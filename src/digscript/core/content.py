@@ -1,0 +1,1 @@
+"""DigScript content module."""

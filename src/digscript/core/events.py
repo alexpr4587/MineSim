@@ -1,0 +1,1 @@
+"""DigScript events module."""

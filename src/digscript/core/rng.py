@@ -1,0 +1,1 @@
+"""DigScript rng module."""
