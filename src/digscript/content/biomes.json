@@ -1,1 +1,42 @@
-[]
+[
+  {
+    "id": "quarry",
+    "name": "Quarry",
+    "min_distance": 0,
+    "weight": 10,
+    "floor_color": "#4a4a42",
+    "ore_weights": {
+      "stone": 70,
+      "coal": 20,
+      "copper": 10
+    }
+  },
+  {
+    "id": "deep_vein",
+    "name": "Deep Vein",
+    "min_distance": 40,
+    "weight": 5,
+    "floor_color": "#3a3348",
+    "ore_weights": {
+      "stone": 40,
+      "coal": 15,
+      "copper": 20,
+      "iron": 20,
+      "silver": 5
+    }
+  },
+  {
+    "id": "crystal_caverns",
+    "name": "Crystal Caverns",
+    "min_distance": 100,
+    "weight": 2,
+    "floor_color": "#2f2440",
+    "ore_weights": {
+      "stone": 30,
+      "iron": 20,
+      "silver": 20,
+      "gold": 15,
+      "ruby": 10
+    }
+  }
+]

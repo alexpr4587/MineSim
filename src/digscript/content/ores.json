@@ -1,1 +1,79 @@
-[]
+[
+  {
+    "id": "stone",
+    "name": "Stone",
+    "tier": 0,
+    "hardness": 1,
+    "base_value": 1,
+    "mine_probability": 0.95,
+    "regen_ticks": 300,
+    "color": "#7a7a7a",
+    "unlocked_by": null
+  },
+  {
+    "id": "coal",
+    "name": "Coal",
+    "tier": 0,
+    "hardness": 2,
+    "base_value": 3,
+    "mine_probability": 0.9,
+    "regen_ticks": 600,
+    "color": "#2b2b2b",
+    "unlocked_by": "first_dig"
+  },
+  {
+    "id": "copper",
+    "name": "Copper",
+    "tier": 1,
+    "hardness": 3,
+    "base_value": 8,
+    "mine_probability": 0.8,
+    "regen_ticks": 900,
+    "color": "#c9773a",
+    "unlocked_by": "coal_miner"
+  },
+  {
+    "id": "iron",
+    "name": "Iron",
+    "tier": 2,
+    "hardness": 4,
+    "base_value": 15,
+    "mine_probability": 0.7,
+    "regen_ticks": 1200,
+    "color": "#b0b7c0",
+    "unlocked_by": "copper_age"
+  },
+  {
+    "id": "silver",
+    "name": "Silver",
+    "tier": 3,
+    "hardness": 5,
+    "base_value": 40,
+    "mine_probability": 0.55,
+    "regen_ticks": 2400,
+    "color": "#dfe6ee",
+    "unlocked_by": "iron_will"
+  },
+  {
+    "id": "gold",
+    "name": "Gold",
+    "tier": 4,
+    "hardness": 6,
+    "base_value": 100,
+    "mine_probability": 0.4,
+    "regen_ticks": 3600,
+    "color": "#f2c230",
+    "unlocked_by": "silver_lining"
+  },
+  {
+    "id": "ruby",
+    "name": "Ruby",
+    "tier": 5,
+    "hardness": 8,
+    "base_value": 400,
+    "mine_probability": 0.25,
+    "regen_ticks": 6000,
+    "color": "#d62b4a",
+    "unlocked_by": "gold_rush"
+  }
+]

@@ -1,1 +1,7 @@
-{}
+{
+  "seed_default": 12345,
+  "chunk_size": 16,
+  "region_size_chunks": 2,
+  "base_half_size": 1,
+  "tick_hz": 10
+}
