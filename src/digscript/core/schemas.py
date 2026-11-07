@@ -135,4 +135,21 @@ class Upgrade(_ContentModel):
         return changes
 
 
-__all__ = ["Biome", "Config", "ContentError", "Ore", "Upgrade"]
+class FunctionSpec(_ContentModel):
+    """A player API function (functions.json)."""
+
+    name: str = Field(min_length=1)
+    signature: str = ""
+    doc: str = ""
+    category: str = ""
+    unlocked_by: str | None = None
+
+
+class ModuleSpec(_ContentModel):
+    """An importable Python module (modules.json)."""
+
+    name: str = Field(min_length=1)
+    unlocked_by: str | None = None
+
+
+__all__ = ["Biome", "Config", "ContentError", "FunctionSpec", "ModuleSpec", "Ore", "Upgrade"]

@@ -1,1 +1,65 @@
-[]
+[
+  {
+    "name": "move",
+    "signature": "move(direction)",
+    "doc": "Move one tile in the given direction.",
+    "category": "movement",
+    "unlocked_by": null
+  },
+  {
+    "name": "mine",
+    "signature": "mine()",
+    "doc": "Mine the tile the miner stands on. Returns a dict with ok, and reason or ore when relevant.",
+    "category": "mining",
+    "unlocked_by": null
+  },
+  {
+    "name": "peek",
+    "signature": "peek()",
+    "doc": "Return the ore on the current tile, None if empty, or 'unknown' if the ore is locked.",
+    "category": "mining",
+    "unlocked_by": null
+  },
+  {
+    "name": "position",
+    "signature": "position()",
+    "doc": "Return the miner position as (x, y).",
+    "category": "movement",
+    "unlocked_by": null
+  },
+  {
+    "name": "sell",
+    "signature": "sell()",
+    "doc": "Sell the whole inventory at the base and return the money gained.",
+    "category": "business",
+    "unlocked_by": "first_dig"
+  },
+  {
+    "name": "inventory",
+    "signature": "inventory()",
+    "doc": "Return the inventory as a dict of ore id to count.",
+    "category": "business",
+    "unlocked_by": "hello_miner"
+  },
+  {
+    "name": "scan",
+    "signature": "scan(radius)",
+    "doc": "Scan for ore within radius tiles. Returns a list of (dx, dy, ore_id) for non-empty tiles.",
+    "category": "mining",
+    "unlocked_by": "scout"
+  },
+  {
+    "name": "stats",
+    "signature": "stats()",
+    "doc": "Return per-ore mining statistics as {ore: {'attempts': n, 'successes': m}}.",
+    "category": "mining",
+    "unlocked_by": "data_driven"
+  },
+  {
+    "name": "buy_upgrade",
+    "signature": "buy_upgrade(upgrade_id)",
+    "doc": "Buy the next level of the given upgrade and return the new level.",
+    "category": "business",
+    "unlocked_by": "first_sale"
+  }
+]

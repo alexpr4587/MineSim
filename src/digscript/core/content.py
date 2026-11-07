@@ -17,7 +17,15 @@ from typing import Any
 
 from pydantic import TypeAdapter, ValidationError
 
-from digscript.core.schemas import Biome, Config, ContentError, Ore, Upgrade
+from digscript.core.schemas import (
+    Biome,
+    Config,
+    ContentError,
+    FunctionSpec,
+    ModuleSpec,
+    Ore,
+    Upgrade,
+)
 
 __all__ = [
     "Content",
@@ -37,6 +45,8 @@ class Content:
     ores: dict[str, Ore] = field(default_factory=dict)
     biomes: dict[str, Biome] = field(default_factory=dict)
     upgrades: dict[str, Upgrade] = field(default_factory=dict)
+    functions: dict[str, FunctionSpec] = field(default_factory=dict)
+    modules: dict[str, ModuleSpec] = field(default_factory=dict)
 
     def get_ore(self, ore_id: str) -> Ore:
         """Return the ore with ``ore_id`` or raise ContentError."""
@@ -58,6 +68,48 @@ class Content:
             return self.upgrades[upgrade_id]
         except KeyError:
             raise ContentError(f"upgrades.json: $.id: unknown upgrade id '{upgrade_id}'") from None
+
+    def get_function(self, name: str) -> FunctionSpec:
+        """Return the function spec with ``name`` or raise ContentError."""
+        try:
+            return self.functions[name]
+        except KeyError:
+            raise ContentError(f"functions.json: $.name: unknown function '{name}'") from None
+
+    def get_module(self, name: str) -> ModuleSpec:
+        """Return the module spec with ``name`` or raise ContentError."""
+        try:
+            return self.modules[name]
+        except KeyError:
+            raise ContentError(f"modules.json: $.name: unknown module '{name}'") from None
+
+    def function(self, name: str) -> FunctionSpec:
+        """Alias for :meth:`get_function`."""
+        return self.get_function(name)
+
+    def module(self, name: str) -> ModuleSpec:
+        """Alias for :meth:`get_module`."""
+        return self.get_module(name)
+
+    @property
+    def function_list(self) -> list[FunctionSpec]:
+        """All function specs in file order."""
+        return list(self.functions.values())
+
+    @property
+    def module_list(self) -> list[ModuleSpec]:
+        """All module specs in file order."""
+        return list(self.modules.values())
+
+    @property
+    def functions_by_name(self) -> dict[str, FunctionSpec]:
+        """Alias for :attr:`functions`."""
+        return self.functions
+
+    @property
+    def modules_by_name(self) -> dict[str, ModuleSpec]:
+        """Alias for :attr:`modules`."""
+        return self.modules
 
     def ore(self, ore_id: str) -> Ore:
         """Alias for :meth:`get_ore`."""
@@ -145,6 +197,30 @@ def _index_by_id(items: list[Any], filename: str, kind: str) -> dict[str, Any]:
     return indexed
 
 
+def _index_by_name(items: list[Any], filename: str, kind: str) -> dict[str, Any]:
+    indexed: dict[str, Any] = {}
+    for index, item in enumerate(items):
+        if item.name in indexed:
+            raise ContentError(f"{filename}: $.{index}.name: duplicate {kind} name '{item.name}'")
+        indexed[item.name] = item
+    return indexed
+
+
+def _load_named_specs(
+    base_path: Any, filename: str, wrapper: str, adapter: TypeAdapter[Any]
+) -> dict[str, Any]:
+    try:
+        data = _read_json(base_path, filename)
+    except ContentError as exc:
+        if "file not found" in str(exc):
+            return {}
+        raise
+    if isinstance(data, dict):
+        data = data.get(wrapper, data)
+    items = _validate(data, adapter, filename)
+    return _index_by_name(items, filename, wrapper.rstrip("s"))
+
+
 def _cross_validate(ores: dict[str, Ore], biomes: dict[str, Biome]) -> None:
     for biome_index, biome in enumerate(biomes.values()):
         for ore_id in biome.ore_weights:
@@ -194,11 +270,28 @@ def load_content(content_dir: str | Path | None = None) -> Content:
         upgrades_list = _validate(upgrades_data, TypeAdapter(list[Upgrade]), "upgrades.json")
         upgrades = _index_by_id(upgrades_list, "upgrades.json", "upgrade")
 
+    functions = _load_named_specs(
+        base_path, "functions.json", "functions", TypeAdapter(list[FunctionSpec])
+    )
+    modules = _load_named_specs(base_path, "modules.json", "modules", TypeAdapter(list[ModuleSpec]))
+
     _cross_validate(ores, biomes)
     logger.debug(
-        "Loaded content: %d ores, %d biomes, %d upgrades", len(ores), len(biomes), len(upgrades)
+        "Loaded content: %d ores, %d biomes, %d upgrades, %d functions, %d modules",
+        len(ores),
+        len(biomes),
+        len(upgrades),
+        len(functions),
+        len(modules),
     )
-    return Content(config=config, ores=ores, biomes=biomes, upgrades=upgrades)
+    return Content(
+        config=config,
+        ores=ores,
+        biomes=biomes,
+        upgrades=upgrades,
+        functions=functions,
+        modules=modules,
+    )
 
 
 def load_content_from_dir(content_dir: str | Path) -> Content:

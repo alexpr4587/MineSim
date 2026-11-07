@@ -1,1 +1,22 @@
-[]
+[
+  {
+    "name": "math",
+    "unlocked_by": null
+  },
+  {
+    "name": "random",
+    "unlocked_by": "wanderer"
+  },
+  {
+    "name": "statistics",
+    "unlocked_by": "data_driven"
+  },
+  {
+    "name": "collections",
+    "unlocked_by": "custom_function"
+  },
+  {
+    "name": "heapq",
+    "unlocked_by": "custom_function"
+  }
+]
