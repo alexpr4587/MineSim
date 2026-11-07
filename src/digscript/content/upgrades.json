@@ -1,1 +1,42 @@
-[]
+[
+  {
+    "id": "backpack",
+    "name": "Backpack",
+    "description": "Carry more ore: capacity +10 per level.",
+    "stat": "capacity",
+    "per_level": 10,
+    "max_level": 5,
+    "costs": [25, 60, 140, 300, 700],
+    "unlocked_by": "first_sale"
+  },
+  {
+    "id": "pickaxe",
+    "name": "Pickaxe",
+    "description": "Mine faster and break harder ore: tool_power +1 and tool_tier +1 per level.",
+    "stat": ["tool_power", "tool_tier"],
+    "per_level": {"tool_power": 1, "tool_tier": 1},
+    "max_level": 5,
+    "costs": [50, 150, 400, 1000, 2500],
+    "unlocked_by": "pocket_change"
+  },
+  {
+    "id": "motor",
+    "name": "Motor",
+    "description": "Move faster: move_ticks -1 per level (never below 1).",
+    "stat": "move_ticks",
+    "per_level": -1,
+    "max_level": 3,
+    "costs": [100, 400, 1500],
+    "unlocked_by": "investor"
+  },
+  {
+    "id": "scanner",
+    "name": "Scanner",
+    "description": "See further: scan_radius +1 per level.",
+    "stat": "scan_radius",
+    "per_level": 1,
+    "max_level": 4,
+    "costs": [150, 500, 1500, 4000],
+    "unlocked_by": "investor"
+  }
+]

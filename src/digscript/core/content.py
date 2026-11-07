@@ -17,7 +17,7 @@ from typing import Any
 
 from pydantic import TypeAdapter, ValidationError
 
-from digscript.core.schemas import Biome, Config, ContentError, Ore
+from digscript.core.schemas import Biome, Config, ContentError, Ore, Upgrade
 
 __all__ = [
     "Content",
@@ -36,6 +36,7 @@ class Content:
     config: Config
     ores: dict[str, Ore] = field(default_factory=dict)
     biomes: dict[str, Biome] = field(default_factory=dict)
+    upgrades: dict[str, Upgrade] = field(default_factory=dict)
 
     def get_ore(self, ore_id: str) -> Ore:
         """Return the ore with ``ore_id`` or raise ContentError."""
@@ -50,6 +51,13 @@ class Content:
             return self.biomes[biome_id]
         except KeyError:
             raise ContentError(f"biomes.json: $.id: unknown biome id '{biome_id}'") from None
+
+    def get_upgrade(self, upgrade_id: str) -> Upgrade:
+        """Return the upgrade with ``upgrade_id`` or raise ContentError."""
+        try:
+            return self.upgrades[upgrade_id]
+        except KeyError:
+            raise ContentError(f"upgrades.json: $.id: unknown upgrade id '{upgrade_id}'") from None
 
     def ore(self, ore_id: str) -> Ore:
         """Alias for :meth:`get_ore`."""
@@ -68,6 +76,20 @@ class Content:
     def biome_list(self) -> list[Biome]:
         """All biomes in file order."""
         return list(self.biomes.values())
+
+    def upgrade(self, upgrade_id: str) -> Upgrade:
+        """Alias for :meth:`get_upgrade`."""
+        return self.get_upgrade(upgrade_id)
+
+    @property
+    def upgrade_list(self) -> list[Upgrade]:
+        """All upgrades in file order."""
+        return list(self.upgrades.values())
+
+    @property
+    def upgrades_by_id(self) -> dict[str, Upgrade]:
+        """Alias for :attr:`upgrades`."""
+        return self.upgrades
 
     @property
     def ores_by_id(self) -> dict[str, Ore]:
@@ -160,9 +182,23 @@ def load_content(content_dir: str | Path | None = None) -> Content:
     biomes_list = _validate(biomes_data, TypeAdapter(list[Biome]), "biomes.json")
     biomes = _index_by_id(biomes_list, "biomes.json", "biome")
 
+    upgrades: dict[str, Upgrade] = {}
+    try:
+        upgrades_data = _read_json(base_path, "upgrades.json")
+    except ContentError as exc:
+        if "file not found" not in str(exc):
+            raise
+    else:
+        if isinstance(upgrades_data, dict):
+            upgrades_data = upgrades_data.get("upgrades", upgrades_data)
+        upgrades_list = _validate(upgrades_data, TypeAdapter(list[Upgrade]), "upgrades.json")
+        upgrades = _index_by_id(upgrades_list, "upgrades.json", "upgrade")
+
     _cross_validate(ores, biomes)
-    logger.debug("Loaded content: %d ores, %d biomes", len(ores), len(biomes))
-    return Content(config=config, ores=ores, biomes=biomes)
+    logger.debug(
+        "Loaded content: %d ores, %d biomes, %d upgrades", len(ores), len(biomes), len(upgrades)
+    )
+    return Content(config=config, ores=ores, biomes=biomes, upgrades=upgrades)
 
 
 def load_content_from_dir(content_dir: str | Path) -> Content:

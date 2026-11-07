@@ -3,5 +3,16 @@
   "chunk_size": 16,
   "region_size_chunks": 2,
   "base_half_size": 1,
-  "tick_hz": 10
+  "tick_hz": 10,
+  "move_ticks": 4,
+  "mine_tick_base": 3,
+  "sell_ticks": 2,
+  "scan_ticks_per_radius": 1,
+  "start_capacity": 10,
+  "start_tool_power": 1,
+  "start_tool_tier": 0,
+  "start_scan_radius": 0,
+  "free_calls_before_forced_tick": 200,
+  "script_idle_timeout_s": 5,
+  "console_max_lines": 500
 }
