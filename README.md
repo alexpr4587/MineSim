@@ -12,19 +12,25 @@ functions, ores, upgrades and Python modules.
 
 ## Controls
 
+Single-letter keys (`E F L U C G Space 1-5`) work while the world view has
+focus. While the code editor has focus, letters are typed as code — press
+`Esc` (or click the world) first, or use the **View** menu, which works
+from anywhere.
+
 | Key | Action |
 |-----|--------|
-| `E` | Toggle the script editor |
-| `F` | Toggle the API functions panel |
-| `L` | Toggle the achievements panel |
-| `U` | Toggle the upgrades panel |
+| `E` / `Ctrl+E` or View menu | Toggle the script editor |
+| `F` / `Ctrl+F` or View menu | Toggle the API functions panel |
+| `L` / `Ctrl+L` or View menu | Toggle the achievements panel |
+| `U` / `Ctrl+U` or View menu | Toggle the upgrades panel |
 | `C` | Recenter the world on the miner |
 | `G` | Toggle the world grid |
-| `F10` | Open the File menu |
+| `F10` / `Alt+V` | Open the File / View menu |
 | `Space` | Toggle pause |
 | `1`–`5` | Set game speed (slowest to fastest) |
 | `Ctrl+R` | Run the current script |
 | `Ctrl+.` | Stop the running script |
+| `Esc` (in editor) | Return focus to the world |
 
 ## Your first script
 

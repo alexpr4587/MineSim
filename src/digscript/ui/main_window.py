@@ -209,13 +209,31 @@ class MainWindow(QMainWindow):
 
     # -- panel toggles -------------------------------------------------------------
 
+    def _sync_view_actions(self) -> None:
+        for action, panel in (
+            (getattr(self, "_editor_action", None), getattr(self, "editor_panel", None)),
+            (getattr(self, "_api_action", None), getattr(self, "api_panel", None)),
+            (
+                getattr(self, "_achievements_action", None),
+                getattr(self, "achievements_panel", None),
+            ),
+            (getattr(self, "_upgrades_action", None), getattr(self, "upgrades_panel", None)),
+        ):
+            if action is not None and panel is not None:
+                try:
+                    action.setChecked(bool(panel.isVisible()))
+                except Exception:
+                    pass
+
     def toggle_editor(self) -> None:
         """Toggle the editor panel (E)."""
         self.editor_panel.toggle()
+        self._sync_view_actions()
 
     def toggle_api_panel(self) -> None:
         """Toggle the functions reference panel (F)."""
         self.api_panel.toggle()
+        self._sync_view_actions()
 
     def toggle_functions(self) -> None:
         """Alias for :meth:`toggle_api_panel`."""
@@ -232,44 +250,66 @@ class MainWindow(QMainWindow):
     def show_editor(self) -> None:
         """Show the editor panel."""
         self.editor_panel.show_panel()
+        self._sync_view_actions()
 
     def hide_editor(self) -> None:
         """Hide the editor panel."""
         self.editor_panel.hide_panel()
+        self._sync_view_actions()
 
     def show_api_panel(self) -> None:
         """Show the functions reference panel."""
         self.api_panel.show_panel()
+        self._sync_view_actions()
 
     def hide_api_panel(self) -> None:
         """Hide the functions reference panel."""
         self.api_panel.hide_panel()
+        self._sync_view_actions()
 
     # -- achievements / upgrades toggles --------------------------------------
 
     def toggle_achievements(self) -> None:
         """Toggle the achievements panel (L)."""
         self.achievements_panel.toggle()
+        self._sync_view_actions()
 
     def toggle_upgrades(self) -> None:
         """Toggle the upgrades panel (U)."""
         self.upgrades_panel.toggle()
+        self._sync_view_actions()
 
     def show_achievements(self) -> None:
         """Show the achievements panel."""
         self.achievements_panel.show_panel()
+        self._sync_view_actions()
 
     def hide_achievements(self) -> None:
         """Hide the achievements panel."""
         self.achievements_panel.hide_panel()
+        self._sync_view_actions()
 
     def show_upgrades(self) -> None:
         """Show the upgrades panel."""
         self.upgrades_panel.show_panel()
+        self._sync_view_actions()
 
     def hide_upgrades(self) -> None:
         """Hide the upgrades panel."""
         self.upgrades_panel.hide_panel()
+        self._sync_view_actions()
+
+    def _on_view_action(self, panel: Any, checked: bool) -> None:
+        if panel is None:
+            return
+        try:
+            if checked:
+                panel.show_panel()
+            else:
+                panel.hide_panel()
+        except Exception:
+            pass
+        self._sync_view_actions()
 
     # -- menu bar (F10) -------------------------------------------------------
 
@@ -290,11 +330,43 @@ class MainWindow(QMainWindow):
         quit_action.setShortcut(QKeySequence("Ctrl+Q"))
         quit_action.triggered.connect(self.close)
         menu_bar.addMenu(file_menu)
+        view_menu = QMenu("&View", self)
+        self._editor_action = view_menu.addAction("&Editor")
+        self._editor_action.setCheckable(True)
+        self._editor_action.setShortcut(QKeySequence("Ctrl+E"))
+        self._editor_action.setToolTip("Toggle editor (E when world focused, Ctrl+E anywhere)")
+        self._editor_action.triggered.connect(
+            lambda checked=False: self._on_view_action(self.editor_panel, checked)
+        )
+        self._api_action = view_menu.addAction("&Functions / API")
+        self._api_action.setCheckable(True)
+        self._api_action.setShortcut(QKeySequence("Ctrl+F"))
+        self._api_action.setToolTip("Toggle API panel (F when world focused)")
+        self._api_action.triggered.connect(
+            lambda checked=False: self._on_view_action(self.api_panel, checked)
+        )
+        self._achievements_action = view_menu.addAction("&Achievements")
+        self._achievements_action.setCheckable(True)
+        self._achievements_action.setShortcut(QKeySequence("Ctrl+L"))
+        self._achievements_action.setToolTip("Toggle achievements (L when world focused)")
+        self._achievements_action.triggered.connect(
+            lambda checked=False: self._on_view_action(self.achievements_panel, checked)
+        )
+        self._upgrades_action = view_menu.addAction("&Upgrades")
+        self._upgrades_action.setCheckable(True)
+        self._upgrades_action.setShortcut(QKeySequence("Ctrl+U"))
+        self._upgrades_action.setToolTip("Toggle upgrades (U when world focused)")
+        self._upgrades_action.triggered.connect(
+            lambda checked=False: self._on_view_action(self.upgrades_panel, checked)
+        )
+        menu_bar.addMenu(view_menu)
+        self._view_menu = view_menu
         self.setMenuBar(menu_bar)
         self._file_menu = file_menu
         # F10 opens the File menu.
         self._f10_shortcut = QShortcut(QKeySequence(Qt.Key.Key_F10), self)
         self._f10_shortcut.activated.connect(self._open_file_menu)
+        self._sync_view_actions()
 
     def _open_file_menu(self) -> None:
         menu = getattr(self, "_file_menu", None)
