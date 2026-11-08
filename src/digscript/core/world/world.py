@@ -13,6 +13,7 @@ the UI; evicting a chunk never changes any result.
 
 from __future__ import annotations
 
+import heapq
 import logging
 from collections import OrderedDict
 from collections.abc import Mapping
@@ -150,6 +151,10 @@ class World:
             OrderedDict()
         )
         self._chunk_versions: dict[tuple[int, int], int] = {}
+        # Min-heap of (regen_at_tick, x, y) for depleted tiles.
+        # Entries may be stale (already regenerated lazily via
+        # tile_at); stale entries are skipped when popped.
+        self._regen_heap: list[tuple[int, int, int]] = []
 
     # -- basic properties -------------------------------------------------
 
@@ -188,16 +193,22 @@ class World:
         self._chunk_versions[chunk] = self._chunk_versions.get(chunk, 0) + 1
         self._chunk_cache.pop(chunk, None)
 
-    def _advance_tile_if_due(self, x: int, y: int, tick: int) -> None:
-        """Regenerate a depleted tile whose regen tick has been reached."""
+    def _advance_tile_if_due(self, x: int, y: int, tick: int) -> bool:
+        """Regenerate a depleted tile whose regen tick has been reached.
+
+        Returns True if the tile regenerated. The matching heap entry
+        (if any) becomes stale and is skipped by :meth:`advance`.
+        """
         entry = self.delta.get((x, y))
         if entry is None:
-            return
+            return False
         epoch, regen_at = entry
-        if regen_at is not None and tick >= regen_at:
-            self.delta[(x, y)] = (epoch + 1, None)
-            self.version += 1
-            self._bump_chunk(x, y)
+        if regen_at is None or tick < regen_at:
+            return False
+        self.delta[(x, y)] = (epoch + 1, None)
+        self.version += 1
+        self._bump_chunk(x, y)
+        return True
 
     def _advance_chunk_if_due(self, cx: int, cy: int, tick: int) -> None:
         size = self.chunk_size
@@ -233,14 +244,31 @@ class World:
             return None
         ore = self.content.get_ore(tile.ore_id)
         epoch = self.delta.get((x, y), (0, None))[0]
-        self.delta[(x, y)] = (epoch, tick + ore.regen_ticks)
+        regen_at = tick + ore.regen_ticks
+        self.delta[(x, y)] = (epoch, regen_at)
+        heapq.heappush(self._regen_heap, (regen_at, x, y))
         self.version += 1
         self._bump_chunk(x, y)
         return tile.ore_id
 
     def advance(self, tick: int) -> None:
-        """Process all regenerations due at ``tick``."""
-        for x, y in list(self.delta):
+        """Process all regenerations due at ``tick``.
+
+        Pops due entries from the min-heap of ``(regen_at_tick, x, y)``
+        so each depleted tile regenerates exactly once, at its regen
+        tick, bumping its chunk version exactly once. Stale heap
+        entries (tiles already regenerated lazily via ``tile_at``)
+        are skipped without bumping the chunk again. ``tile_at``
+        stays consistent with this method: a tile mined at tick ``t``
+        is depleted for every tick ``< t + ore.regen_ticks`` and
+        regenerated from that tick on.
+        """
+        heap = self._regen_heap
+        while heap and heap[0][0] <= tick:
+            regen_at, x, y = heapq.heappop(heap)
+            entry = self.delta.get((x, y))
+            if entry is None or entry[1] != regen_at:
+                continue
             self._advance_tile_if_due(x, y, tick)
 
     def chunk_tiles(self, cx: int, cy: int, tick: int = 0) -> tuple[tuple[Tile, ...], ...]:
@@ -282,6 +310,12 @@ class World:
         self.delta = _parse_delta(data)
         self._chunk_cache.clear()
         self._chunk_versions.clear()
+        self._regen_heap = [
+            (regen_at, x, y)
+            for (x, y), (_epoch, regen_at) in self.delta.items()
+            if regen_at is not None
+        ]
+        heapq.heapify(self._regen_heap)
         self.version += 1
 
     def load_dict(self, data: Any) -> None:
