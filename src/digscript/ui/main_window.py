@@ -5,21 +5,30 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
+    QFileDialog,
     QLineEdit,
     QMainWindow,
+    QMenu,
+    QMenuBar,
     QPlainTextEdit,
     QTextEdit,
     QVBoxLayout,
     QWidget,
 )
 
+from digscript.core.game import Game
+from digscript.core.save import default_save_path
+from digscript.ui.achievements_panel import AchievementsPanel
 from digscript.ui.api_panel import ApiPanel
 from digscript.ui.editor_panel import EditorPanel, default_scripts_dir
 from digscript.ui.floating_panel import ensure_settings_names
 from digscript.ui.game_loop import GameLoop
 from digscript.ui.hud import HUD
+from digscript.ui.toasts import ToastManager
+from digscript.ui.upgrades_panel import UpgradesPanel
 from digscript.ui.world_view import WorldView
 
 __all__ = ["MainWindow"]
@@ -152,6 +161,23 @@ class MainWindow(QMainWindow):
         }
         self.panels = self.floating_panels
 
+        # Achievements (L) and upgrades (U) panels.
+        self.achievements_panel = AchievementsPanel(
+            game=game,
+            parent=self,
+        )
+        self.upgrades_panel = UpgradesPanel(
+            game=game,
+            parent=self,
+        )
+        self.floating_panels["achievements"] = self.achievements_panel
+        self.floating_panels["upgrades"] = self.upgrades_panel
+        self.achievements_panel.hide()
+        self.upgrades_panel.hide()
+
+        # Toasts for achievement unlocks.
+        self.toast_manager = ToastManager(self, game)
+
         self.game_loop = GameLoop(
             game,
             hud=self.hud,
@@ -162,6 +188,16 @@ class MainWindow(QMainWindow):
         )
         self.hud.set_game_loop(self.game_loop)
         self.loop = self.game_loop
+
+        # Autosave every 30 s of wall-clock time.
+        self._autosave_timer = QTimer(self)
+        self._autosave_timer.setInterval(30000)
+        self._autosave_timer.timeout.connect(self._autosave)
+        self._autosave_timer.start()
+
+        # Menu bar (F10): New game, Load, Save, Quit.
+        self._build_menu_bar()
+
         # Show the editor over the world; the functions panel starts hidden.
         try:
             self.editor_panel.show_panel()
@@ -208,6 +244,120 @@ class MainWindow(QMainWindow):
         """Hide the functions reference panel."""
         self.api_panel.hide_panel()
 
+    # -- achievements / upgrades toggles --------------------------------------
+
+    def toggle_achievements(self) -> None:
+        """Toggle the achievements panel (L)."""
+        self.achievements_panel.toggle()
+
+    def toggle_upgrades(self) -> None:
+        """Toggle the upgrades panel (U)."""
+        self.upgrades_panel.toggle()
+
+    def show_achievements(self) -> None:
+        """Show the achievements panel."""
+        self.achievements_panel.show_panel()
+
+    def hide_achievements(self) -> None:
+        """Hide the achievements panel."""
+        self.achievements_panel.hide_panel()
+
+    def show_upgrades(self) -> None:
+        """Show the upgrades panel."""
+        self.upgrades_panel.show_panel()
+
+    def hide_upgrades(self) -> None:
+        """Hide the upgrades panel."""
+        self.upgrades_panel.hide_panel()
+
+    # -- menu bar (F10) -------------------------------------------------------
+
+    def _build_menu_bar(self) -> None:
+        menu_bar = QMenuBar(self)
+        file_menu = QMenu("&File", self)
+        new_action = file_menu.addAction("&New game")
+        new_action.setShortcut(QKeySequence("Ctrl+N"))
+        new_action.triggered.connect(self._new_game)
+        load_action = file_menu.addAction("&Load…")
+        load_action.setShortcut(QKeySequence("Ctrl+O"))
+        load_action.triggered.connect(self._load_game)
+        save_action = file_menu.addAction("&Save")
+        save_action.setShortcut(QKeySequence("Ctrl+S"))
+        save_action.triggered.connect(self._save_game)
+        file_menu.addSeparator()
+        quit_action = file_menu.addAction("&Quit")
+        quit_action.setShortcut(QKeySequence("Ctrl+Q"))
+        quit_action.triggered.connect(self.close)
+        menu_bar.addMenu(file_menu)
+        self.setMenuBar(menu_bar)
+        self._file_menu = file_menu
+        # F10 opens the File menu.
+        self._f10_shortcut = QShortcut(QKeySequence(Qt.Key.Key_F10), self)
+        self._f10_shortcut.activated.connect(self._open_file_menu)
+
+    def _open_file_menu(self) -> None:
+        menu = getattr(self, "_file_menu", None)
+        if menu is not None:
+            menu.menuAction().trigger()
+            menu.show()
+
+    # -- save / load / new ----------------------------------------------------
+
+    def _autosave(self) -> None:
+        """Autosave every 30 s of wall-clock time."""
+        try:
+            self.game.save()
+        except Exception:
+            pass
+
+    def _save_game(self) -> None:
+        try:
+            path = self.game.save()
+            self._notify(f"Saved to {path}")
+        except Exception as exc:
+            self._notify(f"Save failed: {exc}")
+
+    def _load_game(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Load game", str(default_save_path().parent), "JSON (*.json)"
+        )
+        if not path:
+            return
+        try:
+            self._switch_game(Game.load(path))
+            self._notify(f"Loaded {path}")
+        except Exception as exc:
+            self._notify(f"Load failed: {exc}")
+
+    def _new_game(self) -> None:
+        try:
+            self._switch_game(Game.new())
+            self._notify("New game started")
+        except Exception as exc:
+            self._notify(f"New game failed: {exc}")
+
+    def _switch_game(self, game: Game) -> None:
+        """Replace the active game and re-bind panels/toasts."""
+        self.game_loop.stop()
+        self.game = game
+        self.game_loop.game = game
+        self.game_loop.engine = game.engine
+        self.hud.set_game(game)
+        self.world_view.game = game
+        self.world_view.world = game.world
+        self.world_view.engine = game.engine
+        self.achievements_panel.set_game(game)
+        self.upgrades_panel.set_game(game)
+        self.toast_manager.set_game(game)
+        self.api_panel.set_game(game)
+        self.editor_panel.set_game(game)
+        self.world_view.update()
+        self.hud.refresh()
+        self.game_loop.start()
+
+    def _notify(self, message: str) -> None:
+        self.statusBar().showMessage(message, 3000)
+
     # -- hotkeys ----------------------------------------------------------------------
 
     def _focus_allows_hotkeys(self) -> bool:
@@ -227,6 +377,8 @@ class MainWindow(QMainWindow):
         for panel in (
             getattr(self, "editor_panel", None),
             getattr(self, "api_panel", None),
+            getattr(self, "achievements_panel", None),
+            getattr(self, "upgrades_panel", None),
         ):
             if panel is not None:
                 try:
@@ -273,16 +425,22 @@ class MainWindow(QMainWindow):
             pass
 
     def closeEvent(self, event: Any) -> None:  # noqa: N802 - Qt override name
-        """Stop the script and game loop when the window closes."""
+        """Stop the script and game loop when the window closes; save the game."""
         for panel in (
             getattr(self, "editor_panel", None),
             getattr(self, "api_panel", None),
+            getattr(self, "achievements_panel", None),
+            getattr(self, "upgrades_panel", None),
         ):
             if panel is not None:
                 try:
                     panel.save_geometry()
                 except Exception:
                     pass
+        try:
+            self.game.save()
+        except Exception:
+            pass
         host = getattr(self, "host", None) or getattr(self, "script_host", None)
         if host is not None:
             try:
@@ -310,8 +468,16 @@ class MainWindow(QMainWindow):
             self.toggle_api_panel()
             event.accept()
             return
-        if key in (Qt.Key.Key_L, Qt.Key.Key_U):
-            # Achievements/upgrades panels arrive in the next prompt.
+        if key == Qt.Key.Key_L:
+            self.toggle_achievements()
+            event.accept()
+            return
+        if key == Qt.Key.Key_U:
+            self.toggle_upgrades()
+            event.accept()
+            return
+        if key == Qt.Key.Key_F10:
+            self._open_file_menu()
             event.accept()
             return
         if self.game_loop.handle_key(key):

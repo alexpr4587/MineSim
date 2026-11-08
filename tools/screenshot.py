@@ -96,6 +96,24 @@ def build_window(ticks: int = 300, size: tuple[int, int] = (1024, 768)) -> MainW
             console.append_line("hello from DigScript", "out")
             console.append_line("miner ready", "info")
         editor_panel.raise_()
+        # Run the starter script so the first achievement (hello_miner) completes,
+        # then open the achievements screen (key L) for the screenshot.
+        try:
+            editor_panel.run()
+            for _ in range(4000):
+                window.game_loop.advance(100)
+                app.processEvents()
+                if str(window.host.state) != "RUNNING":
+                    break
+        except Exception:
+            pass
+        try:
+            window.show_achievements()
+        except Exception:
+            try:
+                window.achievements_panel.show_panel()
+            except Exception:
+                pass
     app.processEvents()
     return window
 
