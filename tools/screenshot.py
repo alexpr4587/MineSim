@@ -2,7 +2,8 @@
 
 Builds the real :class:`~digscript.ui.main_window.MainWindow`, runs N
 ticks with a hard-coded command sequence submitted straight to the
-engine (no scripting yet), grabs the window and saves a PNG.
+engine, shows the editor panel over the world (with the console below
+it), grabs the window and saves a PNG.
 
 Flags: ``--ticks`` (default 300) and ``--size`` (``WIDTHxHEIGHT``,
 default 1024x768).
@@ -79,6 +80,22 @@ def build_window(ticks: int = 300, size: tuple[int, int] = (1024, 768)) -> MainW
     window.world_view.snap_visual_to_miner()
     window.world_view.center_on_miner()
     window.hud.refresh()
+    editor_panel = getattr(window, "editor_panel", None)
+    if editor_panel is not None:
+        from digscript.ui.editor_panel import STARTER_SCRIPT
+
+        editor = getattr(editor_panel, "editor", None) or getattr(editor_panel, "code_editor", None)
+        if editor is not None and not editor.toPlainText().strip():
+            editor.setPlainText(STARTER_SCRIPT)
+        try:
+            editor_panel.show_panel()
+        except Exception:
+            editor_panel.show()
+        console = getattr(window, "console_panel", None)
+        if console is not None:
+            console.append_line("hello from DigScript", "out")
+            console.append_line("miner ready", "info")
+        editor_panel.raise_()
     app.processEvents()
     return window
 

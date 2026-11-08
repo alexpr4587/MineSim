@@ -36,15 +36,31 @@ class GameLoop(QObject):
         engine = kwargs.pop("engine", None)
         hud = kwargs.pop("hud", None)
         world_view = kwargs.pop("world_view", None)
+        host = kwargs.pop("host", None) or kwargs.pop("script_host", None)
+        editor_panel = kwargs.pop("editor_panel", None) or kwargs.pop("editor", None)
+        console_panel = kwargs.pop("console_panel", None) or kwargs.pop("console", None)
         tick_hz = kwargs.pop("tick_hz", None)
         parent = kwargs.pop("parent", None)
         for arg in args:
             if arg is None:
                 continue
-            if hasattr(arg, "money_label") or hasattr(arg, "refresh") and not hasattr(arg, "step"):
+            if hasattr(arg, "tabs") and hasattr(arg, "run_button"):
+                if editor_panel is None:
+                    editor_panel = arg
+            elif hasattr(arg, "console_panel") and hasattr(arg, "state_label"):
+                if editor_panel is None:
+                    editor_panel = arg
+            elif hasattr(arg, "start") and hasattr(arg, "pump") and hasattr(arg, "state"):
+                if host is None:
+                    host = arg
+            elif (
+                hasattr(arg, "money_label") or hasattr(arg, "refresh") and not hasattr(arg, "step")
+            ):
                 if hud is None:
                     hud = arg
-            elif hasattr(arg, "paintEvent") or hasattr(arg, "tile_px"):
+            elif hasattr(arg, "tile_px") or (
+                hasattr(arg, "paintEvent") and hasattr(arg, "camera_x")
+            ):
                 if world_view is None:
                     world_view = arg
             elif hasattr(arg, "step") and hasattr(arg, "tick"):
@@ -59,6 +75,15 @@ class GameLoop(QObject):
         self.engine = engine
         self.hud = hud
         self.world_view = world_view
+        if editor_panel is not None:
+            if host is None:
+                host = _get(editor_panel, "host") or _get(editor_panel, "script_host")
+            if console_panel is None:
+                console_panel = _get(editor_panel, "console_panel") or _get(editor_panel, "console")
+        self.host = host
+        self.script_host = host
+        self.editor_panel = editor_panel
+        self.console_panel = console_panel
         if tick_hz is None:
             content = _get(game, "content")
             config = _get(content, "config")
@@ -87,6 +112,57 @@ class GameLoop(QObject):
     def stop(self) -> None:
         """Stop the timer."""
         self.timer.stop()
+
+    def set_host(self, host: Any) -> None:
+        """Attach a ScriptHost that is pumped every frame."""
+        self.host = host
+        self.script_host = host
+
+    def attach_host(self, host: Any) -> None:
+        """Alias for :meth:`set_host`."""
+        self.set_host(host)
+
+    def set_editor_panel(self, editor_panel: Any) -> None:
+        """Attach the editor panel (its host/console are pumped)."""
+        self.editor_panel = editor_panel
+        host = _get(editor_panel, "host") or _get(editor_panel, "script_host")
+        if host is not None:
+            self.set_host(host)
+        console = _get(editor_panel, "console_panel") or _get(editor_panel, "console")
+        if console is not None:
+            self.console_panel = console
+
+    def set_console_panel(self, console_panel: Any) -> None:
+        """Attach the console panel."""
+        self.console_panel = console_panel
+
+    def pump_host(self) -> list[Any]:
+        """Pump the script host once, feeding console/editor state."""
+        editor_panel = self.editor_panel
+        if editor_panel is not None:
+            pump = _get(editor_panel, "pump")
+            if callable(pump):
+                try:
+                    return list(pump() or [])
+                except Exception:
+                    return []
+        host = self.host or self.script_host
+        if host is None:
+            return []
+        try:
+            events = list(host.pump() or [])
+        except Exception:
+            return []
+        console = self.console_panel
+        if console is not None and events:
+            append = _get(console, "append_events")
+            if callable(append):
+                append(events)
+        if editor_panel is not None:
+            handle = _get(editor_panel, "handle_host_events")
+            if callable(handle):
+                handle(events)
+        return events
 
     def set_speed(self, speed: int) -> None:
         """Set the speed multiplier (0 pauses)."""
@@ -168,12 +244,14 @@ class GameLoop(QObject):
         self._accumulator += float(elapsed_ms) / 1000.0 * self.tick_hz * self.speed
         if self.paused or self.speed == 0:
             self._accumulator = 0.0
+            self.pump_host()
             return 0
         ticks = min(MAX_TICKS_PER_FRAME, int(self._accumulator))
         self._accumulator -= ticks
         if ticks > 0:
             self._step_engine(ticks)
             self._refresh_ui()
+        self.pump_host()
         return ticks
 
     def step_frame(self, elapsed_ms: float = FRAME_MS) -> int:

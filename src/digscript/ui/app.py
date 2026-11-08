@@ -33,6 +33,8 @@ def main() -> int:
     from digscript.ui.theme import apply_theme
 
     app = QApplication.instance() or QApplication([])
+    app.setOrganizationName("DigScript")
+    app.setApplicationName("DigScript")
     apply_theme(app)
     game = load_game_or_new()
     window = MainWindow(game)

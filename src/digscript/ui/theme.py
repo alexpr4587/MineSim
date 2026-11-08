@@ -20,10 +20,22 @@ __all__ = [
     "BUTTON_PRESSED",
     "BUTTON_TEXT",
     "COLORS",
+    "CONSOLE_ERR",
+    "CONSOLE_INFO",
+    "CONSOLE_OUT",
     "DISABLED_TEXT",
+    "ERROR",
     "FONT_FAMILY",
     "FONT_SIZE",
     "GRID",
+    "HIGHLIGHT_KEYWORD",
+    "HIGHLIGHT_API",
+    "HIGHLIGHT_BUILTIN",
+    "HIGHLIGHT_CLASS",
+    "HIGHLIGHT_COMMENT",
+    "HIGHLIGHT_FUNCTION",
+    "HIGHLIGHT_NUMBER",
+    "HIGHLIGHT_STRING",
     "HUD_BACKGROUND",
     "LOCKED_MARK",
     "MINER_BODY",
@@ -32,6 +44,14 @@ __all__ = [
     "RECENTER_BACKGROUND",
     "RECENTER_TEXT",
     "STYLESHEET",
+    "SYNTAX_API",
+    "SYNTAX_BUILTIN",
+    "SYNTAX_CLASS",
+    "SYNTAX_COMMENT",
+    "SYNTAX_FUNCTION",
+    "SYNTAX_KEYWORD",
+    "SYNTAX_NUMBER",
+    "SYNTAX_STRING",
     "TEXT",
     "TEXT_DIM",
     "apply_theme",
@@ -61,6 +81,18 @@ COLORS: dict[str, str] = {
     "locked_mark": "#101018",
     "recenter_background": "#3a3a50",
     "recenter_text": "#e6e6e6",
+    "syntax_keyword": "#c792ea",
+    "syntax_builtin": "#82aaff",
+    "syntax_string": "#c3e88d",
+    "syntax_comment": "#697098",
+    "syntax_number": "#f78c6c",
+    "syntax_function": "#ffcb6b",
+    "syntax_class": "#ffcb6b",
+    "syntax_api": "#f2a541",
+    "console_out": "#e6e6e6",
+    "console_err": "#f7768e",
+    "console_info": "#7dcfff",
+    "error": "#f7768e",
 }
 
 BACKGROUND = COLORS["background"]
@@ -83,6 +115,26 @@ BASE_LABEL = COLORS["base_label"]
 LOCKED_MARK = COLORS["locked_mark"]
 RECENTER_BACKGROUND = COLORS["recenter_background"]
 RECENTER_TEXT = COLORS["recenter_text"]
+SYNTAX_KEYWORD = COLORS["syntax_keyword"]
+SYNTAX_BUILTIN = COLORS["syntax_builtin"]
+SYNTAX_STRING = COLORS["syntax_string"]
+SYNTAX_COMMENT = COLORS["syntax_comment"]
+SYNTAX_NUMBER = COLORS["syntax_number"]
+SYNTAX_FUNCTION = COLORS["syntax_function"]
+SYNTAX_CLASS = COLORS["syntax_class"]
+SYNTAX_API = COLORS["syntax_api"]
+HIGHLIGHT_KEYWORD = SYNTAX_KEYWORD
+HIGHLIGHT_BUILTIN = SYNTAX_BUILTIN
+HIGHLIGHT_STRING = SYNTAX_STRING
+HIGHLIGHT_COMMENT = SYNTAX_COMMENT
+HIGHLIGHT_NUMBER = SYNTAX_NUMBER
+HIGHLIGHT_FUNCTION = SYNTAX_FUNCTION
+HIGHLIGHT_CLASS = SYNTAX_CLASS
+HIGHLIGHT_API = SYNTAX_API
+CONSOLE_OUT = COLORS["console_out"]
+CONSOLE_ERR = COLORS["console_err"]
+CONSOLE_INFO = COLORS["console_info"]
+ERROR = COLORS["error"]
 
 MONOSPACE_FONT = "Consolas, 'DejaVu Sans Mono', 'Liberation Mono', monospace"
 FONT_FAMILY = MONOSPACE_FONT
