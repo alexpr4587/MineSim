@@ -566,11 +566,11 @@ class WorldView(QWidget):
         event.accept()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:  # noqa: N802 - Qt override name
-        """Start panning with the middle or right button."""
+        """Start panning with the middle or right button; any click grabs focus."""
+        self.setFocus()
         if event.button() in (Qt.MouseButton.MiddleButton, Qt.MouseButton.RightButton):
             self._panning = True
             self._last_mouse_pos = event.position()
-            self.setFocus()
             event.accept()
         else:
             super().mousePressEvent(event)
@@ -595,13 +595,18 @@ class WorldView(QWidget):
             super().mouseReleaseEvent(event)
 
     def keyPressEvent(self, event: Any) -> None:  # noqa: N802 - Qt override name
-        """C recenters on the miner; G toggles the grid."""
+        """C recenters on the miner; G toggles the grid; other hotkeys go to MainWindow."""
         key = event.key()
-        if key in (Qt.Key.Key_C, Qt.Key.Key_c):
+        if key == Qt.Key.Key_C:
             self.recenter()
             event.accept()
-        elif key in (Qt.Key.Key_G, Qt.Key.Key_g):
+        elif key == Qt.Key.Key_G:
             self.toggle_grid()
             event.accept()
         else:
-            super().keyPressEvent(event)
+            window = self.window()
+            handler = getattr(window, "keyPressEvent", None)
+            if window is not None and window is not self and callable(handler):
+                handler(event)
+            else:
+                super().keyPressEvent(event)

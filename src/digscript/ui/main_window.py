@@ -188,6 +188,7 @@ class MainWindow(QMainWindow):
         )
         self.hud.set_game_loop(self.game_loop)
         self.loop = self.game_loop
+        self.game_loop.start()
 
         # Autosave every 30 s of wall-clock time.
         self._autosave_timer = QTimer(self)
@@ -453,6 +454,27 @@ class MainWindow(QMainWindow):
     def keyPressEvent(self, event: Any) -> None:  # noqa: N802 - Qt override name
         """Hotkeys: E editor, F functions, Space/1-5 speed, C/G world."""
         key = event.key()
+        modifiers = event.modifiers()
+        try:
+            from PySide6.QtCore import Qt as _Qt
+
+            ctrl = _Qt.KeyboardModifier.ControlModifier
+        except Exception:
+            ctrl = event.modifiers()
+        if modifiers & ctrl and key == Qt.Key.Key_R:
+            try:
+                self.editor_panel.run()
+            except Exception:
+                pass
+            event.accept()
+            return
+        if modifiers & ctrl and key == Qt.Key.Key_Period:
+            try:
+                self.editor_panel.stop()
+            except Exception:
+                pass
+            event.accept()
+            return
         if key == Qt.Key.Key_Escape and self._focus_is_text_widget():
             self._move_focus_to_world()
             event.accept()
