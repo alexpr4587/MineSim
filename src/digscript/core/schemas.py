@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
@@ -152,4 +154,54 @@ class ModuleSpec(_ContentModel):
     unlocked_by: str | None = None
 
 
-__all__ = ["Biome", "Config", "ContentError", "FunctionSpec", "ModuleSpec", "Ore", "Upgrade"]
+class CounterCriteria(_ContentModel):
+    """A counter-based achievement criterion."""
+
+    type: Literal["counter"] = "counter"
+    counter: str = Field(min_length=1)
+    target: int = Field(ge=1)
+
+
+class ScriptDefinesFunctionCriteria(_ContentModel):
+    """Criterion satisfied when a player script defines a function."""
+
+    type: Literal["script_defines_function"] = "script_defines_function"
+
+
+Criteria = CounterCriteria | ScriptDefinesFunctionCriteria
+
+
+class Reward(_ContentModel):
+    """One achievement reward (unlock something or grant money)."""
+
+    type: Literal["unlock_function", "unlock_ore", "unlock_upgrade", "unlock_module", "money"]
+    id: str | None = None
+    amount: int | None = None
+
+
+class Achievement(_ContentModel):
+    """An achievement (achievements.json)."""
+
+    id: str = Field(min_length=1)
+    tab: Literal["code", "mining", "business"]
+    parent: str | None = None
+    title: str = Field(min_length=1)
+    description: str = ""
+    criteria: Criteria
+    rewards: list[Reward] = Field(default_factory=list)
+
+
+__all__ = [
+    "Achievement",
+    "Biome",
+    "Config",
+    "ContentError",
+    "CounterCriteria",
+    "Criteria",
+    "FunctionSpec",
+    "ModuleSpec",
+    "Ore",
+    "Reward",
+    "ScriptDefinesFunctionCriteria",
+    "Upgrade",
+]

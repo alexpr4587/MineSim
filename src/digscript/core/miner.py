@@ -135,6 +135,37 @@ class Miner:
         """Add ``amount`` items of ``ore_id`` to the inventory."""
         self.inventory[ore_id] = self.inventory.get(ore_id, 0) + amount
 
+    @classmethod
+    def from_dict(cls, data: Any) -> Miner:
+        """Rebuild a miner from its :meth:`to_dict` payload."""
+        if not isinstance(data, dict):
+            raise ValueError("miner data must be a mapping")
+        stats_data = data.get("stats") or {}
+        stats = MinerStats(
+            attempts={str(k): int(v) for k, v in dict(stats_data.get("attempts", {})).items()},
+            successes={str(k): int(v) for k, v in dict(stats_data.get("successes", {})).items()},
+            total_mined=int(stats_data.get("total_mined", 0)),
+            total_earned=int(stats_data.get("total_earned", 0)),
+            tiles_moved=int(stats_data.get("tiles_moved", 0)),
+            sales=int(stats_data.get("sales", 0)),
+        )
+        facing_raw = data.get("facing", "north")
+        facing = Direction.parse(facing_raw) if isinstance(facing_raw, str) else facing_raw
+        return cls(
+            x=int(data.get("x", 0)),
+            y=int(data.get("y", 0)),
+            facing=facing,
+            inventory={str(k): int(v) for k, v in dict(data.get("inventory", {})).items()},
+            capacity=int(data.get("capacity", 10)),
+            money=int(data.get("money", 0)),
+            tool_power=int(data.get("tool_power", 1)),
+            tool_tier=int(data.get("tool_tier", 0)),
+            move_ticks=int(data.get("move_ticks", 4)),
+            scan_radius=int(data.get("scan_radius", 0)),
+            stats=stats,
+            upgrades={str(k): int(v) for k, v in dict(data.get("upgrades", {})).items()},
+        )
+
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-serialisable copy of the miner state."""
         return {

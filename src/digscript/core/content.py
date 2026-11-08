@@ -18,6 +18,7 @@ from typing import Any
 from pydantic import TypeAdapter, ValidationError
 
 from digscript.core.schemas import (
+    Achievement,
     Biome,
     Config,
     ContentError,
@@ -47,6 +48,30 @@ class Content:
     upgrades: dict[str, Upgrade] = field(default_factory=dict)
     functions: dict[str, FunctionSpec] = field(default_factory=dict)
     modules: dict[str, ModuleSpec] = field(default_factory=dict)
+    achievements: dict[str, Achievement] = field(default_factory=dict)
+
+    def get_achievement(self, achievement_id: str) -> Achievement:
+        """Return the achievement with ``achievement_id`` or raise ContentError."""
+        try:
+            return self.achievements[achievement_id]
+        except KeyError:
+            raise ContentError(
+                f"achievements.json: $.id: unknown achievement id '{achievement_id}'"
+            ) from None
+
+    def achievement(self, achievement_id: str) -> Achievement:
+        """Alias for :meth:`get_achievement`."""
+        return self.get_achievement(achievement_id)
+
+    @property
+    def achievement_list(self) -> list[Achievement]:
+        """All achievements in file order."""
+        return list(self.achievements.values())
+
+    @property
+    def achievements_by_id(self) -> dict[str, Achievement]:
+        """Alias for :attr:`achievements`."""
+        return self.achievements
 
     def get_ore(self, ore_id: str) -> Ore:
         """Return the ore with ``ore_id`` or raise ContentError."""
@@ -221,7 +246,24 @@ def _load_named_specs(
     return _index_by_name(items, filename, wrapper.rstrip("s"))
 
 
-def _cross_validate(ores: dict[str, Ore], biomes: dict[str, Biome]) -> None:
+_KNOWN_COUNTERS = {
+    "mined:any",
+    "attempts:any",
+    "tiles_moved",
+    "sales",
+    "money_earned",
+    "scripts_finished",
+}
+
+
+def _cross_validate(
+    ores: dict[str, Ore],
+    biomes: dict[str, Biome],
+    achievements: dict[str, Achievement] | None = None,
+    upgrades: dict[str, Upgrade] | None = None,
+    functions: dict[str, FunctionSpec] | None = None,
+    modules: dict[str, ModuleSpec] | None = None,
+) -> None:
     for biome_index, biome in enumerate(biomes.values()):
         for ore_id in biome.ore_weights:
             if ore_id not in ores:
@@ -229,6 +271,91 @@ def _cross_validate(ores: dict[str, Ore], biomes: dict[str, Biome]) -> None:
                     f"biomes.json: $.{biome_index}.ore_weights.{ore_id}: "
                     f"unknown ore id '{ore_id}' in biome '{biome.id}'"
                 )
+    if achievements is None:
+        achievements = {}
+    if upgrades is None:
+        upgrades = {}
+    if functions is None:
+        functions = {}
+    if modules is None:
+        modules = {}
+    for ach_index, achievement in enumerate(achievements.values()):
+        if achievement.parent is not None:
+            if achievement.parent == achievement.id:
+                raise ContentError(
+                    f"achievements.json: $.{ach_index}.parent: "
+                    f"achievement '{achievement.id}' cannot be its own parent"
+                )
+            if achievement.parent not in achievements:
+                raise ContentError(
+                    f"achievements.json: $.{ach_index}.parent: "
+                    f"unknown achievement id '{achievement.parent}'"
+                )
+        criteria = achievement.criteria
+        if getattr(criteria, "type", None) == "counter":
+            counter = getattr(criteria, "counter", "")
+            if counter in _KNOWN_COUNTERS:
+                pass
+            elif isinstance(counter, str) and counter.startswith("mined:"):
+                ore_id = counter[len("mined:") :]
+                if ore_id not in ores:
+                    raise ContentError(
+                        f"achievements.json: $.{ach_index}.criteria.counter: "
+                        f"unknown ore id '{ore_id}'"
+                    )
+            else:
+                raise ContentError(
+                    f"achievements.json: $.{ach_index}.criteria.counter: "
+                    f"unknown counter '{counter}'"
+                )
+        for reward_index, reward in enumerate(achievement.rewards):
+            reward_type = getattr(reward, "type", "")
+            if reward_type == "money":
+                if getattr(reward, "amount", None) is None:
+                    raise ContentError(
+                        f"achievements.json: $.{ach_index}.rewards.{reward_index}.amount: "
+                        "money reward requires an amount"
+                    )
+                continue
+            reward_id = getattr(reward, "id", None)
+            if not reward_id:
+                raise ContentError(
+                    f"achievements.json: $.{ach_index}.rewards.{reward_index}.id: "
+                    f"reward of type '{reward_type}' requires an id"
+                )
+            targets: dict[str, Any] = {
+                "unlock_function": functions,
+                "unlock_ore": ores,
+                "unlock_upgrade": upgrades,
+                "unlock_module": modules,
+            }
+            target = targets.get(reward_type)
+            if target is not None and reward_id not in target:
+                kind_names = {
+                    "unlock_function": "function",
+                    "unlock_ore": "ore",
+                    "unlock_upgrade": "upgrade",
+                    "unlock_module": "module",
+                }
+                raise ContentError(
+                    f"achievements.json: $.{ach_index}.rewards.{reward_index}.id: "
+                    f"unknown {kind_names[reward_type]} id '{reward_id}'"
+                )
+
+    def _check_unlocked_by(entries: dict[str, Any], filename: str, key_attr: str) -> None:
+        for index, entry in enumerate(entries.values()):
+            unlocked_by = getattr(entry, "unlocked_by", None)
+            if unlocked_by is not None and unlocked_by not in achievements:
+                entry_id = getattr(entry, key_attr, "")
+                raise ContentError(
+                    f"{filename}: $.{index}.unlocked_by: "
+                    f"unknown achievement id '{unlocked_by}' for '{entry_id}'"
+                )
+
+    _check_unlocked_by(ores, "ores.json", "id")
+    _check_unlocked_by(upgrades, "upgrades.json", "id")
+    _check_unlocked_by(functions, "functions.json", "name")
+    _check_unlocked_by(modules, "modules.json", "name")
 
 
 def load_content(content_dir: str | Path | None = None) -> Content:
@@ -275,14 +402,30 @@ def load_content(content_dir: str | Path | None = None) -> Content:
     )
     modules = _load_named_specs(base_path, "modules.json", "modules", TypeAdapter(list[ModuleSpec]))
 
-    _cross_validate(ores, biomes)
+    achievements: dict[str, Achievement] = {}
+    try:
+        achievements_data = _read_json(base_path, "achievements.json")
+    except ContentError as exc:
+        if "file not found" not in str(exc):
+            raise
+    else:
+        if isinstance(achievements_data, dict):
+            achievements_data = achievements_data.get("achievements", achievements_data)
+        achievements_list = _validate(
+            achievements_data, TypeAdapter(list[Achievement]), "achievements.json"
+        )
+        achievements = _index_by_id(achievements_list, "achievements.json", "achievement")
+
+    _cross_validate(ores, biomes, achievements, upgrades, functions, modules)
     logger.debug(
-        "Loaded content: %d ores, %d biomes, %d upgrades, %d functions, %d modules",
+        "Loaded content: %d ores, %d biomes, %d upgrades, %d functions, %d modules, "
+        "%d achievements",
         len(ores),
         len(biomes),
         len(upgrades),
         len(functions),
         len(modules),
+        len(achievements),
     )
     return Content(
         config=config,
@@ -291,6 +434,7 @@ def load_content(content_dir: str | Path | None = None) -> Content:
         upgrades=upgrades,
         functions=functions,
         modules=modules,
+        achievements=achievements,
     )
 
 

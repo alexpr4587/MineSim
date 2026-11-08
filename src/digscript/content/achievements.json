@@ -1,1 +1,152 @@
-[]
+[
+  {
+    "id": "hello_miner",
+    "tab": "code",
+    "parent": null,
+    "title": "Hello, Miner",
+    "description": "Run a script to completion.",
+    "criteria": {"type": "counter", "counter": "scripts_finished", "target": 1},
+    "rewards": [{"type": "unlock_function", "id": "inventory"}]
+  },
+  {
+    "id": "wanderer",
+    "tab": "code",
+    "parent": "hello_miner",
+    "title": "Wanderer",
+    "description": "Move 200 tiles.",
+    "criteria": {"type": "counter", "counter": "tiles_moved", "target": 200},
+    "rewards": [{"type": "unlock_module", "id": "random"}]
+  },
+  {
+    "id": "scout",
+    "tab": "code",
+    "parent": "wanderer",
+    "title": "Scout",
+    "description": "Make 50 mining attempts.",
+    "criteria": {"type": "counter", "counter": "attempts:any", "target": 50},
+    "rewards": [{"type": "unlock_function", "id": "scan"}]
+  },
+  {
+    "id": "data_driven",
+    "tab": "code",
+    "parent": "scout",
+    "title": "Data Driven",
+    "description": "Make 200 mining attempts.",
+    "criteria": {"type": "counter", "counter": "attempts:any", "target": 200},
+    "rewards": [
+      {"type": "unlock_function", "id": "stats"},
+      {"type": "unlock_module", "id": "statistics"}
+    ]
+  },
+  {
+    "id": "custom_function",
+    "tab": "code",
+    "parent": "hello_miner",
+    "title": "Your Own Function",
+    "description": "Write a script that defines a function.",
+    "criteria": {"type": "script_defines_function"},
+    "rewards": [
+      {"type": "unlock_module", "id": "collections"},
+      {"type": "unlock_module", "id": "heapq"}
+    ]
+  },
+  {
+    "id": "first_dig",
+    "tab": "mining",
+    "parent": null,
+    "title": "First Dig",
+    "description": "Mine your first ore.",
+    "criteria": {"type": "counter", "counter": "mined:any", "target": 1},
+    "rewards": [
+      {"type": "unlock_ore", "id": "coal"},
+      {"type": "unlock_function", "id": "sell"}
+    ]
+  },
+  {
+    "id": "coal_miner",
+    "tab": "mining",
+    "parent": "first_dig",
+    "title": "Coal Miner",
+    "description": "Mine 20 coal.",
+    "criteria": {"type": "counter", "counter": "mined:coal", "target": 20},
+    "rewards": [{"type": "unlock_ore", "id": "copper"}]
+  },
+  {
+    "id": "copper_age",
+    "tab": "mining",
+    "parent": "coal_miner",
+    "title": "Copper Age",
+    "description": "Mine 20 copper.",
+    "criteria": {"type": "counter", "counter": "mined:copper", "target": 20},
+    "rewards": [{"type": "unlock_ore", "id": "iron"}]
+  },
+  {
+    "id": "iron_will",
+    "tab": "mining",
+    "parent": "copper_age",
+    "title": "Iron Will",
+    "description": "Mine 20 iron.",
+    "criteria": {"type": "counter", "counter": "mined:iron", "target": 20},
+    "rewards": [{"type": "unlock_ore", "id": "silver"}]
+  },
+  {
+    "id": "silver_lining",
+    "tab": "mining",
+    "parent": "iron_will",
+    "title": "Silver Lining",
+    "description": "Mine 20 silver.",
+    "criteria": {"type": "counter", "counter": "mined:silver", "target": 20},
+    "rewards": [{"type": "unlock_ore", "id": "gold"}]
+  },
+  {
+    "id": "gold_rush",
+    "tab": "mining",
+    "parent": "silver_lining",
+    "title": "Gold Rush",
+    "description": "Mine 10 gold.",
+    "criteria": {"type": "counter", "counter": "mined:gold", "target": 10},
+    "rewards": [{"type": "unlock_ore", "id": "ruby"}]
+  },
+  {
+    "id": "first_sale",
+    "tab": "business",
+    "parent": null,
+    "title": "First Sale",
+    "description": "Sell ore for money.",
+    "criteria": {"type": "counter", "counter": "sales", "target": 1},
+    "rewards": [
+      {"type": "unlock_function", "id": "buy_upgrade"},
+      {"type": "unlock_upgrade", "id": "backpack"}
+    ]
+  },
+  {
+    "id": "pocket_change",
+    "tab": "business",
+    "parent": "first_sale",
+    "title": "Pocket Change",
+    "description": "Earn 100 money from selling ore.",
+    "criteria": {"type": "counter", "counter": "money_earned", "target": 100},
+    "rewards": [{"type": "unlock_upgrade", "id": "pickaxe"}]
+  },
+  {
+    "id": "investor",
+    "tab": "business",
+    "parent": "pocket_change",
+    "title": "Investor",
+    "description": "Earn 1000 money from selling ore.",
+    "criteria": {"type": "counter", "counter": "money_earned", "target": 1000},
+    "rewards": [
+      {"type": "unlock_upgrade", "id": "motor"},
+      {"type": "unlock_upgrade", "id": "scanner"}
+    ]
+  },
+  {
+    "id": "tycoon",
+    "tab": "business",
+    "parent": "investor",
+    "title": "Tycoon",
+    "description": "Earn 10000 money from selling ore.",
+    "criteria": {"type": "counter", "counter": "money_earned", "target": 10000},
+    "rewards": [{"type": "money", "amount": 500}]
+  }
+]
