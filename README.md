@@ -1,4 +1,4 @@
-# DigScript
+# MineSim
 
 DigScript is an open-source 2D top-down programming game. You write real Python
 in an in-game floating editor to control a mining robot on an infinite,
