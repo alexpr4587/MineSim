@@ -90,7 +90,7 @@ def test_config_and_upgrades(content):
     assert config.start_capacity == 10
     assert config.start_tool_power == 1
     assert config.start_tool_tier == 0
-    assert config.start_scan_radius == 0
+    assert config.start_scan_radius == 2
     assert config.free_calls_before_forced_tick == 200
     assert config.script_idle_timeout_s == 5
     assert config.console_max_lines == 500
@@ -380,7 +380,7 @@ def test_upgrades_apply_and_respect_cost_and_max_level(content):
     assert miner.move_ticks == 1
     # Scanner.
     assert _submit(engine, BuyUpgrade("scanner"))["ok"]
-    assert miner.scan_radius == 1
+    assert miner.scan_radius == 3
 
 
 def test_buy_upgrade_after_sell_fifo(content):

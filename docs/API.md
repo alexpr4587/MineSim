@@ -84,7 +84,7 @@ Functions are called directly, e.g. `move(East)`, `mine()`, `sell()`. Locked fun
 
 **Category:** mining
 
-**Description:** Scan for ore within radius tiles. Returns a list of (dx, dy, ore_id) for non-empty tiles.
+**Description:** Scan for ore within radius tiles. Returns a list of (dx, dy, ore_id) for non-empty tiles. The default scan radius (without upgrades) is 2.
 
 **Unlocked by:** unlocks with the **Scout** achievement
 
