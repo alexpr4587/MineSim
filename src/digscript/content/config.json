@@ -14,5 +14,13 @@
   "start_scan_radius": 2,
   "free_calls_before_forced_tick": 200,
   "script_idle_timeout_s": 5,
-  "console_max_lines": 500
+  "console_max_lines": 500,
+  "art_px_per_tile": 4,
+  "sun_dir": [-0.6, -0.7, 0.45],
+  "light_bands": 4,
+  "ambient": 0.35,
+  "height_scale": 2.0,
+  "pit_depth": 0.8,
+  "ore_bump_per_hardness": 0.12,
+  "terrain_noise_scale": 12
 }

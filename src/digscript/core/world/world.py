@@ -221,15 +221,16 @@ class World:
 
     def tile_at(self, x: int, y: int, tick: int = 0) -> Tile:
         """Return the tile at ``(x, y)`` as of ``tick``."""
-        biome_id = self.generator.biome_id_at(x, y)
         if self.generator.is_base(x, y):
+            biome_id = self.generator.biome_id_at(x, y)
             return Tile(ore_id=None, biome_id=biome_id, is_base=True, depleted=False)
+        biome = self.generator.biome_at(x, y)
         self._advance_tile_if_due(x, y, tick)
         epoch, regen_at = self.delta.get((x, y), (0, None))
         if regen_at is not None:
-            return Tile(ore_id=None, biome_id=biome_id, is_base=False, depleted=True)
-        ore_id = self.generator.ore_at(x, y, epoch=epoch)
-        return Tile(ore_id=ore_id, biome_id=biome_id, is_base=False, depleted=False)
+            return Tile(ore_id=None, biome_id=biome.id, is_base=False, depleted=True)
+        ore_id = self.generator.ore_at(x, y, epoch=epoch, biome=biome)
+        return Tile(ore_id=ore_id, biome_id=biome.id, is_base=False, depleted=False)
 
     def mine_tile(self, x: int, y: int, tick: int = 0) -> str | None:
         """Mark the tile at ``(x, y)`` depleted until it regenerates.

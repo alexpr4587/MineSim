@@ -41,13 +41,23 @@ class WorldGenerator:
         """Return the biome id of the tile at ``(x, y)``."""
         return self._biomes.biome_id_at(x, y)
 
-    def ore_at(self, x: int, y: int, epoch: int = 0) -> str | None:
+    def ore_at(
+        self,
+        x: int,
+        y: int,
+        epoch: int = 0,
+        *,
+        biome: Biome | None = None,
+    ) -> str | None:
         """Return the ore id generated at ``(x, y)`` for ``epoch``.
 
         Returns ``None`` for base tiles. The ore is picked from the
         biome's ``ore_weights`` with ``mix64(seed, x, y, epoch)``.
+        Callers that already resolved the biome may pass it in to
+        avoid a second lookup.
         """
         if self.is_base(x, y):
             return None
-        biome = self.biome_at(x, y)
+        if biome is None:
+            biome = self.biome_at(x, y)
         return weighted_choice(mix64(self.seed, x, y, epoch), biome.ore_weights)

@@ -1,12 +1,14 @@
-"""Screenshot the real main window offscreen to artifacts/ui_main.png.
+"""Screenshot the real main window offscreen.
 
 Builds the real :class:`~digscript.ui.main_window.MainWindow`, runs N
 ticks with a hard-coded command sequence submitted straight to the
 engine, shows the editor panel over the world (with the console below
-it), grabs the window and saves a PNG.
+it), grabs the window and saves a PNG. By default the lit terrain
+renderer is used and the image is saved to ``artifacts/ui_lit.png``;
+``--flat`` disables lighting and saves ``artifacts/ui_flat.png``.
 
-Flags: ``--ticks`` (default 300) and ``--size`` (``WIDTHxHEIGHT``,
-default 1024x768).
+Flags: ``--ticks`` (default 300), ``--size`` (``WIDTHxHEIGHT``,
+default 1024x768), ``--flat`` and ``--output``.
 """
 
 from __future__ import annotations
@@ -64,12 +66,17 @@ def parse_size(value: str) -> tuple[int, int]:
     return (int(parts[0]), int(parts[1]))
 
 
-def build_window(ticks: int = 300, size: tuple[int, int] = (1024, 768)) -> MainWindow:
+def build_window(
+    ticks: int = 300,
+    size: tuple[int, int] = (1024, 768),
+    flat: bool = False,
+) -> MainWindow:
     """Build the real main window and run ``ticks`` engine ticks."""
     app = QApplication.instance() or QApplication([])
     apply_theme(app)
     game = Game.new()
     window = MainWindow(game)
+    window.world_view.set_terrain_lighting(not flat, persist=False)
     window.resize(size[0], size[1])
     window.show()
     for command in COMMAND_SEQUENCE:
@@ -119,14 +126,35 @@ def build_window(ticks: int = 300, size: tuple[int, int] = (1024, 768)) -> MainW
 
 
 def main() -> int:
-    """Parse flags, screenshot the window and save artifacts/ui_main.png."""
+    """Parse flags, screenshot the window and save the PNG."""
     parser = argparse.ArgumentParser(prog="screenshot.py")
     parser.add_argument("--ticks", type=int, default=300)
     parser.add_argument("--size", type=parse_size, default=(1024, 768))
+    parser.add_argument(
+        "--flat",
+        action="store_true",
+        help="disable terrain lighting and save artifacts/ui_flat.png",
+    )
     parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args()
-    window = build_window(ticks=args.ticks, size=args.size)
-    out = args.output or (Path(__file__).resolve().parents[1] / "artifacts" / "ui_main.png")
+    window = build_window(ticks=args.ticks, size=args.size, flat=args.flat)
+    for panel_name in ("achievements_panel", "editor_panel", "api_panel"):
+        panel = getattr(window, panel_name, None)
+        if panel is not None:
+            try:
+                panel.hide_panel()
+            except Exception:
+                panel.hide()
+    toast_manager = getattr(window, "toast_manager", None)
+    current_toast = getattr(toast_manager, "_current", None)
+    if current_toast is not None:
+        current_toast.hide()
+    window.world_view.setFocus()
+    app = QApplication.instance()
+    if app is not None:
+        app.processEvents()
+    default_name = "ui_flat.png" if args.flat else "ui_lit.png"
+    out = args.output or (Path(__file__).resolve().parents[1] / "artifacts" / default_name)
     out.parent.mkdir(parents=True, exist_ok=True)
     window.grab().save(str(out))
     window.close()

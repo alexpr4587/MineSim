@@ -41,6 +41,23 @@ class Config(_ContentModel):
     free_calls_before_forced_tick: int = Field(default=200, ge=0)
     script_idle_timeout_s: float = Field(default=5, ge=0)
     console_max_lines: int = Field(default=500, ge=0)
+    art_px_per_tile: int = Field(default=4, ge=1, le=32)
+    sun_dir: list[float] = Field(default_factory=lambda: [-0.6, -0.7, 0.45])
+    light_bands: int = Field(default=4, ge=1)
+    ambient: float = Field(default=0.35, ge=0.0, le=1.0)
+    height_scale: float = Field(default=2.0, ge=0.0)
+    pit_depth: float = Field(default=0.8, ge=0.0)
+    ore_bump_per_hardness: float = Field(default=0.12, ge=0.0)
+    terrain_noise_scale: float = Field(default=12.0, gt=0.0)
+
+    @field_validator("sun_dir")
+    @classmethod
+    def _check_sun_dir(cls, value: list[float]) -> list[float]:
+        if len(value) != 3:
+            raise ValueError("sun_dir must have exactly three components")
+        if all(component == 0 for component in value):
+            raise ValueError("sun_dir must not be the zero vector")
+        return [float(component) for component in value]
 
 
 class Ore(_ContentModel):
@@ -65,6 +82,8 @@ class Biome(_ContentModel):
     min_distance: int = Field(ge=0)
     weight: float = Field(gt=0)
     floor_color: str = Field(min_length=1)
+    relief: float = Field(default=1.0, ge=0.0)
+    shadow_color: str = ""
     ore_weights: dict[str, float]
 
     @field_validator("ore_weights")

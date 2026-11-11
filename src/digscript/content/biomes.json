@@ -9,7 +9,9 @@
       "stone": 70,
       "coal": 20,
       "copper": 10
-    }
+    },
+    "relief": 0.6,
+    "shadow_color": "#2b2a38"
   },
   {
     "id": "deep_vein",
@@ -23,7 +25,9 @@
       "copper": 20,
       "iron": 20,
       "silver": 5
-    }
+    },
+    "relief": 1.0,
+    "shadow_color": "#232033"
   },
   {
     "id": "crystal_caverns",
@@ -37,6 +41,8 @@
       "silver": 20,
       "gold": 15,
       "ruby": 10
-    }
+    },
+    "relief": 1.4,
+    "shadow_color": "#1c1530"
   }
 ]

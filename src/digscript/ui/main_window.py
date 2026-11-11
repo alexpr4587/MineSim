@@ -40,6 +40,7 @@ _SINGLE_KEYS = {
     Qt.Key.Key_U,
     Qt.Key.Key_C,
     Qt.Key.Key_G,
+    Qt.Key.Key_H,
     Qt.Key.Key_Space,
     Qt.Key.Key_1,
     Qt.Key.Key_2,
@@ -311,6 +312,21 @@ class MainWindow(QMainWindow):
             pass
         self._sync_view_actions()
 
+    def _on_terrain_lighting_toggled(self, checked: bool) -> None:
+        self.world_view.set_terrain_lighting(checked)
+
+    def _sync_terrain_action(self, enabled: bool) -> None:
+        action = getattr(self, "_terrain_action", None)
+        if action is None:
+            return
+        action.blockSignals(True)
+        action.setChecked(bool(enabled))
+        action.blockSignals(False)
+
+    def toggle_terrain_lighting(self) -> None:
+        """Toggle the lit 2.5D terrain renderer (H in the world view)."""
+        self.world_view.toggle_terrain_lighting()
+
     # -- menu bar (F10) -------------------------------------------------------
 
     def _build_menu_bar(self) -> None:
@@ -359,6 +375,13 @@ class MainWindow(QMainWindow):
         self._upgrades_action.triggered.connect(
             lambda checked=False: self._on_view_action(self.upgrades_panel, checked)
         )
+        view_menu.addSeparator()
+        self._terrain_action = view_menu.addAction("Terrain &lighting")
+        self._terrain_action.setCheckable(True)
+        self._terrain_action.setChecked(bool(self.world_view.terrain_lighting))
+        self._terrain_action.setToolTip("Toggle lit 2.5D terrain (H when world focused)")
+        self._terrain_action.toggled.connect(self._on_terrain_lighting_toggled)
+        self.world_view.terrain_lighting_changed.connect(self._sync_terrain_action)
         menu_bar.addMenu(view_menu)
         self._view_menu = view_menu
         self.setMenuBar(menu_bar)
@@ -577,7 +600,7 @@ class MainWindow(QMainWindow):
         if self.game_loop.handle_key(key):
             event.accept()
             return
-        if key in (Qt.Key.Key_C, Qt.Key.Key_G):
+        if key in (Qt.Key.Key_C, Qt.Key.Key_G, Qt.Key.Key_H):
             self.world_view.keyPressEvent(event)
             return
         super().keyPressEvent(event)

@@ -97,6 +97,7 @@ def test_only_changed_chunks_rebuilt_after_mine(qapp, content) -> None:
     game._world = world
     game._engine.world = world
     view = WorldView(game)
+    view.set_terrain_lighting(False, persist=False)
     view.resize(800, 600)
     view.show()
     qapp.processEvents()

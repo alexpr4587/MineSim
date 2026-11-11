@@ -1,17 +1,20 @@
 """World view: QPainter rendering of the infinite tile world.
 
-Tiles are rendered from a per-chunk :class:`QPixmap` cache keyed by
-``(cx, cy, chunk_version, tile_px)`` (LRU, about 200 chunks). Only
-chunks whose version changed are rebuilt. The miner is drawn as a
-simple vector robot with smooth visual interpolation between tiles.
+Tiles are rendered from a per-chunk :class:`QPixmap` cache (LRU,
+about 200 chunks). With terrain lighting enabled the key includes the
+chunk versions of the chunk and its eight neighbours, because normals
+depend on neighbouring heights. With lighting disabled the flat
+renderer only keys on the chunk's own version. The miner is drawn as
+a simple vector robot with smooth visual interpolation between tiles.
 """
 
 from __future__ import annotations
 
+import math
 from collections import OrderedDict
 from typing import Any
 
-from PySide6.QtCore import QPointF, Qt, QTimer
+from PySide6.QtCore import QPointF, Qt, QTimer, Signal
 from PySide6.QtGui import (
     QColor,
     QFont,
@@ -24,6 +27,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QPushButton, QWidget
 
+from digscript.ui.terrain_shader import render_chunk
 from digscript.ui.theme import (
     BACKGROUND,
     BASE_BORDER,
@@ -41,6 +45,7 @@ MIN_TILE_PX = 12
 MAX_TILE_PX = 64
 DEFAULT_TILE_PX = 24
 CACHE_SIZE = 200
+TERRAIN_LIGHTING_SETTING = "world/terrain_lighting"
 
 
 def _get(obj: Any, name: str, default: Any = None) -> Any:
@@ -128,6 +133,8 @@ def _resolve(*args: Any, **kwargs: Any) -> dict[str, Any]:
 class WorldView(QWidget):
     """Draws the tiles around a camera center with QPainter only."""
 
+    terrain_lighting_changed = Signal(bool)
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         tile_px_arg = kwargs.pop("tile_px", None)
         resolved = _resolve(*args, **kwargs)
@@ -142,7 +149,8 @@ class WorldView(QWidget):
         self.tile_px = max(MIN_TILE_PX, min(MAX_TILE_PX, int(self.tile_px)))
         self.follow_miner: bool = True
         self.show_grid: bool = False
-        self._pixmap_cache: OrderedDict[tuple[int, int, int, int], QPixmap] = OrderedDict()
+        self.terrain_lighting: bool = self._load_terrain_lighting()
+        self._pixmap_cache: OrderedDict[tuple[Any, ...], QPixmap] = OrderedDict()
         self.pixmap_cache = self._pixmap_cache
         self.cache_size: int = CACHE_SIZE
         self.chunks_built: int = 0
@@ -193,6 +201,15 @@ class WorldView(QWidget):
     def grid_visible(self, value: bool) -> None:
         self.show_grid = bool(value)
         self.update()
+
+    @property
+    def lighting_enabled(self) -> bool:
+        """Whether the lit 2.5D terrain renderer is active."""
+        return self.terrain_lighting
+
+    @lighting_enabled.setter
+    def lighting_enabled(self, value: bool) -> None:
+        self.set_terrain_lighting(value)
 
     @property
     def camera(self) -> tuple[float, float]:
@@ -268,6 +285,44 @@ class WorldView(QWidget):
         if biome is not None:
             return QColor(str(biome.floor_color))
         return QColor(BACKGROUND)
+
+    def _load_terrain_lighting(self) -> bool:
+        """Read the persisted terrain-lighting setting (default on)."""
+        try:
+            from digscript.ui.floating_panel import ensure_settings_names
+
+            value = ensure_settings_names().value(TERRAIN_LIGHTING_SETTING, True)
+        except Exception:
+            return True
+        if isinstance(value, str):
+            return value.strip().lower() not in ("false", "0", "no", "off")
+        return bool(value)
+
+    def set_terrain_lighting(self, enabled: bool, *, persist: bool = True) -> None:
+        """Enable or disable the lit terrain renderer."""
+        enabled = bool(enabled)
+        changed = enabled != self.terrain_lighting
+        self.terrain_lighting = enabled
+        if persist:
+            try:
+                from digscript.ui.floating_panel import ensure_settings_names
+
+                settings = ensure_settings_names()
+                settings.setValue(TERRAIN_LIGHTING_SETTING, enabled)
+                settings.sync()
+            except Exception:
+                pass
+        if changed:
+            self.clear_cache()
+            try:
+                self.terrain_lighting_changed.emit(enabled)
+            except Exception:
+                pass
+            self.update()
+
+    def toggle_terrain_lighting(self) -> None:
+        """Toggle lit terrain (H when the world view has focus)."""
+        self.set_terrain_lighting(not self.terrain_lighting)
 
     # -- camera / zoom / grid ----------------------------------------------------
 
@@ -377,13 +432,26 @@ class WorldView(QWidget):
             return int(getter(cx, cy))
         return 0
 
+    def _version_signature(self, cx: int, cy: int) -> tuple[int, ...]:
+        """Return the cache version signature for chunk ``(cx, cy)``.
+
+        Lit terrain derives normals from the neighbouring heights, so
+        the signature includes the versions of all eight neighbours.
+        """
+        if not self.terrain_lighting:
+            return (self._chunk_version(cx, cy),)
+        return tuple(
+            self._chunk_version(cx + dx, cy + dy) for dy in (-1, 0, 1) for dx in (-1, 0, 1)
+        )
+
     def clear_cache(self) -> None:
         """Drop all cached chunk pixmaps."""
         self._pixmap_cache.clear()
 
     def get_chunk_pixmap(self, cx: int, cy: int) -> QPixmap:
         """Return the cached pixmap for chunk ``(cx, cy)``, building if needed."""
-        key = (cx, cy, self._chunk_version(cx, cy), self.tile_px)
+        version = self._version_signature(cx, cy)
+        key = (cx, cy, version, self.tile_px, self.terrain_lighting)
         cached = self._pixmap_cache.get(key)
         if cached is not None:
             self._pixmap_cache.move_to_end(key)
@@ -395,8 +463,86 @@ class WorldView(QWidget):
             self._pixmap_cache.popitem(last=False)
         return pixmap
 
+    def _chunk_rows(self, cx: int, cy: int, tick: int) -> Any:
+        chunk_tiles = _get(self.world, "chunk_tiles")
+        if callable(chunk_tiles):
+            try:
+                return chunk_tiles(cx, cy, tick)
+            except TypeError:
+                return chunk_tiles(cx, cy)
+        return None
+
+    def _tile_at(self, rows: Any, cx: int, cy: int, dx: int, dy: int, tick: int) -> Any:
+        if rows is not None:
+            return rows[dy][dx]
+        size = self._chunk_size()
+        return self.world.tile_at(cx * size + dx, cy * size + dy, tick)
+
+    def _draw_locked_marks(self, painter: QPainter, rows: Any, cx: int, cy: int, tick: int) -> None:
+        size = self._chunk_size()
+        tile_px = self.tile_px
+        if tile_px < 14:
+            return
+        painter.setPen(QColor(LOCKED_MARK))
+        font = QFont(FONT_FAMILY)
+        font.setBold(True)
+        font.setPointSize(max(8, tile_px // 2))
+        painter.setFont(font)
+        for dy in range(size):
+            for dx in range(size):
+                tile = self._tile_at(rows, cx, cy, dx, dy, tick)
+                if tile.ore_id is None or not self._is_locked(tile.ore_id):
+                    continue
+                painter.drawText(
+                    dx * tile_px,
+                    dy * tile_px,
+                    tile_px,
+                    tile_px,
+                    Qt.AlignmentFlag.AlignCenter,
+                    "?",
+                )
+
+    def _build_lit_chunk_pixmap(self, cx: int, cy: int) -> QPixmap:
+        """Render one chunk with the lit terrain shader."""
+        size = self._chunk_size()
+        tile_px = self.tile_px
+        tick = self._tick()
+        image = render_chunk(
+            self.world,
+            cx,
+            cy,
+            tick,
+            content=self.content,
+            is_locked=self._is_locked,
+        )
+        pixmap = QPixmap.fromImage(image).scaled(
+            size * tile_px,
+            size * tile_px,
+            Qt.AspectRatioMode.IgnoreAspectRatio,
+            Qt.TransformationMode.FastTransformation,
+        )
+        rows = self._chunk_rows(cx, cy, tick)
+        painter = QPainter(pixmap)
+        try:
+            self._draw_locked_marks(painter, rows, cx, cy, tick)
+        finally:
+            painter.end()
+        return pixmap
+
     def _build_chunk_pixmap(self, cx: int, cy: int) -> QPixmap:
         """Render one chunk into a new pixmap and count the rebuild."""
+        if self.terrain_lighting and self.world is not None:
+            pixmap = self._build_lit_chunk_pixmap(cx, cy)
+            self.chunks_built += 1
+            self.rebuild_count += 1
+            return pixmap
+        pixmap = self._build_flat_chunk_pixmap(cx, cy)
+        self.chunks_built += 1
+        self.rebuild_count += 1
+        return pixmap
+
+    def _build_flat_chunk_pixmap(self, cx: int, cy: int) -> QPixmap:
+        """Render one chunk with the original flat tile renderer."""
         size = self._chunk_size()
         tile_px = self.tile_px
         pixmap = QPixmap(size * tile_px, size * tile_px)
@@ -446,8 +592,6 @@ class WorldView(QWidget):
                         )
         finally:
             painter.end()
-        self.chunks_built += 1
-        self.rebuild_count += 1
         return pixmap
 
     def build_chunk_pixmap(self, cx: int, cy: int) -> QPixmap:
@@ -495,6 +639,32 @@ class WorldView(QWidget):
         painter.setFont(font)
         painter.drawText(int(x0) + 4, int(y0) + max(12, self.tile_px), "BASE")
 
+    def _draw_miner_shadow(self, painter: QPainter, sx: float, sy: float, radius: float) -> None:
+        """Draw a soft drop shadow offset away from the configured sun."""
+        config = _get(self.content, "config")
+        sun = _get(config, "sun_dir", (-0.6, -0.7, 0.45))
+        try:
+            sun_x, sun_y = float(sun[0]), float(sun[1])
+        except (TypeError, ValueError, IndexError):
+            sun_x, sun_y = -0.6, -0.7
+        length = math.hypot(sun_x, sun_y)
+        if length <= 0.0:
+            sun_x, sun_y, length = -0.6, -0.7, math.hypot(-0.6, -0.7)
+        offset = self.tile_px * 0.22
+        offset_x = -sun_x / length * offset
+        offset_y = -sun_y / length * offset
+        painter.setPen(Qt.PenStyle.NoPen)
+        for index, alpha in enumerate((42, 26, 14)):
+            width = radius * (1.05 + 0.28 * index)
+            height = width * 0.58
+            painter.setBrush(QColor(0, 0, 0, alpha))
+            painter.drawEllipse(
+                int(sx + offset_x - width),
+                int(sy + offset_y - height),
+                int(width * 2),
+                int(height * 2),
+            )
+
     def _draw_miner(self, painter: QPainter) -> None:
         if self.miner is None:
             return
@@ -505,6 +675,7 @@ class WorldView(QWidget):
         dy = float(_get(facing, "dy", -1) if _get(facing, "dy") is not None else -1)
         if dx == 0 and dy == 0:
             dx, dy = 0.0, -1.0
+        self._draw_miner_shadow(painter, sx, sy, radius)
         painter.setPen(QPen(QColor(MINER_DETAIL), 2))
         painter.setBrush(QColor(MINER_BODY))
         painter.drawEllipse(int(sx - radius), int(sy - radius), int(radius * 2), int(radius * 2))
@@ -595,13 +766,16 @@ class WorldView(QWidget):
             super().mouseReleaseEvent(event)
 
     def keyPressEvent(self, event: Any) -> None:  # noqa: N802 - Qt override name
-        """C recenters on the miner; G toggles the grid; other hotkeys go to MainWindow."""
+        """C recenters, G toggles the grid, H toggles lighting; others go to MainWindow."""
         key = event.key()
         if key == Qt.Key.Key_C:
             self.recenter()
             event.accept()
         elif key == Qt.Key.Key_G:
             self.toggle_grid()
+            event.accept()
+        elif key == Qt.Key.Key_H:
+            self.toggle_terrain_lighting()
             event.accept()
         else:
             window = self.window()
