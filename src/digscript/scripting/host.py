@@ -26,15 +26,21 @@ from pathlib import Path
 from typing import Any
 
 from digscript.core.commands import (
+    Biome,
     BuyUpgrade,
+    Distance,
+    Inspect,
     Inventory,
     Mine,
     Move,
+    OreInfo,
     Peek,
     Position,
     Scan,
     Sell,
     Stats,
+    SubmitEstimate,
+    Tick,
     Wait,
 )
 from digscript.core.direction import Direction
@@ -248,6 +254,55 @@ _DEFAULT_FUNCTIONS: tuple[dict[str, Any], ...] = (
         "category": "business",
         "unlocked_by": "first_sale",
     },
+    {
+        "name": "wait",
+        "signature": "wait(ticks)",
+        "doc": "Wait for ticks.",
+        "category": "timing",
+        "unlocked_by": None,
+    },
+    {
+        "name": "tick",
+        "signature": "tick()",
+        "doc": "Return the current game tick.",
+        "category": "timing",
+        "unlocked_by": None,
+    },
+    {
+        "name": "distance",
+        "signature": "distance()",
+        "doc": "Return the distance from the base.",
+        "category": "movement",
+        "unlocked_by": None,
+    },
+    {
+        "name": "biome",
+        "signature": "biome()",
+        "doc": "Return the current biome id.",
+        "category": "world",
+        "unlocked_by": None,
+    },
+    {
+        "name": "ore_info",
+        "signature": "ore_info(ore_id)",
+        "doc": "Return public ore information.",
+        "category": "mining",
+        "unlocked_by": None,
+    },
+    {
+        "name": "inspect",
+        "signature": "inspect()",
+        "doc": "Describe the current tile.",
+        "category": "mining",
+        "unlocked_by": None,
+    },
+    {
+        "name": "submit_estimate",
+        "signature": "submit_estimate(ore_id, p)",
+        "doc": "Submit a mining probability estimate.",
+        "category": "data",
+        "unlocked_by": None,
+    },
 )
 
 _DEFAULT_MODULES: tuple[dict[str, Any], ...] = (
@@ -275,7 +330,7 @@ def _spec_entries(
             entries.append(dict(item))
         elif hasattr(item, "name"):
             entry: dict[str, Any] = {"name": item.name}
-            for key in ("signature", "doc", "category", "unlocked_by"):
+            for key in ("signature", "doc", "category", "unlocked_by", "cost", "example"):
                 if hasattr(item, key):
                     entry[key] = getattr(item, key)
             entries.append(entry)
@@ -707,6 +762,43 @@ class ScriptHost:
             if upgrade_id is None:
                 raise TypeError("buy_upgrade() missing required argument 'upgrade_id'")
             return BuyUpgrade(str(upgrade_id))
+        if name == "wait":
+            ticks = args[0] if args else kwargs.get("ticks")
+            if ticks is None:
+                raise TypeError("wait() missing required argument 'ticks'")
+            ticks_int = int(ticks)
+            if ticks_int < 1 or ticks_int > 600:
+                raise ValueError("wait() ticks must be between 1 and 600")
+            return Wait(ticks_int)
+        if name == "tick":
+            if args or kwargs:
+                raise TypeError("tick() takes no arguments")
+            return Tick()
+        if name == "distance":
+            if args or kwargs:
+                raise TypeError("distance() takes no arguments")
+            return Distance()
+        if name == "biome":
+            if args or kwargs:
+                raise TypeError("biome() takes no arguments")
+            return Biome()
+        if name == "ore_info":
+            ore_id = args[0] if args else (kwargs.get("ore_id") or kwargs.get("id"))
+            if ore_id is None:
+                raise TypeError("ore_info() missing required argument 'ore_id'")
+            return OreInfo(str(ore_id))
+        if name == "inspect":
+            if args or kwargs:
+                raise TypeError("inspect() takes no arguments")
+            return Inspect()
+        if name == "submit_estimate":
+            ore_id = args[0] if args else (kwargs.get("ore_id") or kwargs.get("id"))
+            p = args[1] if len(args) > 1 else kwargs.get("p")
+            if ore_id is None:
+                raise TypeError("submit_estimate() missing required argument 'ore_id'")
+            if p is None:
+                raise TypeError("submit_estimate() missing required argument 'p'")
+            return SubmitEstimate(str(ore_id), float(p))
         raise NameError(f"unknown function '{name}'")
 
     def _extract_result(self, name: str, result: Any) -> Any:
@@ -768,6 +860,29 @@ class ScriptHost:
             if upgrade_id and isinstance(upgrades, dict):
                 return int(upgrades.get(upgrade_id, 0) or 0)
             return int(result.get("level", 0) or 0)
+        if name == "wait":
+            return None
+        if name == "tick":
+            return int(result.get("tick", 0) or 0)
+        if name == "distance":
+            return int(result.get("distance", 0) or 0)
+        if name == "biome":
+            return result.get("biome")
+        if name == "ore_info":
+            return result.get("info")
+        if name == "inspect":
+            return result.get("inspect")
+        if name == "submit_estimate":
+            cleaned: dict[str, Any] = {"ok": bool(result.get("ok"))}
+            if result.get("reason"):
+                cleaned["reason"] = result["reason"]
+            if result.get("attempts") is not None:
+                cleaned["attempts"] = int(result["attempts"])
+            if result.get("submissions") is not None:
+                cleaned["submissions"] = int(result["submissions"])
+            if result.get("ok"):
+                cleaned["close"] = bool(result.get("close"))
+            return cleaned
         return result
 
     def _handle_api(self, message: dict[str, Any], out: list[HostEvent]) -> None:

@@ -1,0 +1,50 @@
+[
+  {
+    "id": "01_hello",
+    "title": "Hello, DigScript",
+    "file": "01_hello.py",
+    "unlocked_by": null
+  },
+  {
+    "id": "02_sweep_and_sell",
+    "title": "Sweep and Sell",
+    "file": "02_sweep_and_sell.py",
+    "unlocked_by": null
+  },
+  {
+    "id": "03_ore_hunter",
+    "title": "Ore Hunter",
+    "file": "03_ore_hunter.py",
+    "unlocked_by": null
+  },
+  {
+    "id": "04_explorer_spiral",
+    "title": "Explorer Spiral",
+    "file": "04_explorer_spiral.py",
+    "unlocked_by": null
+  },
+  {
+    "id": "05_probability_lab",
+    "title": "Probability Lab",
+    "file": "05_probability_lab.py",
+    "unlocked_by": null
+  },
+  {
+    "id": "06_farm_ruby",
+    "title": "Ruby Farm",
+    "file": "06_farm_ruby.py",
+    "unlocked_by": null
+  },
+  {
+    "id": "07_regen_cycle",
+    "title": "Regeneration Cycle",
+    "file": "07_regen_cycle.py",
+    "unlocked_by": null
+  },
+  {
+    "id": "08_dataclass_logbook",
+    "title": "Dataclass Logbook",
+    "file": "08_dataclass_logbook.py",
+    "unlocked_by": null
+  }
+]

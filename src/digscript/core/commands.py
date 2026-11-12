@@ -7,23 +7,47 @@ from dataclasses import dataclass
 from typing import Any
 
 from digscript.core.direction import Direction
-from digscript.core.events import MineAttempted, Moved, OreMined, Sold, UpgradeBought
+from digscript.core.events import (
+    EstimateSubmitted,
+    MineAttempted,
+    Moved,
+    OreMined,
+    Sold,
+    UpgradeBought,
+)
 from digscript.core.rng import mix64, unit
 
 __all__ = [
+    "Biome",
     "BuyUpgrade",
+    "Distance",
+    "Inspect",
     "Inventory",
     "Mine",
     "Move",
+    "OreInfo",
     "Peek",
     "Position",
     "Scan",
     "Sell",
     "Stats",
+    "SubmitEstimate",
+    "Tick",
     "Wait",
 ]
 
-_ZERO_COST_NAMES = {"Peek", "Position", "Inventory", "Stats"}
+_ZERO_COST_NAMES = {
+    "Biome",
+    "Distance",
+    "Inspect",
+    "Inventory",
+    "OreInfo",
+    "Peek",
+    "Position",
+    "Stats",
+    "SubmitEstimate",
+    "Tick",
+}
 
 
 def _get(obj: Any, name: str, default: Any = None) -> Any:
@@ -531,3 +555,170 @@ class Stats:
             "tiles_moved": hybrid["tiles_moved"],
             "sales": hybrid["sales"],
         }
+
+
+@dataclass(frozen=True, slots=True)
+class Tick:
+    """Return the current game tick."""
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        return 0
+
+    def execute(self, engine: Any) -> dict[str, Any]:
+        return {"ok": True, "tick": _tick(engine)}
+
+
+@dataclass(frozen=True, slots=True)
+class Distance:
+    """Return the Chebyshev distance from the base at ``(0, 0)``."""
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        return 0
+
+    def execute(self, engine: Any) -> dict[str, Any]:
+        miner = engine.miner
+        distance = max(abs(int(miner.x)), abs(int(miner.y)))
+        return {"ok": True, "distance": distance}
+
+
+@dataclass(frozen=True, slots=True)
+class Biome:
+    """Return the id of the biome under the miner."""
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        return 0
+
+    def execute(self, engine: Any) -> dict[str, Any]:
+        miner = engine.miner
+        tile = engine.world.tile_at(miner.x, miner.y, _tick(engine))
+        return {"ok": True, "biome": tile.biome_id}
+
+
+@dataclass(frozen=True, slots=True)
+class OreInfo:
+    """Return public information about ore ``ore_id`` (never its probability)."""
+
+    ore_id: str = ""
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        return 0
+
+    def execute(self, engine: Any) -> dict[str, Any]:
+        content = engine.content
+        try:
+            ore = _get_ore(content, self.ore_id)
+        except Exception:
+            return {"ok": True, "ore_id": self.ore_id, "info": None}
+        if not _is_unlocked(engine, content, self.ore_id):
+            return {"ok": True, "ore_id": self.ore_id, "info": None}
+        info = {
+            "id": ore.id,
+            "name": ore.name,
+            "tier": int(ore.tier),
+            "hardness": int(ore.hardness),
+            "base_value": int(ore.base_value),
+            "regen_ticks": int(ore.regen_ticks),
+        }
+        return {"ok": True, "ore_id": self.ore_id, "info": info}
+
+
+@dataclass(frozen=True, slots=True)
+class Inspect:
+    """Describe whether the current tile can be mined and when it regrows."""
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        return 0
+
+    def execute(self, engine: Any) -> dict[str, Any]:
+        miner = engine.miner
+        world = engine.world
+        content = engine.content
+        tick = _tick(engine)
+        tile = world.tile_at(miner.x, miner.y, tick)
+        if tile.ore_id is None:
+            ore = None
+        elif _is_unlocked(engine, content, tile.ore_id):
+            ore = tile.ore_id
+        else:
+            ore = "unknown"
+        regrows_in: int | None = None
+        if tile.depleted:
+            delta = getattr(world, "delta", None)
+            entry = delta.get((miner.x, miner.y)) if isinstance(delta, dict) else None
+            if entry is not None and entry[1] is not None:
+                regrows_in = max(0, int(entry[1]) - tick)
+        failure = _mine_failure(engine)
+        return {
+            "ok": True,
+            "inspect": {
+                "ore": ore,
+                "mineable": failure is None,
+                "reason": failure.get("reason") if failure is not None else None,
+                "regrows_in": regrows_in,
+            },
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class SubmitEstimate:
+    """Submit an estimate for the mining probability of ``ore_id``."""
+
+    ore_id: str = ""
+    p: float = 0.0
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        return 0
+
+    def execute(self, engine: Any) -> dict[str, Any]:
+        miner = engine.miner
+        content = engine.content
+        try:
+            ore = _get_ore(content, self.ore_id)
+        except Exception:
+            return {
+                "ok": False,
+                "reason": "unknown_ore",
+                "ore_id": self.ore_id,
+                "attempts": 0,
+            }
+        stats = getattr(miner, "stats", None)
+        attempts_by_ore = getattr(stats, "attempts", {}) if stats is not None else {}
+        attempts = int(attempts_by_ore.get(self.ore_id, 0))
+        if attempts < 100:
+            return {
+                "ok": False,
+                "reason": "not_enough_data",
+                "ore_id": self.ore_id,
+                "attempts": attempts,
+            }
+        estimates = getattr(miner, "estimates", None)
+        if not isinstance(estimates, dict):
+            estimates = {}
+            try:
+                miner.estimates = estimates
+            except Exception:
+                pass
+        used = int(estimates.get(self.ore_id, 0))
+        if used >= 3:
+            return {
+                "ok": False,
+                "reason": "limit_reached",
+                "ore_id": self.ore_id,
+                "attempts": attempts,
+                "submissions": used,
+            }
+        estimates[self.ore_id] = used + 1
+        p = float(self.p)
+        error = abs(p - float(ore.mine_probability))
+        close = error <= 0.05
+        _publish(
+            engine,
+            EstimateSubmitted(
+                ore_id=self.ore_id,
+                p=p,
+                error=error,
+                attempts=attempts,
+                good=close,
+            ),
+        )
+        return {"ok": True, "close": close}

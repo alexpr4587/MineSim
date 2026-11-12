@@ -18,5 +18,21 @@
   {
     "name": "heapq",
     "unlocked_by": "custom_function"
+  },
+  {
+    "name": "itertools",
+    "unlocked_by": null
+  },
+  {
+    "name": "functools",
+    "unlocked_by": null
+  },
+  {
+    "name": "dataclasses",
+    "unlocked_by": null
+  },
+  {
+    "name": "typing",
+    "unlocked_by": null
   }
 ]

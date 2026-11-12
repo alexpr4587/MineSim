@@ -164,6 +164,8 @@ class FunctionSpec(_ContentModel):
     doc: str = ""
     category: str = ""
     unlocked_by: str | None = None
+    cost: str = ""
+    example: str = ""
 
 
 class ModuleSpec(_ContentModel):

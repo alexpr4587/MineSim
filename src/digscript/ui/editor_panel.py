@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QHBoxLayout,
     QLabel,
+    QMenu,
     QPushButton,
     QTabWidget,
     QVBoxLayout,
@@ -191,6 +192,10 @@ class EditorPanel(FloatingPanel):
         self.run_button = QPushButton("Run", self.content_widget)
         self.stop_button = QPushButton("Stop", self.content_widget)
         self.open_folder_button = QPushButton("Open scripts folder", self.content_widget)
+        self.examples_button = QPushButton("Examples", self.content_widget)
+        self.examples_menu = QMenu(self.examples_button)
+        self.examples_button.setMenu(self.examples_menu)
+        self._example_actions: dict[str, Any] = {}
         self.new_button = self.new_file_button
         self.open_scripts_folder_button = self.open_folder_button
         self.open_button = self.open_folder_button
@@ -198,13 +203,15 @@ class EditorPanel(FloatingPanel):
         self.run_button.clicked.connect(self.run)
         self.stop_button.clicked.connect(self.stop)
         self.open_folder_button.clicked.connect(self.open_scripts_folder)
+        self.examples_button.setToolTip("Open an example script in a new tab")
         for button in (
             self.new_file_button,
             self.run_button,
             self.stop_button,
             self.open_folder_button,
+            self.examples_button,
         ):
-            button.setToolTip(button.text())
+            button.setToolTip(button.toolTip() or button.text())
             controls.addWidget(button)
         self.state_label = QLabel("Idle", self.content_widget)
         self.status_label = self.state_label
@@ -240,6 +247,7 @@ class EditorPanel(FloatingPanel):
 
         self.tabs.currentChanged.connect(self._on_tab_changed)
         self.refresh_files()
+        self.refresh_examples_menu()
         main_index = (
             self.tabs.indexOf(self._editors["main.py"]) if "main.py" in self._editors else 0
         )
@@ -278,6 +286,7 @@ class EditorPanel(FloatingPanel):
             except Exception:
                 pass
         self._subscribe_events()
+        self.refresh_examples_menu()
 
     def _subscribe_events(self) -> None:
         if self.game is None:

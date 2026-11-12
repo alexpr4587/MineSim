@@ -40,6 +40,7 @@ def _miner_from_dict(data: Any) -> Miner:
         facing = Direction.NORTH
     inventory = {str(k): int(v) for k, v in dict(data.get("inventory", {})).items()}
     upgrades = {str(k): int(v) for k, v in dict(data.get("upgrades", {})).items()}
+    estimates = {str(k): int(v) for k, v in dict(data.get("estimates", {})).items()}
     return Miner(
         x=int(data.get("x", 0)),
         y=int(data.get("y", 0)),
@@ -53,6 +54,7 @@ def _miner_from_dict(data: Any) -> Miner:
         scan_radius=int(data.get("scan_radius", 0)),
         stats=stats,
         upgrades=upgrades,
+        estimates=estimates,
     )
 
 

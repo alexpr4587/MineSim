@@ -10,7 +10,18 @@ from digscript.core.events import EventBus, TickAdvanced, TileRegenerated
 
 __all__ = ["AllUnlocked", "GameEngine", "ProgressionView", "Ticket"]
 
-_ZERO_COST_NAMES = {"Peek", "Position", "Inventory", "Stats"}
+_ZERO_COST_NAMES = {
+    "Biome",
+    "Distance",
+    "Inspect",
+    "Inventory",
+    "OreInfo",
+    "Peek",
+    "Position",
+    "Stats",
+    "SubmitEstimate",
+    "Tick",
+}
 
 
 class ProgressionView(Protocol):

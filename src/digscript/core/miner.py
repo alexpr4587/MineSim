@@ -59,6 +59,7 @@ class Miner:
     scan_radius: int = 0
     stats: MinerStats = field(default_factory=MinerStats)
     upgrades: dict[str, int] = field(default_factory=dict)
+    estimates: dict[str, int] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if isinstance(self.facing, str):
@@ -69,6 +70,8 @@ class Miner:
             self.inventory = {}
         if self.upgrades is None:
             self.upgrades = {}
+        if self.estimates is None:
+            self.estimates = {}
 
     @property
     def upgrade_levels(self) -> dict[str, int]:
@@ -164,6 +167,7 @@ class Miner:
             scan_radius=int(data.get("scan_radius", 0)),
             stats=stats,
             upgrades={str(k): int(v) for k, v in dict(data.get("upgrades", {})).items()},
+            estimates={str(k): int(v) for k, v in dict(data.get("estimates", {})).items()},
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -183,4 +187,5 @@ class Miner:
             "scan_radius": self.scan_radius,
             "stats": self.stats.to_dict(),
             "upgrades": dict(self.upgrades),
+            "estimates": dict(self.estimates),
         }

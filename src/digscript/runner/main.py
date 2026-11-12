@@ -76,6 +76,28 @@ _DEFAULT_FUNCTIONS: tuple[dict[str, Any], ...] = (
         "doc": "Buy an upgrade level.",
         "category": "",
     },
+    {"name": "wait", "signature": "wait(ticks)", "doc": "Wait for ticks.", "category": ""},
+    {"name": "tick", "signature": "tick()", "doc": "Return the current tick.", "category": ""},
+    {
+        "name": "distance",
+        "signature": "distance()",
+        "doc": "Return the distance from the base.",
+        "category": "",
+    },
+    {"name": "biome", "signature": "biome()", "doc": "Return the current biome.", "category": ""},
+    {
+        "name": "ore_info",
+        "signature": "ore_info(ore_id)",
+        "doc": "Return public ore information.",
+        "category": "",
+    },
+    {"name": "inspect", "signature": "inspect()", "doc": "Describe the current tile.", "category": ""},
+    {
+        "name": "submit_estimate",
+        "signature": "submit_estimate(ore_id, p)",
+        "doc": "Submit a mining probability estimate.",
+        "category": "",
+    },
 )
 
 _CONSTANTS: dict[str, str] = {
