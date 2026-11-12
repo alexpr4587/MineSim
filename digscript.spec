@@ -15,7 +15,10 @@ a = Analysis(
     ["src/digscript/__main__.py"],
     pathex=["src"],
     binaries=[],
-    datas=[("src/digscript/content", "digscript/content")],
+    datas=[
+        ("src/digscript/content", "digscript/content"),
+        ("assets", "assets"),
+    ],
     hiddenimports=[
         "digscript.runner.main",
         "digscript.runner.minerlib",

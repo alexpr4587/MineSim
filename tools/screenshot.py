@@ -8,7 +8,9 @@ renderer is used and the image is saved to ``artifacts/ui_lit.png``;
 ``--flat`` disables lighting and saves ``artifacts/ui_flat.png``.
 
 Flags: ``--ticks`` (default 300), ``--size`` (``WIDTHxHEIGHT``,
-default 1024x768), ``--flat`` and ``--output``.
+default 1024x768), ``--flat``, ``--skin`` (select a miner skin, saved as
+``artifacts/ui_skin_<id>.png``), ``--moving`` (leave a Move command
+active so the walk animation is captured) and ``--output``.
 """
 
 from __future__ import annotations
@@ -70,11 +72,15 @@ def build_window(
     ticks: int = 300,
     size: tuple[int, int] = (1024, 768),
     flat: bool = False,
+    skin: str | None = None,
+    moving: bool = False,
 ) -> MainWindow:
     """Build the real main window and run ``ticks`` engine ticks."""
     app = QApplication.instance() or QApplication([])
     apply_theme(app)
     game = Game.new()
+    if skin:
+        game.select_skin(skin)
     window = MainWindow(game)
     window.world_view.set_terrain_lighting(not flat, persist=False)
     window.resize(size[0], size[1])
@@ -82,6 +88,9 @@ def build_window(
     for command in COMMAND_SEQUENCE:
         game.submit(command)
     for _ in range(int(ticks)):
+        game.engine.step()
+    if moving:
+        game.submit(Move(Direction.EAST))
         game.engine.step()
     window.game_loop.stop()
     window.world_view.snap_visual_to_miner()
@@ -135,10 +144,28 @@ def main() -> int:
         action="store_true",
         help="disable terrain lighting and save artifacts/ui_flat.png",
     )
+    parser.add_argument("--skin", default=None, help="select a miner skin by id")
+    parser.add_argument(
+        "--moving",
+        action="store_true",
+        help="leave a Move command active so the walk animation is visible",
+    )
     parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args()
-    window = build_window(ticks=args.ticks, size=args.size, flat=args.flat)
-    for panel_name in ("achievements_panel", "editor_panel", "api_panel"):
+    window = build_window(
+        ticks=args.ticks,
+        size=args.size,
+        flat=args.flat,
+        skin=args.skin,
+        moving=args.moving,
+    )
+    for panel_name in (
+        "achievements_panel",
+        "upgrades_panel",
+        "wardrobe_panel",
+        "editor_panel",
+        "api_panel",
+    ):
         panel = getattr(window, panel_name, None)
         if panel is not None:
             try:
@@ -154,6 +181,8 @@ def main() -> int:
     if app is not None:
         app.processEvents()
     default_name = "ui_flat.png" if args.flat else "ui_lit.png"
+    if args.skin:
+        default_name = f"ui_skin_{args.skin}.png"
     out = args.output or (Path(__file__).resolve().parents[1] / "artifacts" / default_name)
     out.parent.mkdir(parents=True, exist_ok=True)
     window.grab().save(str(out))

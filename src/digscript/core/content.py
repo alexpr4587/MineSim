@@ -25,6 +25,8 @@ from digscript.core.schemas import (
     FunctionSpec,
     ModuleSpec,
     Ore,
+    Skin,
+    Sprites,
     Upgrade,
 )
 
@@ -49,6 +51,29 @@ class Content:
     functions: dict[str, FunctionSpec] = field(default_factory=dict)
     modules: dict[str, ModuleSpec] = field(default_factory=dict)
     achievements: dict[str, Achievement] = field(default_factory=dict)
+    sprites: Sprites | None = None
+    skins: dict[str, Skin] = field(default_factory=dict)
+
+    def get_skin(self, skin_id: str) -> Skin:
+        """Return the skin with ``skin_id`` or raise ContentError."""
+        try:
+            return self.skins[skin_id]
+        except KeyError:
+            raise ContentError(f"skins.json: $.id: unknown skin id '{skin_id}'") from None
+
+    def skin(self, skin_id: str) -> Skin:
+        """Alias for :meth:`get_skin`."""
+        return self.get_skin(skin_id)
+
+    @property
+    def skin_list(self) -> list[Skin]:
+        """All skins in file order."""
+        return list(self.skins.values())
+
+    @property
+    def skins_by_id(self) -> dict[str, Skin]:
+        """Alias for :attr:`skins`."""
+        return self.skins
 
     def get_achievement(self, achievement_id: str) -> Achievement:
         """Return the achievement with ``achievement_id`` or raise ContentError."""
@@ -263,6 +288,7 @@ def _cross_validate(
     upgrades: dict[str, Upgrade] | None = None,
     functions: dict[str, FunctionSpec] | None = None,
     modules: dict[str, ModuleSpec] | None = None,
+    skins: dict[str, Skin] | None = None,
 ) -> None:
     for biome_index, biome in enumerate(biomes.values()):
         for ore_id in biome.ore_weights:
@@ -279,6 +305,8 @@ def _cross_validate(
         functions = {}
     if modules is None:
         modules = {}
+    if skins is None:
+        skins = {}
     for ach_index, achievement in enumerate(achievements.values()):
         if achievement.parent is not None:
             if achievement.parent == achievement.id:
@@ -356,6 +384,7 @@ def _cross_validate(
     _check_unlocked_by(upgrades, "upgrades.json", "id")
     _check_unlocked_by(functions, "functions.json", "name")
     _check_unlocked_by(modules, "modules.json", "name")
+    _check_unlocked_by(skins, "skins.json", "id")
 
 
 def load_content(content_dir: str | Path | None = None) -> Content:
@@ -416,16 +445,40 @@ def load_content(content_dir: str | Path | None = None) -> Content:
         )
         achievements = _index_by_id(achievements_list, "achievements.json", "achievement")
 
-    _cross_validate(ores, biomes, achievements, upgrades, functions, modules)
+    sprites: Sprites | None = None
+    try:
+        sprites_data = _read_json(base_path, "sprites.json")
+    except ContentError as exc:
+        if "file not found" not in str(exc):
+            raise
+    else:
+        if isinstance(sprites_data, dict):
+            sprites_data = sprites_data.get("sprites", sprites_data)
+        sprites = _validate(sprites_data, TypeAdapter(Sprites), "sprites.json")
+
+    skins: dict[str, Skin] = {}
+    try:
+        skins_data = _read_json(base_path, "skins.json")
+    except ContentError as exc:
+        if "file not found" not in str(exc):
+            raise
+    else:
+        if isinstance(skins_data, dict):
+            skins_data = skins_data.get("skins", skins_data)
+        skins_list = _validate(skins_data, TypeAdapter(list[Skin]), "skins.json")
+        skins = _index_by_id(skins_list, "skins.json", "skin")
+
+    _cross_validate(ores, biomes, achievements, upgrades, functions, modules, skins)
     logger.debug(
         "Loaded content: %d ores, %d biomes, %d upgrades, %d functions, %d modules, "
-        "%d achievements",
+        "%d achievements, %d skins",
         len(ores),
         len(biomes),
         len(upgrades),
         len(functions),
         len(modules),
         len(achievements),
+        len(skins),
     )
     return Content(
         config=config,
@@ -435,6 +488,8 @@ def load_content(content_dir: str | Path | None = None) -> Content:
         functions=functions,
         modules=modules,
         achievements=achievements,
+        sprites=sprites,
+        skins=skins,
     )
 
 

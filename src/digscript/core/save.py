@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 __all__ = [
     "CURRENT_VERSION",
     "DEFAULT_SAVE_PATH",
+    "DEFAULT_SKIN",
     "MIGRATIONS",
     "SaveError",
     "SaveGame",
@@ -28,8 +29,9 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-CURRENT_VERSION = 1
+CURRENT_VERSION = 2
 SAVE_VERSION = CURRENT_VERSION
+DEFAULT_SKIN = "rusty_bot"
 
 
 class SaveError(Exception):
@@ -54,7 +56,17 @@ def _identity(data: dict[str, Any]) -> dict[str, Any]:
     return dict(data)
 
 
-MIGRATIONS: dict[int, Callable[[dict[str, Any]], dict[str, Any]]] = {}
+def _migrate_v1_to_v2(data: dict[str, Any]) -> dict[str, Any]:
+    """Add the selected skin introduced in save version 2."""
+    migrated = dict(data)
+    migrated.setdefault("selected_skin", DEFAULT_SKIN)
+    migrated["version"] = 2
+    return migrated
+
+
+MIGRATIONS: dict[int, Callable[[dict[str, Any]], dict[str, Any]]] = {
+    1: _migrate_v1_to_v2,
+}
 
 
 def migrate(data: Any) -> dict[str, Any]:
@@ -94,13 +106,14 @@ def migrate(data: Any) -> dict[str, Any]:
 
 
 class SaveGame(BaseModel):
-    """A serialised game state (save file schema, version 1)."""
+    """A serialised game state (save file schema, version 2)."""
 
     model_config = ConfigDict(extra="ignore")
 
     version: int = Field(default=CURRENT_VERSION)
     seed: int
     tick: int = 0
+    selected_skin: str = DEFAULT_SKIN
     miner: dict[str, Any] = Field(default_factory=dict)
     world_delta: dict[str, Any] = Field(default_factory=dict)
     progression: dict[str, Any] = Field(default_factory=dict)

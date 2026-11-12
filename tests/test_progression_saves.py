@@ -199,8 +199,17 @@ def test_save_load_round_trip_and_next_500_ticks(tmp_path):
     assert path.is_file()
     assert not list(path.parent.glob("*.tmp"))
     raw = json.loads(path.read_text(encoding="utf-8"))
-    assert set(raw) == {"version", "seed", "tick", "miner", "world_delta", "progression"}
-    assert raw["version"] == 1
+    assert set(raw) == {
+        "version",
+        "seed",
+        "tick",
+        "selected_skin",
+        "miner",
+        "world_delta",
+        "progression",
+    }
+    assert raw["version"] == 2
+    assert raw["selected_skin"] == "rusty_bot"
     loaded = Game.load(path)
     assert loaded.seed == game.seed
     assert loaded.tick == game.tick

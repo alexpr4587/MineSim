@@ -4,8 +4,8 @@ Tiles are rendered from a per-chunk :class:`QPixmap` cache (LRU,
 about 200 chunks). With terrain lighting enabled the key includes the
 chunk versions of the chunk and its eight neighbours, because normals
 depend on neighbouring heights. With lighting disabled the flat
-renderer only keys on the chunk's own version. The miner is drawn as
-a simple vector robot with smooth visual interpolation between tiles.
+renderer only keys on the chunk's own version. The miner and the base
+building are drawn as cached pixel-art sprites from the selected skin.
 """
 
 from __future__ import annotations
@@ -27,6 +27,8 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QPushButton, QWidget
 
+from digscript.core.save import DEFAULT_SKIN
+from digscript.ui.sprites import SpriteBook
 from digscript.ui.terrain_shader import render_chunk
 from digscript.ui.theme import (
     BACKGROUND,
@@ -137,6 +139,8 @@ class WorldView(QWidget):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         tile_px_arg = kwargs.pop("tile_px", None)
+        sprite_book_arg = kwargs.pop("sprite_book", None)
+        asset_dir = kwargs.pop("asset_dir", None)
         resolved = _resolve(*args, **kwargs)
         super().__init__(resolved["parent"])
         self.game = resolved["game"]
@@ -145,6 +149,9 @@ class WorldView(QWidget):
         self.content = resolved["content"]
         self.engine = resolved["engine"]
         self.progression_view = resolved["progression_view"]
+        self.sprite_book = sprite_book_arg
+        if self.sprite_book is None and self.content is not None:
+            self.sprite_book = SpriteBook(self.content, asset_dir=asset_dir)
         self.tile_px: int = int(tile_px_arg) if tile_px_arg is not None else DEFAULT_TILE_PX
         self.tile_px = max(MIN_TILE_PX, min(MAX_TILE_PX, int(self.tile_px)))
         self.follow_miner: bool = True
@@ -252,6 +259,68 @@ class WorldView(QWidget):
         if self.miner is None:
             return (0.5, 0.5)
         return (float(self.miner.x) + 0.5, float(self.miner.y) + 0.5)
+
+    def set_game(self, game: Any) -> None:
+        """Re-bind this view to ``game`` (world, miner, content and sprites)."""
+        self.game = game
+        self.world = _get(game, "world")
+        self.miner = _get(game, "miner")
+        self.content = _get(game, "content")
+        self.engine = _get(game, "engine")
+        self.progression_view = _get(game, "progression") or _get(game, "progression_view")
+        self.sprite_book = SpriteBook(self.content) if self.content is not None else None
+        self.clear_cache()
+        self.snap_visual_to_miner()
+        self.update()
+
+    def _selected_skin(self) -> str:
+        skin = _get(self.game, "selected_skin")
+        if skin:
+            return str(skin)
+        return DEFAULT_SKIN
+
+    def _sprite_direction(self) -> str:
+        facing = _get(self.miner, "facing")
+        name = getattr(facing, "name", None)
+        key = str(name or facing or "north").lower()
+        return {
+            "south": "down",
+            "north": "up",
+            "west": "left",
+            "east": "right",
+        }.get(key, "down")
+
+    def _active_command(self) -> Any:
+        engine = self.engine
+        command = _get(engine, "active_command")
+        if command is not None:
+            return command
+        entry = _get(engine, "_active")
+        return _get(entry, "command")
+
+    def _animation_state(self) -> tuple[str, int, bool]:
+        """Return ``(animation, frame, is_active)`` for the current situtation."""
+        command = self._active_command()
+        name = type(command).__name__ if command is not None else ""
+        tick = self._tick()
+        if name == "Move":
+            return ("walk", (tick // 2) % 2, True)
+        if name == "Mine":
+            return ("mine", (tick // 2) % 2, True)
+        return ("walk", 0, False)
+
+    def miner_pixmap(self) -> QPixmap | None:
+        """Return the miner pixmap that would be drawn right now."""
+        if self.sprite_book is None:
+            return None
+        animation, frame, _ = self._animation_state()
+        return self.sprite_book.miner_pixmap(
+            self._selected_skin(),
+            self._sprite_direction(),
+            animation,
+            frame,
+            self.tile_px,
+        )
 
     def _is_locked(self, ore_id: str) -> bool:
         view = self.progression_view
@@ -628,8 +697,19 @@ class WorldView(QWidget):
     def _draw_base(self, painter: QPainter) -> None:
         config = _get(self.content, "config")
         half = int(_get(config, "base_half_size", 1) or 0)
+        span = half * 2 + 1
         x0, y0 = self.world_to_screen(-half, -half)
         x1, y1 = self.world_to_screen(half + 1, half + 1)
+        if self.sprite_book is not None:
+            pixmap = self.sprite_book.base_pixmap(self._selected_skin(), self.tile_px, span)
+            self._draw_miner_shadow(
+                painter,
+                (x0 + x1) / 2.0,
+                y0 + (y1 - y0) * 0.82,
+                max(4.0, self.tile_px * span * 0.42),
+            )
+            painter.drawPixmap(int(round(x0)), int(round(y0)), pixmap)
+            return
         painter.setPen(QPen(QColor(BASE_BORDER), 2))
         painter.drawRect(int(x0), int(y0), int(x1 - x0), int(y1 - y0))
         painter.setPen(QColor(BASE_LABEL))
@@ -670,12 +750,22 @@ class WorldView(QWidget):
             return
         sx, sy = self.world_to_screen(self._visual_x, self._visual_y)
         radius = max(4.0, self.tile_px * 0.36)
+        self._draw_miner_shadow(painter, sx, sy, radius)
+        pixmap = self.miner_pixmap()
+        if pixmap is not None:
+            _, _, is_active = self._animation_state()
+            bob = 0 if is_active else (self._tick() // 5) % 2
+            painter.drawPixmap(
+                int(round(sx - self.tile_px / 2.0)),
+                int(round(sy - self.tile_px / 2.0 - bob)),
+                pixmap,
+            )
+            return
         facing = _get(self.miner, "facing")
         dx = float(_get(facing, "dx", 0) or 0)
         dy = float(_get(facing, "dy", -1) if _get(facing, "dy") is not None else -1)
         if dx == 0 and dy == 0:
             dx, dy = 0.0, -1.0
-        self._draw_miner_shadow(painter, sx, sy, radius)
         painter.setPen(QPen(QColor(MINER_DETAIL), 2))
         painter.setBrush(QColor(MINER_BODY))
         painter.drawEllipse(int(sx - radius), int(sy - radius), int(radius * 2), int(radius * 2))

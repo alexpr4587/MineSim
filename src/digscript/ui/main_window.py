@@ -29,6 +29,7 @@ from digscript.ui.game_loop import GameLoop
 from digscript.ui.hud import HUD
 from digscript.ui.toasts import ToastManager
 from digscript.ui.upgrades_panel import UpgradesPanel
+from digscript.ui.wardrobe_panel import WardrobePanel
 from digscript.ui.world_view import WorldView
 
 __all__ = ["MainWindow"]
@@ -38,6 +39,7 @@ _SINGLE_KEYS = {
     Qt.Key.Key_F,
     Qt.Key.Key_L,
     Qt.Key.Key_U,
+    Qt.Key.Key_K,
     Qt.Key.Key_C,
     Qt.Key.Key_G,
     Qt.Key.Key_H,
@@ -171,10 +173,17 @@ class MainWindow(QMainWindow):
             game=game,
             parent=self,
         )
+        self.wardrobe_panel = WardrobePanel(
+            game=game,
+            parent=self,
+        )
         self.floating_panels["achievements"] = self.achievements_panel
         self.floating_panels["upgrades"] = self.upgrades_panel
+        self.floating_panels["wardrobe"] = self.wardrobe_panel
         self.achievements_panel.hide()
         self.upgrades_panel.hide()
+        self.wardrobe_panel.hide()
+        self.wardrobe_panel.skin_selected.connect(lambda _skin: self.world_view.update())
 
         # Toasts for achievement unlocks.
         self.toast_manager = ToastManager(self, game)
@@ -219,6 +228,7 @@ class MainWindow(QMainWindow):
                 getattr(self, "achievements_panel", None),
             ),
             (getattr(self, "_upgrades_action", None), getattr(self, "upgrades_panel", None)),
+            (getattr(self, "_wardrobe_action", None), getattr(self, "wardrobe_panel", None)),
         ):
             if action is not None and panel is not None:
                 try:
@@ -300,6 +310,21 @@ class MainWindow(QMainWindow):
         self.upgrades_panel.hide_panel()
         self._sync_view_actions()
 
+    def toggle_wardrobe(self) -> None:
+        """Toggle the wardrobe panel (K)."""
+        self.wardrobe_panel.toggle()
+        self._sync_view_actions()
+
+    def show_wardrobe(self) -> None:
+        """Show the wardrobe panel."""
+        self.wardrobe_panel.show_panel()
+        self._sync_view_actions()
+
+    def hide_wardrobe(self) -> None:
+        """Hide the wardrobe panel."""
+        self.wardrobe_panel.hide_panel()
+        self._sync_view_actions()
+
     def _on_view_action(self, panel: Any, checked: bool) -> None:
         if panel is None:
             return
@@ -375,6 +400,13 @@ class MainWindow(QMainWindow):
         self._upgrades_action.triggered.connect(
             lambda checked=False: self._on_view_action(self.upgrades_panel, checked)
         )
+        self._wardrobe_action = view_menu.addAction("&Wardrobe")
+        self._wardrobe_action.setCheckable(True)
+        self._wardrobe_action.setShortcut(QKeySequence("Ctrl+K"))
+        self._wardrobe_action.setToolTip("Toggle wardrobe (K when world focused)")
+        self._wardrobe_action.triggered.connect(
+            lambda checked=False: self._on_view_action(self.wardrobe_panel, checked)
+        )
         view_menu.addSeparator()
         self._terrain_action = view_menu.addAction("Terrain &lighting")
         self._terrain_action.setCheckable(True)
@@ -439,11 +471,10 @@ class MainWindow(QMainWindow):
         self.game_loop.game = game
         self.game_loop.engine = game.engine
         self.hud.set_game(game)
-        self.world_view.game = game
-        self.world_view.world = game.world
-        self.world_view.engine = game.engine
+        self.world_view.set_game(game)
         self.achievements_panel.set_game(game)
         self.upgrades_panel.set_game(game)
+        self.wardrobe_panel.set_game(game)
         self.toast_manager.set_game(game)
         self.api_panel.set_game(game)
         self.editor_panel.set_game(game)
@@ -475,6 +506,7 @@ class MainWindow(QMainWindow):
             getattr(self, "api_panel", None),
             getattr(self, "achievements_panel", None),
             getattr(self, "upgrades_panel", None),
+            getattr(self, "wardrobe_panel", None),
         ):
             if panel is not None:
                 try:
@@ -527,6 +559,7 @@ class MainWindow(QMainWindow):
             getattr(self, "api_panel", None),
             getattr(self, "achievements_panel", None),
             getattr(self, "upgrades_panel", None),
+            getattr(self, "wardrobe_panel", None),
         ):
             if panel is not None:
                 try:
@@ -591,6 +624,10 @@ class MainWindow(QMainWindow):
             return
         if key == Qt.Key.Key_U:
             self.toggle_upgrades()
+            event.accept()
+            return
+        if key == Qt.Key.Key_K:
+            self.toggle_wardrobe()
             event.accept()
             return
         if key == Qt.Key.Key_F10:

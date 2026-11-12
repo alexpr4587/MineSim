@@ -170,6 +170,11 @@ class GameEngine:
         return count
 
     @property
+    def active_command(self) -> Any:
+        """The command currently occupying the miner, if any."""
+        return self._active.command if self._active is not None else None
+
+    @property
     def queue(self) -> list[Any]:
         """Queued commands (excluding the active one)."""
         return [entry.command for entry in self._queue]

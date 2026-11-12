@@ -12,7 +12,7 @@ from digscript.core.events import EventBus
 from digscript.core.miner import Miner, MinerStats
 from digscript.core.progression.service import ProgressionService
 from digscript.core.progression.state import ProgressionState
-from digscript.core.save import SaveGame, default_save_path
+from digscript.core.save import DEFAULT_SKIN, SaveGame, default_save_path
 from digscript.core.world import World, WorldGenerator
 
 __all__ = ["Game"]
@@ -82,6 +82,7 @@ class Game:
                 raise TypeError(f"unexpected arguments: {sorted(kwargs)}")
         if progression_state is None and state is not None:
             progression_state = state
+        self._selected_skin: str = DEFAULT_SKIN
         if engine is not None:
             self._engine = engine
             self._world = world if world is not None else engine.world
@@ -212,6 +213,42 @@ class Game:
         return self._progression_state
 
     @property
+    def selected_skin(self) -> str:
+        """The id of the currently selected miner skin."""
+        return self._selected_skin
+
+    @selected_skin.setter
+    def selected_skin(self, skin_id: str) -> None:
+        self.select_skin(skin_id)
+
+    def is_skin_unlocked(self, skin_id: str) -> bool:
+        """Return True if the skin exists and its requirement is met."""
+        skins = getattr(self._content, "skins", None) or {}
+        skin = skins.get(str(skin_id)) if isinstance(skins, dict) else None
+        if skin is None:
+            return False
+        unlocked_by = getattr(skin, "unlocked_by", None)
+        if unlocked_by is None:
+            return True
+        completed = getattr(self._progression_state, "completed", {}) or {}
+        if unlocked_by in completed:
+            return True
+        service = self._progression_service
+        checker = getattr(service, "is_achievement_unlocked", None)
+        return bool(checker(unlocked_by)) if callable(checker) else False
+
+    def select_skin(self, skin_id: str) -> str:
+        """Select an unlocked skin by id, raising ValueError otherwise."""
+        skin_id = str(skin_id)
+        skins = getattr(self._content, "skins", None) or {}
+        if not isinstance(skins, dict) or skin_id not in skins:
+            raise ValueError(f"unknown skin: {skin_id!r}")
+        if not self.is_skin_unlocked(skin_id):
+            raise ValueError(f"skin is locked: {skin_id!r}")
+        self._selected_skin = skin_id
+        return skin_id
+
+    @property
     def seed(self) -> int:
         """The world seed."""
         try:
@@ -263,9 +300,10 @@ class Game:
     def save(self, path: str | Path | None = None) -> Path:
         """Save this game to ``path`` (default save path) and return the path."""
         savegame = SaveGame(
-            version=1,
+            version=2,
             seed=self.seed,
             tick=self.tick,
+            selected_skin=self._selected_skin,
             miner=self._miner.to_dict(),
             world_delta=self._world.to_dict(),
             progression=self._progression_state.to_dict(),
@@ -291,6 +329,10 @@ class Game:
         restored = ProgressionState.from_dict(savegame.progression, content=content)
         game._progression_state = restored
         game._progression_service._state = restored
+        try:
+            game.select_skin(str(savegame.selected_skin))
+        except ValueError:
+            game._selected_skin = DEFAULT_SKIN
         game._engine.tick = int(savegame.tick)
         attempts = miner.stats.attempts or {}
         try:

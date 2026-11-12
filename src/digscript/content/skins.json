@@ -1,0 +1,82 @@
+[
+  {
+    "id": "rusty_bot",
+    "name": "Rusty Bot",
+    "description": "The trusty starter unit: rust-brown plating and a copper trim.",
+    "unlocked_by": null,
+    "palette": {
+      "b": "#b87333",
+      "a": "#ffd166",
+      "v": "#7dcfff",
+      "d": "#2a1a12",
+      "m": "#8a8a99",
+      "s": "#7a4a24",
+      "r": "#a34a2a",
+      "w": "#ffd166"
+    }
+  },
+  {
+    "id": "copper_core",
+    "name": "Copper Core",
+    "description": "Warm copper panels with a polished bronze frame.",
+    "unlocked_by": null,
+    "palette": {
+      "b": "#c86b3c",
+      "a": "#ffcf9e",
+      "v": "#8ef0ff",
+      "d": "#2b1610",
+      "m": "#b0794f",
+      "s": "#8a4424",
+      "r": "#8c3b1f",
+      "w": "#ffe0a8"
+    }
+  },
+  {
+    "id": "steel_walker",
+    "name": "Steel Walker",
+    "description": "Cold brushed steel for miners who like their robots industrial.",
+    "unlocked_by": null,
+    "palette": {
+      "b": "#9aa7b8",
+      "a": "#e6f0ff",
+      "v": "#6ad1ff",
+      "d": "#202733",
+      "m": "#c8d3e0",
+      "s": "#5d6878",
+      "r": "#7c8a9c",
+      "w": "#a8e6ff"
+    }
+  },
+  {
+    "id": "golden_hauler",
+    "name": "Golden Hauler",
+    "description": "A gilded hauler with a bright visor and dark trim.",
+    "unlocked_by": null,
+    "palette": {
+      "b": "#d9a520",
+      "a": "#fff1a8",
+      "v": "#fff6d0",
+      "d": "#3a2a05",
+      "m": "#b8860b",
+      "s": "#9c6f0a",
+      "r": "#8c6a00",
+      "w": "#fff2a8"
+    }
+  },
+  {
+    "id": "ruby_runner",
+    "name": "Ruby Runner",
+    "description": "A fast red racer with a rose-gold visor.",
+    "unlocked_by": null,
+    "palette": {
+      "b": "#c0392b",
+      "a": "#ff9aa2",
+      "v": "#ffd6e0",
+      "d": "#2a0b0b",
+      "m": "#8e2f2f",
+      "s": "#7e1f1f",
+      "r": "#6d1616",
+      "w": "#ffc2d0"
+    }
+  }
+]

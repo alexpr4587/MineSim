@@ -210,6 +210,51 @@ class Achievement(_ContentModel):
     rewards: list[Reward] = Field(default_factory=list)
 
 
+class MinerFrames(_ContentModel):
+    """The four animation frames of one facing direction."""
+
+    walk0: list[str]
+    walk1: list[str]
+    mine0: list[str]
+    mine1: list[str]
+
+
+class MinerSprites(_ContentModel):
+    """The miner sprite grids, one frame set per facing direction."""
+
+    down: MinerFrames
+    up: MinerFrames
+    left: MinerFrames
+    right: MinerFrames
+
+
+class Sprites(_ContentModel):
+    """Sprite data (sprites.json): miner frames and the base building."""
+
+    miner: MinerSprites
+    base: list[str]
+
+
+class Skin(_ContentModel):
+    """A miner skin (skins.json): a palette swap of the sprite frames."""
+
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    description: str = ""
+    unlocked_by: str | None = None
+    palette: dict[str, str] = Field(default_factory=dict)
+
+    @field_validator("palette")
+    @classmethod
+    def _check_palette(cls, value: dict[str, str]) -> dict[str, str]:
+        for role, color in value.items():
+            if len(role) != 1 or role == ".":
+                raise ValueError(f"invalid palette role {role!r}")
+            if not str(color).strip():
+                raise ValueError(f"palette role {role!r} has an empty color")
+        return value
+
+
 __all__ = [
     "Achievement",
     "Biome",
@@ -218,9 +263,13 @@ __all__ = [
     "CounterCriteria",
     "Criteria",
     "FunctionSpec",
+    "MinerFrames",
+    "MinerSprites",
     "ModuleSpec",
     "Ore",
     "Reward",
     "ScriptDefinesFunctionCriteria",
+    "Skin",
+    "Sprites",
     "Upgrade",
 ]
