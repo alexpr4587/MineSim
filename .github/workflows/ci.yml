@@ -23,3 +23,5 @@ jobs:
       - run: uv run pytest -q
         env:
           QT_QPA_PLATFORM: offscreen
+      - name: Chunk render timing
+        run: uv run python -m digscript --selftest-ui

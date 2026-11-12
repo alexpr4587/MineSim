@@ -219,7 +219,7 @@ class WardrobePanel(FloatingPanel):
                     or _get(game, "progression")
                     or _get(game, "progression_view")
                 )
-        self.content = content
+        self.game_content = content
         self.progression = progression
         self.sprite_book = sprite_book
         if self.sprite_book is None and content is not None:
@@ -254,12 +254,12 @@ class WardrobePanel(FloatingPanel):
 
     def skins(self) -> list[Any]:
         """Return the skin entries in file order."""
-        if self.content is None:
+        if self.game_content is None:
             return []
-        getter = getattr(self.content, "skin_list", None)
+        getter = getattr(self.game_content, "skin_list", None)
         if callable(getter):
             return list(getter())
-        raw = _get(self.content, "skins")
+        raw = _get(self.game_content, "skins")
         if isinstance(raw, dict):
             return list(raw.values())
         if isinstance(raw, (list, tuple)):
@@ -303,13 +303,15 @@ class WardrobePanel(FloatingPanel):
         """Attach a (new) game, content and progression service."""
         self.game = game
         if game is not None:
-            self.content = _get(game, "content")
+            self.game_content = _get(game, "content")
             self.progression = (
                 _get(game, "progression_service")
                 or _get(game, "progression")
                 or _get(game, "progression_view")
             )
-            self.sprite_book = SpriteBook(self.content) if self.content is not None else None
+            self.sprite_book = (
+                SpriteBook(self.game_content) if self.game_content is not None else None
+            )
         self._build_cards()
         self.refresh()
 

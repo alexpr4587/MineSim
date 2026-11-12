@@ -1,6 +1,6 @@
 [project]
 name = "digscript"
-version = "0.1.0"
+version = "0.2.0"
 description = "DigScript - a 2D top-down programming game"
 readme = "README.md"
 license = { text = "MIT" }

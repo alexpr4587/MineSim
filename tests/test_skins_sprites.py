@@ -21,6 +21,7 @@ from PySide6.QtGui import QColor, QImage  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from digscript.ui.sprites import BASE_SIZE, MINER_SIZE, SpriteBook  # noqa: E402
+from digscript.ui.wardrobe_panel import WardrobePanel  # noqa: E402
 from digscript.ui.world_view import WorldView  # noqa: E402
 
 
@@ -76,6 +77,15 @@ def test_sprite_sizes_from_12_to_64(qapp, content, tmp_path) -> None:
     assert BASE_SIZE == 48
     assert book.miner_pixmap("rusty_bot", "down", "walk", 0, 24).width() == 24
     assert MINER_SIZE == 16
+
+
+def test_wardrobe_lists_every_skin(qapp, content) -> None:
+    panel = WardrobePanel(game=Game.new(content=content))
+    assert panel.game_content is content
+    assert list(panel.cards) == list(content.skins)
+    assert [card.skin_id for card in panel.cards.values()] == list(content.skins)
+    assert panel.cards[DEFAULT_SKIN].is_unlocked()
+    panel.hide()
 
 
 def test_png_override_replaces_generated_frames(qapp, content, tmp_path) -> None:

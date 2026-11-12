@@ -17,6 +17,7 @@ a = Analysis(
     binaries=[],
     datas=[
         ("src/digscript/content", "digscript/content"),
+        ("src/digscript/examples", "digscript/examples"),
         ("assets", "assets"),
     ],
     hiddenimports=[
@@ -24,6 +25,7 @@ a = Analysis(
         "digscript.runner.minerlib",
         "digscript.scripting.host",
         "digscript.scripting.stubs",
+        "numpy",
     ],
     hookspath=[],
     hooksconfig={},

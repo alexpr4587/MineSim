@@ -27,8 +27,12 @@ jobs:
       - run: uv run pyinstaller digscript.spec --distpath dist/digscript --workpath build/digscript
       - if: runner.os == 'Linux'
         run: dist/digscript/digscript/digscript --selftest
+      - if: runner.os == 'Linux'
+        run: dist/digscript/digscript/digscript --selftest-ui
       - if: runner.os == 'Windows'
         run: dist/digscript/digscript/digscript.exe --selftest
+      - if: runner.os == 'Windows'
+        run: dist/digscript/digscript/digscript.exe --selftest-ui
       - name: Package (Linux)
         if: runner.os == 'Linux'
         run: tar -czf digscript-linux.tar.gz -C dist/digscript digscript

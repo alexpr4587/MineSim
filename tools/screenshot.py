@@ -11,7 +11,8 @@ Flags: ``--ticks`` (default 300), ``--size`` (``WIDTHxHEIGHT``,
 default 1024x768), ``--flat``, ``--skin`` (select a miner skin, saved as
 ``artifacts/ui_skin_<id>.png``), ``--moving`` (leave a Move command
 active so the walk animation is captured), ``--achievements`` (keep the
-achievements panel visible) and ``--output``.
+achievements panel visible), ``--wardrobe`` (show the wardrobe panel,
+saved as ``artifacts/ui_wardrobe.png``) and ``--output``.
 """
 
 from __future__ import annotations
@@ -156,6 +157,11 @@ def main() -> int:
         action="store_true",
         help="keep the achievements panel visible and save artifacts/ui_achievements.png",
     )
+    parser.add_argument(
+        "--wardrobe",
+        action="store_true",
+        help="show the wardrobe panel and save artifacts/ui_wardrobe.png",
+    )
     parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args()
     window = build_window(
@@ -174,12 +180,19 @@ def main() -> int:
     ):
         if args.achievements and panel_name == "achievements_panel":
             continue
+        if args.wardrobe and panel_name == "wardrobe_panel":
+            continue
         panel = getattr(window, panel_name, None)
         if panel is not None:
             try:
                 panel.hide_panel()
             except Exception:
                 panel.hide()
+    if args.wardrobe:
+        try:
+            window.show_wardrobe()
+        except Exception:
+            window.wardrobe_panel.show_panel()
     toast_manager = getattr(window, "toast_manager", None)
     current_toast = getattr(toast_manager, "_current", None)
     if current_toast is not None:
@@ -193,6 +206,8 @@ def main() -> int:
         default_name = f"ui_skin_{args.skin}.png"
     if args.achievements:
         default_name = "ui_achievements.png"
+    if args.wardrobe:
+        default_name = "ui_wardrobe.png"
     out = args.output or (Path(__file__).resolve().parents[1] / "artifacts" / default_name)
     out.parent.mkdir(parents=True, exist_ok=True)
     window.grab().save(str(out))

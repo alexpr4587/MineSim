@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.2.0] - 2026-11-12
+
+### Added
+
+- Lit 2.5D terrain renderer with posterized slope lighting, toggled with `H`.
+- Miner skins and pixel-art sprites, selectable in the new wardrobe panel (`K`).
+- 41 achievements across five tabs: Code, Mining, Business, Explorer and Data.
+- Seven new player API functions: `wait`, `tick`, `distance`, `biome`, `ore_info`,
+  `inspect` and `submit_estimate`.
+- New `minerlib` helpers: `ring`, `nearest`, `goto_nearest`, `mine_until`,
+  `haul`, `farm` and the `Samples` recorder.
+- Four new Python modules: `itertools`, `functools`, `dataclasses` and `typing`.
+- Eight example scripts, unlocked through the achievement chain.
+- Save format version 3, with automatic migration of v0.1.0 saves.
+
 ## [0.1.0] - 2026-11-08
 
 ### Added
