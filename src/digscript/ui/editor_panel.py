@@ -460,6 +460,97 @@ class EditorPanel(FloatingPanel):
         """Alias for :meth:`current_file`."""
         return self.current_file()
 
+    def _content_examples(self) -> list[Any]:
+        content = _get(getattr(self, "game", None), "content") or self.content
+        if content is None or not hasattr(content, "examples"):
+            try:
+                from digscript.core.content import load_content
+
+                content = load_content()
+            except Exception:
+                return []
+        examples = _get(content, "examples", []) or []
+        if isinstance(examples, dict):
+            return list(examples.values())
+        return list(examples)
+
+    def _example_unlocked(self, example: Any) -> bool:
+        required = _get(example, "unlocked_by")
+        if required is None:
+            return True
+        view = self.progression
+        checker = _get(view, "is_example_unlocked")
+        if callable(checker):
+            return bool(checker(_get(example, "id", "")))
+        return False
+
+    def _achievement_title(self, achievement_id: str) -> str:
+        content = _get(getattr(self, "game", None), "content") or self.content
+        achievements = _get(content, "achievements", {}) or {}
+        if isinstance(achievements, dict):
+            achievement = achievements.get(achievement_id)
+        else:
+            achievement = next(
+                (item for item in achievements if _get(item, "id") == achievement_id), None
+            )
+        return str(_get(achievement, "title", achievement_id))
+
+    def refresh_examples_menu(self) -> None:
+        """Rebuild the Examples menu from the content pack."""
+        menu = getattr(self, "examples_menu", None)
+        if menu is None:
+            return
+        menu.clear()
+        self._example_actions = {}
+        for example in self._content_examples():
+            example_id = str(_get(example, "id", ""))
+            title = str(_get(example, "title", example_id))
+            action = menu.addAction(title)
+            unlocked = self._example_unlocked(example)
+            action.setEnabled(unlocked)
+            if unlocked:
+                action.triggered.connect(
+                    lambda _checked=False, ident=example_id: self.open_example(ident)
+                )
+            else:
+                required = str(_get(example, "unlocked_by", ""))
+                action.setToolTip(f"Locked: unlock with {self._achievement_title(required)}")
+            self._example_actions[example_id] = action
+
+    def _unique_example_path(self, file_name: str) -> Path:
+        base = Path(file_name)
+        directory = Path(self.scripts_dir)
+        candidate = directory / base.name
+        counter = 2
+        while candidate.exists():
+            candidate = directory / f"{base.stem}_{counter}{base.suffix}"
+            counter += 1
+        return candidate
+
+    def open_example(self, example_id: str) -> bool:
+        """Copy example ``example_id`` into the scripts folder and open it."""
+        example = next(
+            (item for item in self._content_examples() if _get(item, "id") == example_id),
+            None,
+        )
+        if example is None or not self._example_unlocked(example):
+            return False
+        file_name = str(_get(example, "file", ""))
+        source_path = Path(__file__).resolve().parents[1] / "examples" / file_name
+        try:
+            source = source_path.read_text(encoding="utf-8")
+        except OSError:
+            return False
+        target = self._unique_example_path(source_path.name)
+        try:
+            target.write_text(source, encoding="utf-8")
+        except OSError:
+            return False
+        index = self.add_file(target, source)
+        self.tabs.setCurrentIndex(index)
+        self._sync_current_editor()
+        return True
+
     def current_source(self) -> str:
         """Return the current editor text."""
         return self.editor.toPlainText() if self.editor is not None else ""

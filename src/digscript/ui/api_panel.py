@@ -42,7 +42,7 @@ def _entries(content: Any, attr: str) -> list[dict[str, Any]]:
             result.append(dict(item))
         elif hasattr(item, "name"):
             entry: dict[str, Any] = {"name": item.name}
-            for key in ("signature", "doc", "category", "unlocked_by"):
+            for key in ("signature", "doc", "category", "unlocked_by", "cost", "example"):
                 if hasattr(item, key):
                     entry[key] = getattr(item, key)
             result.append(entry)
@@ -82,7 +82,15 @@ def _minerlib_entries() -> list[dict[str, Any]]:
     for node in tree.body:
         if not isinstance(node, ast.FunctionDef):
             continue
-        if node.name in {"move", "mine", "peek", "position"}:
+        if node.name in {
+            "move",
+            "mine",
+            "peek",
+            "position",
+            "scan",
+            "inventory",
+            "sell",
+        }:
             continue
         params = [arg.arg for arg in node.args.args]
         doc = ast.get_docstring(node) or ""
@@ -135,6 +143,7 @@ class ApiPanel(FloatingPanel):
             if progression is None:
                 progression = _get(host, "progression_view") or _get(host, "progression")
         self.content = content
+        self.api_content = content
         self.progression = progression
         self.progression_view = progression
         self.host = host
@@ -196,7 +205,7 @@ class ApiPanel(FloatingPanel):
                         continue
                     if value:
                         return str(value)
-        content = self.content
+        content = self.api_content
         achievements = _get(content, "achievements") if content is not None else None
         if isinstance(achievements, dict):
             entry = achievements.get(str(unlocked_by))
@@ -218,10 +227,11 @@ class ApiPanel(FloatingPanel):
     # -- building -----------------------------------------------------------------
 
     def _build_entries(self) -> None:
-        content = self.content
+        content = self.api_content
         if content is None and self.game is not None:
             content = _get(self.game, "content")
             self.content = content
+            self.api_content = content
         functions = _entries(content, "functions")
         if not functions:
             try:
@@ -232,6 +242,7 @@ class ApiPanel(FloatingPanel):
                 if content is None:
                     content = loaded
                     self.content = loaded
+                    self.api_content = loaded
             except Exception:
                 functions = [
                     {"name": "move", "signature": "move(direction)", "doc": "Move one tile."},
@@ -256,6 +267,8 @@ class ApiPanel(FloatingPanel):
                     "signature": str(entry.get("signature") or f"{name}()"),
                     "doc": str(entry.get("doc") or ""),
                     "category": str(entry.get("category") or ""),
+                    "cost": str(entry.get("cost") or ""),
+                    "example": str(entry.get("example") or ""),
                     "unlocked_by": unlocked_by,
                     "unlocked": unlocked,
                     "locked": not unlocked,
@@ -314,16 +327,26 @@ class ApiPanel(FloatingPanel):
         for entry in self.function_entries:
             signature = self._escape(entry["signature"])
             doc = self._escape(entry["doc"])
+            detail = ""
+            if entry["cost"]:
+                detail += (
+                    f"<br/><span style='color:{TEXT_DIM}'>Cost: "
+                    f"{self._escape(entry['cost'])}</span>"
+                )
+            if entry["example"]:
+                detail += (
+                    f"<br/><code style='color:{TEXT_DIM}'>{self._escape(entry['example'])}</code>"
+                )
             if entry["locked"]:
                 locked = self.locked_text("function", entry["name"], entry["unlocked_by"])
                 parts.append(
-                    f"<p style='color:{DISABLED_TEXT}'><b>{signature}</b> — {doc}<br/>"
-                    f"{self._escape(locked)}</p>"
+                    f"<p style='color:{DISABLED_TEXT}'><b>{signature}</b> — {doc}{detail}</p>"
+                    f"<p style='color:{DISABLED_TEXT}'>{self._escape(locked)}</p>"
                 )
             else:
                 parts.append(
                     f"<p style='color:{TEXT}'>"
-                    f"<b style='color:{SYNTAX_API}'>{signature}</b> — {doc}</p>"
+                    f"<b style='color:{SYNTAX_API}'>{signature}</b> — {doc}{detail}</p>"
                 )
         parts.append("<h3>Constants</h3><p>North, East, South, West — directions for move().</p>")
         parts.append("<h3>Modules</h3>")
@@ -368,6 +391,7 @@ class ApiPanel(FloatingPanel):
         """Attach a new game and refresh."""
         self.game = game
         self.content = _get(game, "content")
+        self.api_content = self.content
         self.progression = _get(game, "progression_service") or _get(game, "progression")
         self.progression_view = self.progression
         self._subscribe()

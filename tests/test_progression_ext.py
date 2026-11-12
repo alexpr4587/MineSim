@@ -333,7 +333,8 @@ def test_saved_version_2_fixture_migrates(content):
     assert state.is_completed("hello_miner")
     for skin in content.skins.values():
         assert state.is_skin_unlocked(skin.id) is (skin.unlocked_by is None)
-    assert state.unlocked_examples == set()
+    for example in content.examples.values():
+        assert state.is_example_unlocked(example.id) is (example.unlocked_by is None)
     assert game.selected_skin == "steel_walker"
 
 
@@ -384,6 +385,7 @@ def test_content_validation_unknown_skin_reward(tmp_path):
 
 def test_example_reward_validation_skipped_until_examples_file_exists(tmp_path):
     content_dir = _copy_content(tmp_path)
+    (content_dir / "examples.json").unlink()
     path = content_dir / "achievements.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     data[0]["rewards"] = [{"type": "unlock_example", "id": "no_such_example"}]

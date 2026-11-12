@@ -79,15 +79,18 @@ def generate_api_md(output: str | Path | None = None) -> Path:
         "required achievement is unlocked."
     )
     lines.append("")
-    lines.append("| Function | Signature | Description | Unlocked by |")
-    lines.append("|---|---|---|---|")
+    lines.append("| Function | Signature | Description | Cost | Example | Unlocked by |")
+    lines.append("|---|---|---|---|---|---|")
     for entry in functions:
         name = str(entry.get("name", ""))
         signature = str(entry.get("signature", ""))
         doc = str(entry.get("doc", ""))
+        cost = str(entry.get("cost", ""))
+        example = str(entry.get("example", ""))
         unlocked_by = entry.get("unlocked_by")
         lines.append(
-            f"| `{name}` | `{signature}` | {doc} | {_unlocked_by_label(unlocked_by, titles)} |"
+            f"| `{name}` | `{signature}` | {doc} | {cost} | `{example}` | "
+            f"{_unlocked_by_label(unlocked_by, titles)} |"
         )
     lines.append("")
 
@@ -105,6 +108,14 @@ def generate_api_md(output: str | Path | None = None) -> Path:
         lines.append("")
         lines.append(f"**Description:** {doc}")
         lines.append("")
+        lines.append(f"**Cost:** {entry.get('cost', '')}")
+        lines.append("")
+        lines.append("**Example:**")
+        lines.append("")
+        lines.append("```python")
+        lines.append(str(entry.get("example", "")))
+        lines.append("```")
+        lines.append("")
         lines.append(f"**Unlocked by:** {_unlocked_by_label(unlocked_by, titles)}")
         lines.append("")
 
@@ -118,7 +129,20 @@ def generate_api_md(output: str | Path | None = None) -> Path:
     )
     lines.append("")
 
-    for name in ("goto", "go_home", "sweep", "spiral", "mine_here"):
+    helper_names = (
+        "goto",
+        "go_home",
+        "sweep",
+        "spiral",
+        "ring",
+        "nearest",
+        "goto_nearest",
+        "mine_here",
+        "mine_until",
+        "haul",
+        "farm",
+    )
+    for name in helper_names:
         doc = _minerlib_doc(name)
         lines.append(f"### `minerlib.{name}`")
         lines.append("")
@@ -130,6 +154,22 @@ def generate_api_md(output: str | Path | None = None) -> Path:
         else:
             lines.append("*No documentation.*")
             lines.append("")
+
+    lines.append("### `minerlib.Samples`")
+    lines.append("")
+    lines.append(
+        "A tiny tally for mining attempts. `add(ore, success)` records an "
+        "attempt, `count(ore)` returns attempts, `rate(ore)` returns the "
+        "observed success rate and `summary()` returns attempts, successes "
+        "and rates per ore."
+    )
+    lines.append("")
+    lines.append("```python")
+    lines.append("samples = minerlib.Samples()")
+    lines.append('samples.add("stone", True)')
+    lines.append('print(samples.rate("stone"))')
+    lines.append("```")
+    lines.append("")
 
     lines.append("## Standard library modules")
     lines.append("")

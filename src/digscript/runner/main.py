@@ -91,7 +91,12 @@ _DEFAULT_FUNCTIONS: tuple[dict[str, Any], ...] = (
         "doc": "Return public ore information.",
         "category": "",
     },
-    {"name": "inspect", "signature": "inspect()", "doc": "Describe the current tile.", "category": ""},
+    {
+        "name": "inspect",
+        "signature": "inspect()",
+        "doc": "Describe the current tile.",
+        "category": "",
+    },
     {
         "name": "submit_estimate",
         "signature": "submit_estimate(ore_id, p)",

@@ -17,6 +17,13 @@ _PARAM_TYPES: dict[str, str] = {
     "radius": "int",
     "upgrade_id": "str",
     "id": "str",
+    "ore_id": "str",
+    "p": "float",
+    "ticks": "int",
+    "n": "int",
+    "ore": "str",
+    "max_tiles": "int",
+    "success": "bool",
     "x": "int",
     "y": "int",
     "width": "int",
@@ -33,11 +40,24 @@ _RETURN_TYPES: dict[str, str] = {
     "scan": "list[tuple[int, int, str]]",
     "stats": "dict",
     "buy_upgrade": "int",
+    "wait": "None",
+    "tick": "int",
+    "distance": "int",
+    "biome": "str",
+    "ore_info": "dict | None",
+    "inspect": "dict",
+    "submit_estimate": "dict",
     "goto": "None",
     "go_home": "None",
     "sweep": "Any",
     "spiral": "Any",
+    "ring": "Any",
     "mine_here": "Any",
+    "nearest": "tuple[int, int] | None",
+    "goto_nearest": "bool",
+    "mine_until": "int",
+    "haul": "int",
+    "farm": "int",
 }
 
 
@@ -83,6 +103,17 @@ def _function_entries(content: Any) -> list[dict[str, Any]]:
         {"name": "scan", "signature": "scan(radius)", "doc": "Scan for ore."},
         {"name": "stats", "signature": "stats()", "doc": "Return mining stats."},
         {"name": "buy_upgrade", "signature": "buy_upgrade(upgrade_id)", "doc": "Buy an upgrade."},
+        {"name": "wait", "signature": "wait(ticks)", "doc": "Wait for ticks."},
+        {"name": "tick", "signature": "tick()", "doc": "Return the current tick."},
+        {"name": "distance", "signature": "distance()", "doc": "Distance from the base."},
+        {"name": "biome", "signature": "biome()", "doc": "Current biome id."},
+        {"name": "ore_info", "signature": "ore_info(ore_id)", "doc": "Public ore info."},
+        {"name": "inspect", "signature": "inspect()", "doc": "Describe the current tile."},
+        {
+            "name": "submit_estimate",
+            "signature": "submit_estimate(ore_id, p)",
+            "doc": "Submit a probability estimate.",
+        },
     ]
 
 
@@ -123,7 +154,15 @@ def _minerlib_entries() -> list[dict[str, Any]]:
     for node in tree.body:
         if not isinstance(node, ast.FunctionDef):
             continue
-        if node.name in {"move", "mine", "peek", "position"}:
+        if node.name in {
+            "move",
+            "mine",
+            "peek",
+            "position",
+            "scan",
+            "inventory",
+            "sell",
+        }:
             continue
         params = [arg.arg for arg in node.args.args]
         doc = ast.get_docstring(node) or ""
@@ -143,7 +182,13 @@ def _format_entry(entry: dict[str, Any]) -> str:
     doc = str(entry.get("doc") or "").strip()
     if doc:
         doc_repr = repr(doc)
-        return f"def {name}({typed}) -> {return_type}: {doc_repr} ..."
+        return "\n".join(
+            [
+                f"def {name}({typed}) -> {return_type}:",
+                f"    {doc_repr}",
+                "    ...",
+            ]
+        )
     return f"def {name}({typed}) -> {return_type}: ..."
 
 
@@ -171,6 +216,13 @@ def generate_stub_text(content: Any = None) -> str:
     lines.append("# --- minerlib ---")
     for entry in _minerlib_entries():
         lines.append(_format_entry(entry))
+    lines.append("")
+    lines.append("class Samples:")
+    lines.append("    def __init__(self) -> None: ...")
+    lines.append("    def add(self, ore: str, success: bool) -> None: ...")
+    lines.append("    def count(self, ore: str) -> int: ...")
+    lines.append("    def rate(self, ore: str) -> float: ...")
+    lines.append("    def summary(self) -> dict[str, dict[str, float | int]]: ...")
     lines.append("")
     return "\n".join(lines)
 
