@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "seed": 12345,
+  "tick": 7,
+  "selected_skin": "steel_walker",
+  "miner": {},
+  "world_delta": {},
+  "progression": {
+    "counters": {
+      "tiles_moved": 12,
+      "mined:any": 3,
+      "attempts:any": 4
+    },
+    "completed": {
+      "hello_miner": 7
+    },
+    "unlocked_functions": ["move", "mine", "peek", "position", "inventory"],
+    "unlocked_ores": ["stone", "coal"],
+    "unlocked_upgrades": [],
+    "unlocked_modules": ["math"]
+  }
+}

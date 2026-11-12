@@ -52,6 +52,49 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 
+def analyze_features(source: str, filename: str = "<script>") -> frozenset[str]:
+    """Return the script features of ``source`` using :func:`ast.parse`.
+
+    The source is parsed, never executed. Unknown/invalid syntax yields
+    an empty feature set. Features: ``defines_function``,
+    ``uses_import``, ``uses_comprehension``, ``uses_class``,
+    ``uses_try``, ``uses_recursion``, ``uses_lambda`` and
+    ``uses_generator``.
+    """
+    try:
+        tree = ast.parse(source, filename=filename)
+    except (SyntaxError, ValueError):
+        return frozenset()
+    features: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            features.add("defines_function")
+        elif isinstance(node, (ast.Import, ast.ImportFrom)):
+            features.add("uses_import")
+        elif isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+            features.add("uses_comprehension")
+        elif isinstance(node, ast.ClassDef):
+            features.add("uses_class")
+        elif isinstance(node, (ast.Try, ast.TryStar)):
+            features.add("uses_try")
+        elif isinstance(node, ast.Lambda):
+            features.add("uses_lambda")
+        elif isinstance(node, (ast.Yield, ast.YieldFrom)):
+            features.add("uses_generator")
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        for inner in ast.walk(node):
+            if (
+                isinstance(inner, ast.Call)
+                and isinstance(inner.func, ast.Name)
+                and inner.func.id == node.name
+            ):
+                features.add("uses_recursion")
+                break
+    return frozenset(features)
+
+
 class NotUnlockedError(Exception):
     """Raised in the parent when a locked function is called.
 
@@ -321,6 +364,7 @@ class ScriptHost:
         self.filename: str = ""
         self.source: str = ""
         self.defines_function: bool = False
+        self.features: frozenset[str] = frozenset()
         self.last_error: dict[str, Any] | None = None
         self._functions: list[dict[str, Any]] = _spec_entries(
             content, "functions", _DEFAULT_FUNCTIONS
@@ -501,13 +545,8 @@ class ScriptHost:
             write_stubs(self.scripts_dir, self.content)
         except Exception:
             logger.debug("could not write digscript_api.pyi", exc_info=True)
-        try:
-            tree = ast.parse(source, filename=str(filename))
-            self.defines_function = any(
-                isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) for node in ast.walk(tree)
-            )
-        except (SyntaxError, ValueError):
-            self.defines_function = False
+        self.features = analyze_features(source, str(filename))
+        self.defines_function = "defines_function" in self.features
         self._functions = _spec_entries(self.content, "functions", _DEFAULT_FUNCTIONS)
         self._modules = _spec_entries(self.content, "modules", _DEFAULT_MODULES)
         self._spec_map = {str(entry.get("name")): entry for entry in self._functions}
@@ -556,7 +595,7 @@ class ScriptHost:
         self._state = ScriptState.RUNNING
         self._last_activity = time.monotonic()
         self._run_id += 1
-        self._publish(ScriptStarted(defines_function=self.defines_function))
+        self._publish(ScriptStarted(defines_function=self.defines_function, features=self.features))
 
     def stop(self) -> None:
         """Terminate the child process (always works) and mark STOPPED."""

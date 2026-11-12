@@ -252,7 +252,7 @@ class World:
         self._bump_chunk(x, y)
         return tile.ore_id
 
-    def advance(self, tick: int) -> None:
+    def advance(self, tick: int) -> list[tuple[int, int]]:
         """Process all regenerations due at ``tick``.
 
         Pops due entries from the min-heap of ``(regen_at_tick, x, y)``
@@ -263,14 +263,20 @@ class World:
         stays consistent with this method: a tile mined at tick ``t``
         is depleted for every tick ``< t + ore.regen_ticks`` and
         regenerated from that tick on.
+
+        Returns the coordinates of the tiles that regenerated during
+        this call, in regeneration order.
         """
+        regenerated: list[tuple[int, int]] = []
         heap = self._regen_heap
         while heap and heap[0][0] <= tick:
             regen_at, x, y = heapq.heappop(heap)
             entry = self.delta.get((x, y))
             if entry is None or entry[1] != regen_at:
                 continue
-            self._advance_tile_if_due(x, y, tick)
+            if self._advance_tile_if_due(x, y, tick):
+                regenerated.append((x, y))
+        return regenerated
 
     def chunk_tiles(self, cx: int, cy: int, tick: int = 0) -> tuple[tuple[Tile, ...], ...]:
         """Return the tiles of chunk ``(cx, cy)`` as rows of tiles.

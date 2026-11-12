@@ -22,6 +22,7 @@ from digscript.core.schemas import (
     Biome,
     Config,
     ContentError,
+    Example,
     FunctionSpec,
     ModuleSpec,
     Ore,
@@ -53,6 +54,7 @@ class Content:
     achievements: dict[str, Achievement] = field(default_factory=dict)
     sprites: Sprites | None = None
     skins: dict[str, Skin] = field(default_factory=dict)
+    examples: dict[str, Example] = field(default_factory=dict)
 
     def get_skin(self, skin_id: str) -> Skin:
         """Return the skin with ``skin_id`` or raise ContentError."""
@@ -74,6 +76,27 @@ class Content:
     def skins_by_id(self) -> dict[str, Skin]:
         """Alias for :attr:`skins`."""
         return self.skins
+
+    def get_example(self, example_id: str) -> Example:
+        """Return the example with ``example_id`` or raise ContentError."""
+        try:
+            return self.examples[example_id]
+        except KeyError:
+            raise ContentError(f"examples.json: $.id: unknown example id '{example_id}'") from None
+
+    def example(self, example_id: str) -> Example:
+        """Alias for :meth:`get_example`."""
+        return self.get_example(example_id)
+
+    @property
+    def example_list(self) -> list[Example]:
+        """All examples in file order."""
+        return list(self.examples.values())
+
+    @property
+    def examples_by_id(self) -> dict[str, Example]:
+        """Alias for :attr:`examples`."""
+        return self.examples
 
     def get_achievement(self, achievement_id: str) -> Achievement:
         """Return the achievement with ``achievement_id`` or raise ContentError."""
@@ -278,6 +301,38 @@ _KNOWN_COUNTERS = {
     "sales",
     "money_earned",
     "scripts_finished",
+    "scripts_run",
+    "max_distance",
+    "biomes_visited",
+    "streak",
+    "fail_streak",
+    "unique_ores_mined",
+    "largest_sale",
+    "ores_in_one_sale",
+    "upgrades_bought",
+    "regens",
+    "good_estimates",
+    "script_defines_function",
+    "scripts_defines_function",
+}
+
+_KNOWN_FAIL_REASONS = {
+    "miss",
+    "locked_ore",
+    "tool_too_weak",
+    "inventory_full",
+    "nothing_to_mine",
+}
+
+_KNOWN_SCRIPT_FEATURES = {
+    "defines_function",
+    "uses_import",
+    "uses_comprehension",
+    "uses_class",
+    "uses_try",
+    "uses_recursion",
+    "uses_lambda",
+    "uses_generator",
 }
 
 
@@ -289,6 +344,7 @@ def _cross_validate(
     functions: dict[str, FunctionSpec] | None = None,
     modules: dict[str, ModuleSpec] | None = None,
     skins: dict[str, Skin] | None = None,
+    examples: dict[str, Example] | None = None,
 ) -> None:
     for biome_index, biome in enumerate(biomes.values()):
         for ore_id in biome.ore_weights:
@@ -307,6 +363,9 @@ def _cross_validate(
         modules = {}
     if skins is None:
         skins = {}
+    examples_present = examples is not None
+    if examples is None:
+        examples = {}
     for ach_index, achievement in enumerate(achievements.values()):
         if achievement.parent is not None:
             if achievement.parent == achievement.id:
@@ -320,7 +379,8 @@ def _cross_validate(
                     f"unknown achievement id '{achievement.parent}'"
                 )
         criteria = achievement.criteria
-        if getattr(criteria, "type", None) == "counter":
+        criteria_type = getattr(criteria, "type", None)
+        if criteria_type == "counter":
             counter = getattr(criteria, "counter", "")
             if counter in _KNOWN_COUNTERS:
                 pass
@@ -331,10 +391,38 @@ def _cross_validate(
                         f"achievements.json: $.{ach_index}.criteria.counter: "
                         f"unknown ore id '{ore_id}'"
                     )
+            elif isinstance(counter, str) and counter.startswith("attempts:"):
+                ore_id = counter[len("attempts:") :]
+                if ore_id != "any" and ore_id not in ores:
+                    raise ContentError(
+                        f"achievements.json: $.{ach_index}.criteria.counter: "
+                        f"unknown ore id '{ore_id}'"
+                    )
+            elif isinstance(counter, str) and counter.startswith("biome:"):
+                biome_id = counter[len("biome:") :]
+                if biome_id not in biomes:
+                    raise ContentError(
+                        f"achievements.json: $.{ach_index}.criteria.counter: "
+                        f"unknown biome id '{biome_id}'"
+                    )
+            elif isinstance(counter, str) and counter.startswith("fail:"):
+                reason = counter[len("fail:") :]
+                if reason not in _KNOWN_FAIL_REASONS:
+                    raise ContentError(
+                        f"achievements.json: $.{ach_index}.criteria.counter: "
+                        f"unknown failure reason '{reason}'"
+                    )
             else:
                 raise ContentError(
                     f"achievements.json: $.{ach_index}.criteria.counter: "
                     f"unknown counter '{counter}'"
+                )
+        elif criteria_type == "script_feature":
+            feature = getattr(criteria, "feature", "")
+            if feature not in _KNOWN_SCRIPT_FEATURES:
+                raise ContentError(
+                    f"achievements.json: $.{ach_index}.criteria.feature: "
+                    f"unknown script feature '{feature}'"
                 )
         for reward_index, reward in enumerate(achievement.rewards):
             reward_type = getattr(reward, "type", "")
@@ -351,11 +439,15 @@ def _cross_validate(
                     f"achievements.json: $.{ach_index}.rewards.{reward_index}.id: "
                     f"reward of type '{reward_type}' requires an id"
                 )
+            if reward_type == "unlock_example" and not examples_present:
+                continue
             targets: dict[str, Any] = {
                 "unlock_function": functions,
                 "unlock_ore": ores,
                 "unlock_upgrade": upgrades,
                 "unlock_module": modules,
+                "unlock_skin": skins,
+                "unlock_example": examples,
             }
             target = targets.get(reward_type)
             if target is not None and reward_id not in target:
@@ -364,6 +456,8 @@ def _cross_validate(
                     "unlock_ore": "ore",
                     "unlock_upgrade": "upgrade",
                     "unlock_module": "module",
+                    "unlock_skin": "skin",
+                    "unlock_example": "example",
                 }
                 raise ContentError(
                     f"achievements.json: $.{ach_index}.rewards.{reward_index}.id: "
@@ -385,6 +479,8 @@ def _cross_validate(
     _check_unlocked_by(functions, "functions.json", "name")
     _check_unlocked_by(modules, "modules.json", "name")
     _check_unlocked_by(skins, "skins.json", "id")
+    if examples_present:
+        _check_unlocked_by(examples, "examples.json", "id")
 
 
 def load_content(content_dir: str | Path | None = None) -> Content:
@@ -468,10 +564,33 @@ def load_content(content_dir: str | Path | None = None) -> Content:
         skins_list = _validate(skins_data, TypeAdapter(list[Skin]), "skins.json")
         skins = _index_by_id(skins_list, "skins.json", "skin")
 
-    _cross_validate(ores, biomes, achievements, upgrades, functions, modules, skins)
+    examples: dict[str, Example] = {}
+    examples_present = False
+    try:
+        examples_data = _read_json(base_path, "examples.json")
+    except ContentError as exc:
+        if "file not found" not in str(exc):
+            raise
+    else:
+        examples_present = True
+        if isinstance(examples_data, dict):
+            examples_data = examples_data.get("examples", examples_data)
+        examples_list = _validate(examples_data, TypeAdapter(list[Example]), "examples.json")
+        examples = _index_by_id(examples_list, "examples.json", "example")
+
+    _cross_validate(
+        ores,
+        biomes,
+        achievements,
+        upgrades,
+        functions,
+        modules,
+        skins,
+        examples if examples_present else None,
+    )
     logger.debug(
         "Loaded content: %d ores, %d biomes, %d upgrades, %d functions, %d modules, "
-        "%d achievements, %d skins",
+        "%d achievements, %d skins, %d examples",
         len(ores),
         len(biomes),
         len(upgrades),
@@ -479,6 +598,7 @@ def load_content(content_dir: str | Path | None = None) -> Content:
         len(modules),
         len(achievements),
         len(skins),
+        len(examples),
     )
     return Content(
         config=config,
@@ -490,6 +610,7 @@ def load_content(content_dir: str | Path | None = None) -> Content:
         achievements=achievements,
         sprites=sprites,
         skins=skins,
+        examples=examples,
     )
 
 

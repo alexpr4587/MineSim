@@ -142,7 +142,7 @@ def test_version_1_saves_load_and_migrate(tmp_path) -> None:
         "progression": {},
     }
     migrated = migrate(data)
-    assert migrated["version"] == 2
+    assert migrated["version"] == 3
     assert migrated["selected_skin"] == DEFAULT_SKIN
     path = tmp_path / "slot1.json"
     path.write_text(json.dumps(data), encoding="utf-8")

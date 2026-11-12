@@ -29,7 +29,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-CURRENT_VERSION = 2
+CURRENT_VERSION = 3
 SAVE_VERSION = CURRENT_VERSION
 DEFAULT_SKIN = "rusty_bot"
 
@@ -64,8 +64,21 @@ def _migrate_v1_to_v2(data: dict[str, Any]) -> dict[str, Any]:
     return migrated
 
 
+def _migrate_v2_to_v3(data: dict[str, Any]) -> dict[str, Any]:
+    """Bump to save version 3.
+
+    Version 3 adds progression counters and the unlocked skin/example
+    sets. Missing counters default to 0 and missing unlock sets are
+    rebuilt from content, so the payload only needs the version bump.
+    """
+    migrated = dict(data)
+    migrated["version"] = 3
+    return migrated
+
+
 MIGRATIONS: dict[int, Callable[[dict[str, Any]], dict[str, Any]]] = {
     1: _migrate_v1_to_v2,
+    2: _migrate_v2_to_v3,
 }
 
 
@@ -106,7 +119,7 @@ def migrate(data: Any) -> dict[str, Any]:
 
 
 class SaveGame(BaseModel):
-    """A serialised game state (save file schema, version 2)."""
+    """A serialised game state (save file schema, version 3)."""
 
     model_config = ConfigDict(extra="ignore")
 

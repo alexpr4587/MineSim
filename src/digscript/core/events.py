@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 __all__ = [
     "AchievementUnlocked",
+    "EstimateSubmitted",
     "EventBus",
     "MineAttempted",
     "Moved",
@@ -17,6 +18,7 @@ __all__ = [
     "ScriptStarted",
     "Sold",
     "TickAdvanced",
+    "TileRegenerated",
     "UpgradeBought",
 ]
 
@@ -32,10 +34,17 @@ class Moved:
 
 @dataclass(frozen=True, slots=True)
 class MineAttempted:
-    """A mining attempt was rolled."""
+    """A mine() call was evaluated.
+
+    ``reason`` is ``None`` on success, ``'miss'`` when the dice rolled a
+    failure, and otherwise a rule failure (``locked_ore``,
+    ``tool_too_weak``, ``inventory_full`` or ``nothing_to_mine``). Only
+    a success or a ``'miss'`` counts as an attempt.
+    """
 
     ore_id: str | None = None
     success: bool = False
+    reason: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,6 +64,25 @@ class Sold:
 
 
 @dataclass(frozen=True, slots=True)
+class TileRegenerated:
+    """A depleted tile regenerated during :meth:`World.advance`."""
+
+    x: int = 0
+    y: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class EstimateSubmitted:
+    """A player submitted an estimate for an ore's mining probability."""
+
+    ore_id: str = ""
+    p: float = 0.0
+    error: float = 0.0
+    attempts: int = 0
+    good: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class UpgradeBought:
     """An upgrade level was bought."""
 
@@ -67,6 +95,7 @@ class ScriptStarted:
     """A player script started."""
 
     defines_function: bool = False
+    features: frozenset[str] = field(default_factory=frozenset)
 
 
 @dataclass(frozen=True, slots=True)

@@ -134,21 +134,21 @@ def _mine_failure(engine: Any) -> dict[str, Any] | None:
     world = ctx["world"]
     content = ctx["content"]
     if miner is None or world is None or content is None:
-        return {"ok": False, "reason": "nothing_to_mine"}
+        return {"ok": False, "reason": "nothing_to_mine", "ore_id": None}
     tile = world.tile_at(miner.x, miner.y, _tick(engine))
     if tile.is_base or tile.depleted or tile.ore_id is None:
-        return {"ok": False, "reason": "nothing_to_mine"}
+        return {"ok": False, "reason": "nothing_to_mine", "ore_id": None}
     ore_id = tile.ore_id
     if not _is_unlocked(engine, content, ore_id):
-        return {"ok": False, "reason": "locked_ore"}
+        return {"ok": False, "reason": "locked_ore", "ore_id": ore_id}
     ore = _get_ore(content, ore_id)
     if miner.tool_tier < ore.tier:
-        return {"ok": False, "reason": "tool_too_weak"}
+        return {"ok": False, "reason": "tool_too_weak", "ore_id": ore_id}
     inventory_size = getattr(miner, "inventory_size", None)
     if inventory_size is None:
         inventory_size = sum(miner.inventory.values())
     if inventory_size >= miner.capacity:
-        return {"ok": False, "reason": "inventory_full"}
+        return {"ok": False, "reason": "inventory_full", "ore_id": ore_id}
     return None
 
 
@@ -212,6 +212,14 @@ class Mine:
         content = engine.content
         failure = _mine_failure(engine)
         if failure is not None:
+            _publish(
+                engine,
+                MineAttempted(
+                    ore_id=failure.get("ore_id"),
+                    success=False,
+                    reason=str(failure.get("reason")),
+                ),
+            )
             return failure
         ore_id = world.tile_at(miner.x, miner.y, _tick(engine)).ore_id
         ore = _get_ore(content, ore_id)
@@ -232,7 +240,10 @@ class Mine:
             if success:
                 stats.successes[ore_id] = stats.successes.get(ore_id, 0) + 1
                 stats.total_mined += 1
-        _publish(engine, MineAttempted(ore_id=ore_id, success=success))
+        _publish(
+            engine,
+            MineAttempted(ore_id=ore_id, success=success, reason=None if success else "miss"),
+        )
         if not success:
             return {
                 "ok": False,

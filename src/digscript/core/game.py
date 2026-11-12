@@ -12,7 +12,7 @@ from digscript.core.events import EventBus
 from digscript.core.miner import Miner, MinerStats
 from digscript.core.progression.service import ProgressionService
 from digscript.core.progression.state import ProgressionState
-from digscript.core.save import DEFAULT_SKIN, SaveGame, default_save_path
+from digscript.core.save import CURRENT_VERSION, DEFAULT_SKIN, SaveGame, default_save_path
 from digscript.core.world import World, WorldGenerator
 
 __all__ = ["Game"]
@@ -230,6 +230,9 @@ class Game:
         unlocked_by = getattr(skin, "unlocked_by", None)
         if unlocked_by is None:
             return True
+        checker = getattr(self._progression_state, "is_skin_unlocked", None)
+        if callable(checker) and checker(str(skin_id)):
+            return True
         completed = getattr(self._progression_state, "completed", {}) or {}
         if unlocked_by in completed:
             return True
@@ -300,7 +303,7 @@ class Game:
     def save(self, path: str | Path | None = None) -> Path:
         """Save this game to ``path`` (default save path) and return the path."""
         savegame = SaveGame(
-            version=2,
+            version=CURRENT_VERSION,
             seed=self.seed,
             tick=self.tick,
             selected_skin=self._selected_skin,
@@ -328,7 +331,7 @@ class Game:
         game._world.load_dict(savegame.world_delta)
         restored = ProgressionState.from_dict(savegame.progression, content=content)
         game._progression_state = restored
-        game._progression_service._state = restored
+        game._progression_service.state = restored
         try:
             game.select_skin(str(savegame.selected_skin))
         except ValueError:

@@ -6,6 +6,7 @@ from typing import Any
 
 from digscript.core.events import (
     AchievementUnlocked,
+    EstimateSubmitted,
     EventBus,
     MineAttempted,
     Moved,
@@ -14,6 +15,8 @@ from digscript.core.events import (
     ScriptStarted,
     Sold,
     TickAdvanced,
+    TileRegenerated,
+    UpgradeBought,
 )
 from digscript.core.progression.state import ProgressionState
 
@@ -71,6 +74,7 @@ class ProgressionService:
         if events is None:
             events = kwargs.pop("bus", None)
         miner = kwargs.pop("miner", None)
+        world = kwargs.pop("world", None)
         engine = kwargs.pop("engine", None)
         if engine is None:
             engine = kwargs.pop("game", None)
@@ -104,10 +108,15 @@ class ProgressionService:
         self._miner = miner
         if engine is not None and self._miner is None:
             self._miner = _get(engine, "miner")
+        self._world = world
+        if self._world is None and engine is not None:
+            self._world = _get(engine, "world")
         if events is None and engine is not None:
             events = _get(engine, "events") or _get(engine, "event_bus") or _get(engine, "bus")
         self._events = events if events is not None else EventBus()
         self._tick = 0
+        self._current_streak = int(getattr(self._state, "current_streak", 0) or 0)
+        self._current_fail_streak = int(getattr(self._state, "current_fail_streak", 0) or 0)
         self._checking = False
         self._subscribed_bus: Any = None
         self._subscribe(self._events)
@@ -129,6 +138,8 @@ class ProgressionService:
     @state.setter
     def state(self, value: ProgressionState) -> None:
         self._state = value
+        self._current_streak = int(getattr(value, "current_streak", 0) or 0)
+        self._current_fail_streak = int(getattr(value, "current_fail_streak", 0) or 0)
 
     @property
     def progression_state(self) -> ProgressionState:
@@ -137,7 +148,7 @@ class ProgressionService:
 
     @progression_state.setter
     def progression_state(self, value: ProgressionState) -> None:
-        self._state = value
+        self.state = value
 
     @property
     def events(self) -> Any:
@@ -188,6 +199,8 @@ class ProgressionService:
         if value is not None:
             if self._miner is None:
                 self._miner = _get(value, "miner")
+            if self._world is None:
+                self._world = _get(value, "world")
             bus = _get(value, "events") or _get(value, "event_bus") or _get(value, "bus")
             if bus is not None:
                 self._subscribe(bus)
@@ -223,6 +236,16 @@ class ProgressionService:
         return self._state.unlocked_modules
 
     @property
+    def unlocked_skins(self) -> set[str]:
+        """Alias for the state's unlocked skins."""
+        return self._state.unlocked_skins
+
+    @property
+    def unlocked_examples(self) -> set[str]:
+        """Alias for the state's unlocked examples."""
+        return self._state.unlocked_examples
+
+    @property
     def tick(self) -> int:
         """The current tick (from the engine if attached)."""
         if self._engine is not None:
@@ -256,6 +279,9 @@ class ProgressionService:
             bus.subscribe(ScriptStarted, self._on_script_started)
             bus.subscribe(ScriptFinished, self._on_script_finished)
             bus.subscribe(TickAdvanced, self._on_tick)
+            bus.subscribe(TileRegenerated, self._on_tile_regenerated)
+            bus.subscribe(EstimateSubmitted, self._on_estimate_submitted)
+            bus.subscribe(UpgradeBought, self._on_upgrade_bought)
         except Exception:
             return
         self._subscribed_bus = bus
@@ -270,12 +296,60 @@ class ProgressionService:
             if bus is not None and hasattr(bus, "publish"):
                 bus.publish(event)
 
+    def _biome_id_at(self, x: int, y: int) -> str | None:
+        world = self._world
+        if world is None and self._engine is not None:
+            world = _get(self._engine, "world")
+        if world is None:
+            return None
+        try:
+            tile = world.tile_at(x, y, self.tick)
+        except Exception:
+            return None
+        biome_id = _get(tile, "biome_id")
+        return str(biome_id) if biome_id else None
+
     def _on_moved(self, event: Any) -> None:
+        x = int(_get(event, "x", 0) or 0)
+        y = int(_get(event, "y", 0) or 0)
         self._state.add_counter("tiles_moved", 1)
+        distance = max(abs(x), abs(y))
+        if distance > self._state.get_counter("max_distance"):
+            self._state.counters["max_distance"] = distance
+        biome_id = self._biome_id_at(x, y)
+        if biome_id:
+            counter = f"biome:{biome_id}"
+            if self._state.get_counter(counter) == 0:
+                self._state.add_counter("biomes_visited", 1)
+            self._state.counters[counter] = 1
         self._check_achievements()
 
     def _on_mine_attempted(self, event: Any) -> None:
-        self._state.add_counter("attempts:any", 1)
+        ore_id = _get(event, "ore_id")
+        success = bool(_get(event, "success", False))
+        reason = _get(event, "reason")
+        if reason is None and not success:
+            reason = "miss"
+        is_attempt = success or reason == "miss"
+        if is_attempt:
+            self._state.add_counter("attempts:any", 1)
+            if ore_id:
+                self._state.add_counter(f"attempts:{ore_id}", 1)
+            if success:
+                self._current_streak += 1
+                self._current_fail_streak = 0
+                if self._current_streak > self._state.get_counter("streak"):
+                    self._state.counters["streak"] = self._current_streak
+            else:
+                self._current_streak = 0
+                self._current_fail_streak += 1
+                if self._current_fail_streak > self._state.get_counter("fail_streak"):
+                    self._state.counters["fail_streak"] = self._current_fail_streak
+                self._state.add_counter(f"fail:{reason}", 1)
+            self._state.current_streak = self._current_streak
+            self._state.current_fail_streak = self._current_fail_streak
+        elif reason:
+            self._state.add_counter(f"fail:{reason}", 1)
         self._check_achievements()
 
     def _on_ore_mined(self, event: Any) -> None:
@@ -283,20 +357,34 @@ class ProgressionService:
         ore_id = _get(event, "ore_id")
         self._state.add_counter("mined:any", amount)
         if ore_id:
+            if amount > 0 and self._state.get_counter(f"mined:{ore_id}") == 0:
+                self._state.add_counter("unique_ores_mined", 1)
             self._state.add_counter(f"mined:{ore_id}", amount)
         self._check_achievements()
 
     def _on_sold(self, event: Any) -> None:
         money = int(_get(event, "money", 0) or 0)
+        items = _get(event, "items") or {}
         if money > 0:
             self._state.add_counter("sales", 1)
             self._state.add_counter("money_earned", money)
+            if money > self._state.get_counter("largest_sale"):
+                self._state.counters["largest_sale"] = money
+            distinct = sum(1 for count in items.values() if int(count) > 0)
+            if distinct > self._state.get_counter("ores_in_one_sale"):
+                self._state.counters["ores_in_one_sale"] = distinct
         self._check_achievements()
 
     def _on_script_started(self, event: Any) -> None:
+        features = {str(feature) for feature in (_get(event, "features") or ())}
         if _get(event, "defines_function"):
+            features.add("defines_function")
+        for feature in features:
+            self._state.counters[f"script_feature:{feature}"] = 1
+        if "defines_function" in features:
             self._state.counters["script_defines_function"] = 1
             self._state.counters["scripts_defines_function"] = 1
+        self._state.add_counter("scripts_run", 1)
         self._check_achievements()
 
     def _on_script_finished(self, event: Any) -> None:
@@ -307,6 +395,19 @@ class ProgressionService:
         tick = _get(event, "tick")
         if tick is not None:
             self._tick = int(tick)
+
+    def _on_tile_regenerated(self, event: Any) -> None:
+        self._state.add_counter("regens", 1)
+        self._check_achievements()
+
+    def _on_estimate_submitted(self, event: Any) -> None:
+        if _get(event, "good"):
+            self._state.add_counter("good_estimates", 1)
+        self._check_achievements()
+
+    def _on_upgrade_bought(self, event: Any) -> None:
+        self._state.add_counter("upgrades_bought", 1)
+        self._check_achievements()
 
     def handle_event(self, event: Any) -> None:
         """Dispatch ``event`` manually (same logic as subscriptions)."""
@@ -324,6 +425,12 @@ class ProgressionService:
             self._on_script_finished(event)
         elif isinstance(event, TickAdvanced):
             self._on_tick(event)
+        elif isinstance(event, TileRegenerated):
+            self._on_tile_regenerated(event)
+        elif isinstance(event, EstimateSubmitted):
+            self._on_estimate_submitted(event)
+        elif isinstance(event, UpgradeBought):
+            self._on_upgrade_bought(event)
         else:
             name = type(event).__name__
             if name == "Moved":
@@ -340,6 +447,12 @@ class ProgressionService:
                 self._on_script_finished(event)
             elif name == "TickAdvanced":
                 self._on_tick(event)
+            elif name == "TileRegenerated":
+                self._on_tile_regenerated(event)
+            elif name == "EstimateSubmitted":
+                self._on_estimate_submitted(event)
+            elif name == "UpgradeBought":
+                self._on_upgrade_bought(event)
 
     def handle(self, event: Any) -> None:
         """Alias for :meth:`handle_event`."""
@@ -379,10 +492,15 @@ class ProgressionService:
         if criteria_type == "script_defines_function":
             current = 1
             if not (
-                self._state.counters.get("script_defines_function")
+                self._state.counters.get("script_feature:defines_function")
+                or self._state.counters.get("script_defines_function")
                 or self._state.counters.get("scripts_defines_function")
             ):
                 current = 0
+            return current, 1
+        if criteria_type == "script_feature":
+            feature = str(_get(criteria, "feature", ""))
+            current = 1 if self._state.counters.get(f"script_feature:{feature}") else 0
             return current, 1
         return 0, 1
 
@@ -440,6 +558,10 @@ class ProgressionService:
                 self._state.unlock_upgrade(str(reward_id))
             elif reward_type == "unlock_module" and reward_id:
                 self._state.unlock_module(str(reward_id))
+            elif reward_type == "unlock_skin" and reward_id:
+                self._state.unlock_skin(str(reward_id))
+            elif reward_type == "unlock_example" and reward_id:
+                self._state.unlock_example(str(reward_id))
             elif reward_type == "money":
                 amount = _get(reward, "amount")
                 if amount is not None:
@@ -505,6 +627,14 @@ class ProgressionService:
     def is_module_unlocked(self, name: str) -> bool:
         """Return True if the module is unlocked."""
         return self._state.is_module_unlocked(name)
+
+    def is_skin_unlocked(self, skin_id: str) -> bool:
+        """Return True if the skin is unlocked."""
+        return self._state.is_skin_unlocked(skin_id)
+
+    def is_example_unlocked(self, example_id: str) -> bool:
+        """Return True if the example script is unlocked."""
+        return self._state.is_example_unlocked(example_id)
 
     def is_unlocked(self, kind: str, ident: str) -> bool:
         """Return True if ``ident`` of ``kind`` is unlocked."""

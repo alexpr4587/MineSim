@@ -84,6 +84,13 @@ class _SkinCard(QFrame):
         return self.panel.sprite_book.skin(self.skin_id) if self.panel.sprite_book else None
 
     def is_unlocked(self) -> bool:
+        progression = self.panel.progression
+        checker = getattr(progression, "is_skin_unlocked", None)
+        if callable(checker):
+            try:
+                return bool(checker(self.skin_id))
+            except Exception:
+                pass
         game = self.panel.game
         checker = getattr(game, "is_skin_unlocked", None)
         if callable(checker):

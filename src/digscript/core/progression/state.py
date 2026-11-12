@@ -27,10 +27,12 @@ def _entries(content: Any, attr: str) -> list[Any]:
 def _entry_id(entry: Any, kind: str) -> str | None:
     """Return the identifier of a content entry."""
     if isinstance(entry, dict):
-        value = entry.get("id" if kind in ("ore", "upgrade") else "name")
+        value = entry.get("id" if kind in ("ore", "upgrade", "skin", "example") else "name")
         return str(value) if value is not None else None
     value = (
-        getattr(entry, "id", None) if kind in ("ore", "upgrade") else getattr(entry, "name", None)
+        getattr(entry, "id", None)
+        if kind in ("ore", "upgrade", "skin", "example")
+        else getattr(entry, "name", None)
     )
     if value is None:
         value = getattr(entry, "id", None) or getattr(entry, "name", None)
@@ -44,6 +46,8 @@ def _initial_unlocked(content: Any) -> dict[str, set[str]]:
         "unlocked_ores": set(),
         "unlocked_upgrades": set(),
         "unlocked_modules": set(),
+        "unlocked_skins": set(),
+        "unlocked_examples": set(),
     }
     if content is None:
         return result
@@ -52,6 +56,8 @@ def _initial_unlocked(content: Any) -> dict[str, set[str]]:
         ("ores", "ore", "unlocked_ores"),
         ("upgrades", "upgrade", "unlocked_upgrades"),
         ("modules", "module", "unlocked_modules"),
+        ("skins", "skin", "unlocked_skins"),
+        ("examples", "example", "unlocked_examples"),
     ]
     for attr, kind, field_name in mapping:
         for entry in _entries(content, attr):
@@ -77,6 +83,10 @@ class ProgressionState:
         "unlocked_ores",
         "unlocked_upgrades",
         "unlocked_modules",
+        "unlocked_skins",
+        "unlocked_examples",
+        "current_streak",
+        "current_fail_streak",
     )
 
     def __init__(
@@ -88,6 +98,8 @@ class ProgressionState:
         unlocked_ores: Any = None,
         unlocked_upgrades: Any = None,
         unlocked_modules: Any = None,
+        unlocked_skins: Any = None,
+        unlocked_examples: Any = None,
         data: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
@@ -102,6 +114,10 @@ class ProgressionState:
             self.unlocked_ores = parsed.unlocked_ores
             self.unlocked_upgrades = parsed.unlocked_upgrades
             self.unlocked_modules = parsed.unlocked_modules
+            self.unlocked_skins = parsed.unlocked_skins
+            self.unlocked_examples = parsed.unlocked_examples
+            self.current_streak = parsed.current_streak
+            self.current_fail_streak = parsed.current_fail_streak
             return
         if counters is None:
             counters = kwargs.pop("counter_values", None) or {}
@@ -126,12 +142,24 @@ class ProgressionState:
         self.unlocked_modules = (
             set(unlocked_modules) if unlocked_modules is not None else initial["unlocked_modules"]
         )
+        self.unlocked_skins = (
+            set(unlocked_skins) if unlocked_skins is not None else initial["unlocked_skins"]
+        )
+        self.unlocked_examples = (
+            set(unlocked_examples)
+            if unlocked_examples is not None
+            else initial["unlocked_examples"]
+        )
+        self.current_streak = 0
+        self.current_fail_streak = 0
         if kwargs:
             unknown = set(kwargs) - {
                 "unlocked_function_ids",
                 "unlocked_ore_ids",
                 "unlocked_upgrade_ids",
                 "unlocked_module_ids",
+                "unlocked_skin_ids",
+                "unlocked_example_ids",
             }
             if unknown:
                 raise TypeError(f"unexpected arguments: {sorted(unknown)}")
@@ -142,10 +170,14 @@ class ProgressionState:
             "unlocked_ore_ids": "unlocked_ores",
             "unlocked_upgrade_ids": "unlocked_upgrades",
             "unlocked_module_ids": "unlocked_modules",
+            "unlocked_skin_ids": "unlocked_skins",
+            "unlocked_example_ids": "unlocked_examples",
             "functions_unlocked": "unlocked_functions",
             "ores_unlocked": "unlocked_ores",
             "upgrades_unlocked": "unlocked_upgrades",
             "modules_unlocked": "unlocked_modules",
+            "skins_unlocked": "unlocked_skins",
+            "examples_unlocked": "unlocked_examples",
             "completed_achievements": "completed",
         }
         if name in aliases:
@@ -163,7 +195,9 @@ class ProgressionState:
             f"unlocked_functions={sorted(self.unlocked_functions)!r}, "
             f"unlocked_ores={sorted(self.unlocked_ores)!r}, "
             f"unlocked_upgrades={sorted(self.unlocked_upgrades)!r}, "
-            f"unlocked_modules={sorted(self.unlocked_modules)!r})"
+            f"unlocked_modules={sorted(self.unlocked_modules)!r}, "
+            f"unlocked_skins={sorted(self.unlocked_skins)!r}, "
+            f"unlocked_examples={sorted(self.unlocked_examples)!r})"
         )
 
     @classmethod
@@ -189,11 +223,15 @@ class ProgressionState:
         state = cls.__new__(cls)
         state.counters = counters
         state.completed = completed
+        state.current_streak = int(data.get("current_streak", 0) or 0)
+        state.current_fail_streak = int(data.get("current_fail_streak", 0) or 0)
         for field_name in (
             "unlocked_functions",
             "unlocked_ores",
             "unlocked_upgrades",
             "unlocked_modules",
+            "unlocked_skins",
+            "unlocked_examples",
         ):
             raw = data.get(field_name)
             if raw is None:
@@ -218,6 +256,10 @@ class ProgressionState:
             "unlocked_ores": sorted(self.unlocked_ores),
             "unlocked_upgrades": sorted(self.unlocked_upgrades),
             "unlocked_modules": sorted(self.unlocked_modules),
+            "unlocked_skins": sorted(self.unlocked_skins),
+            "unlocked_examples": sorted(self.unlocked_examples),
+            "current_streak": int(self.current_streak),
+            "current_fail_streak": int(self.current_fail_streak),
         }
 
     def to_save_dict(self) -> dict[str, Any]:
@@ -275,6 +317,20 @@ class ProgressionState:
         self.unlocked_modules.add(name)
         return True
 
+    def unlock_skin(self, skin_id: str) -> bool:
+        """Unlock a skin; return True if it was newly unlocked."""
+        if skin_id in self.unlocked_skins:
+            return False
+        self.unlocked_skins.add(skin_id)
+        return True
+
+    def unlock_example(self, example_id: str) -> bool:
+        """Unlock an example script; return True if it was newly unlocked."""
+        if example_id in self.unlocked_examples:
+            return False
+        self.unlocked_examples.add(example_id)
+        return True
+
     def is_ore_unlocked(self, ore_id: str) -> bool:
         """Return True if the ore is unlocked."""
         return ore_id in self.unlocked_ores
@@ -291,6 +347,14 @@ class ProgressionState:
         """Return True if the module is unlocked."""
         return name in self.unlocked_modules
 
+    def is_skin_unlocked(self, skin_id: str) -> bool:
+        """Return True if the skin is unlocked."""
+        return skin_id in self.unlocked_skins
+
+    def is_example_unlocked(self, example_id: str) -> bool:
+        """Return True if the example script is unlocked."""
+        return example_id in self.unlocked_examples
+
     def is_unlocked(self, kind: str, ident: str) -> bool:
         """Return True if ``ident`` of ``kind`` is unlocked."""
         kind_normalised = str(kind).lower().rstrip("s")
@@ -302,4 +366,8 @@ class ProgressionState:
             return self.is_upgrade_unlocked(ident)
         if kind_normalised == "module":
             return self.is_module_unlocked(ident)
+        if kind_normalised == "skin":
+            return self.is_skin_unlocked(ident)
+        if kind_normalised == "example":
+            return self.is_example_unlocked(ident)
         raise ValueError(f"unknown kind: {kind!r}")

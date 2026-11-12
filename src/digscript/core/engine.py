@@ -6,7 +6,7 @@ from collections import deque
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from digscript.core.events import EventBus, TickAdvanced
+from digscript.core.events import EventBus, TickAdvanced, TileRegenerated
 
 __all__ = ["AllUnlocked", "GameEngine", "ProgressionView", "Ticket"]
 
@@ -32,6 +32,14 @@ class ProgressionView(Protocol):
         """Return True if the module is unlocked."""
         ...
 
+    def is_skin_unlocked(self, skin_id: str) -> bool:
+        """Return True if the skin is unlocked."""
+        ...
+
+    def is_example_unlocked(self, example_id: str) -> bool:
+        """Return True if the example script is unlocked."""
+        ...
+
 
 class AllUnlocked:
     """A progression view that unlocks everything (for tests)."""
@@ -50,6 +58,14 @@ class AllUnlocked:
 
     def is_module_unlocked(self, name: str) -> bool:
         """Return True for every module."""
+        return True
+
+    def is_skin_unlocked(self, skin_id: str) -> bool:
+        """Return True for every skin."""
+        return True
+
+    def is_example_unlocked(self, example_id: str) -> bool:
+        """Return True for every example."""
         return True
 
 
@@ -233,9 +249,12 @@ class GameEngine:
         advance = getattr(self.world, "advance", None)
         if callable(advance):
             try:
-                advance(self.tick)
+                regenerated = advance(self.tick)
             except Exception:
-                pass
+                regenerated = None
+            if regenerated:
+                for x, y in regenerated:
+                    self._events.publish(TileRegenerated(x=x, y=y))
         if self._active is None:
             self._activate_next()
         if self._active is not None:

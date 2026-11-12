@@ -182,18 +182,37 @@ class CounterCriteria(_ContentModel):
 
 
 class ScriptDefinesFunctionCriteria(_ContentModel):
-    """Criterion satisfied when a player script defines a function."""
+    """Criterion satisfied when a player script defines a function.
+
+    Kept as an alias of the ``script_feature`` criterion with feature
+    ``defines_function`` for existing content and saves.
+    """
 
     type: Literal["script_defines_function"] = "script_defines_function"
 
 
-Criteria = CounterCriteria | ScriptDefinesFunctionCriteria
+class ScriptFeatureCriteria(_ContentModel):
+    """Criterion satisfied when a started script has a feature."""
+
+    type: Literal["script_feature"] = "script_feature"
+    feature: str = Field(min_length=1)
+
+
+Criteria = CounterCriteria | ScriptDefinesFunctionCriteria | ScriptFeatureCriteria
 
 
 class Reward(_ContentModel):
     """One achievement reward (unlock something or grant money)."""
 
-    type: Literal["unlock_function", "unlock_ore", "unlock_upgrade", "unlock_module", "money"]
+    type: Literal[
+        "unlock_function",
+        "unlock_ore",
+        "unlock_upgrade",
+        "unlock_module",
+        "unlock_skin",
+        "unlock_example",
+        "money",
+    ]
     id: str | None = None
     amount: int | None = None
 
@@ -235,6 +254,15 @@ class Sprites(_ContentModel):
     base: list[str]
 
 
+class Example(_ContentModel):
+    """An example player script (examples.json)."""
+
+    id: str = Field(min_length=1)
+    title: str = Field(min_length=1)
+    file: str = Field(min_length=1)
+    unlocked_by: str | None = None
+
+
 class Skin(_ContentModel):
     """A miner skin (skins.json): a palette swap of the sprite frames."""
 
@@ -262,6 +290,7 @@ __all__ = [
     "ContentError",
     "CounterCriteria",
     "Criteria",
+    "Example",
     "FunctionSpec",
     "MinerFrames",
     "MinerSprites",
@@ -269,6 +298,7 @@ __all__ = [
     "Ore",
     "Reward",
     "ScriptDefinesFunctionCriteria",
+    "ScriptFeatureCriteria",
     "Skin",
     "Sprites",
     "Upgrade",
