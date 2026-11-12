@@ -378,6 +378,23 @@ def _cross_validate(
                     f"achievements.json: $.{ach_index}.parent: "
                     f"unknown achievement id '{achievement.parent}'"
                 )
+            parent = achievements[achievement.parent]
+            if parent.tab != achievement.tab:
+                raise ContentError(
+                    f"achievements.json: $.{ach_index}.parent: "
+                    f"achievement '{achievement.id}' and its parent "
+                    f"'{achievement.parent}' must be in the same tab"
+                )
+            seen = {achievement.id}
+            cursor: Achievement | None = achievement
+            while cursor is not None and cursor.parent is not None:
+                if cursor.parent in seen:
+                    raise ContentError(
+                        f"achievements.json: $.{ach_index}.parent: "
+                        f"achievement parent chain for '{achievement.id}' contains a cycle"
+                    )
+                seen.add(cursor.parent)
+                cursor = achievements.get(cursor.parent)
         criteria = achievement.criteria
         criteria_type = getattr(criteria, "type", None)
         if criteria_type == "counter":

@@ -88,14 +88,23 @@ def test_functions_and_modules_are_documented(content):
         "submit_estimate",
     }
     assert required <= set(content.functions)
+    wiring = {
+        "wait": "patience",
+        "tick": "clockwork",
+        "distance": "far_from_home",
+        "biome": "deep_diver",
+        "ore_info": "appraiser",
+        "inspect": "know_your_limits",
+        "submit_estimate": "sampler",
+    }
     for name in required:
         spec = content.functions[name]
         assert spec.cost
         assert spec.example
-        assert spec.unlocked_by is None
+        assert spec.unlocked_by == wiring[name]
     for name in ("itertools", "functools", "dataclasses", "typing"):
         assert name in content.modules
-        assert content.modules[name].unlocked_by is None
+        assert content.modules[name].unlocked_by is not None
 
 
 def test_tick_distance_and_biome(content):

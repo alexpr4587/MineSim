@@ -17,13 +17,13 @@ Functions are called directly, e.g. `move(East)`, `mine()`, `sell()`. Locked fun
 | `scan` | `scan(radius)` | Scan for ore within radius tiles. Returns a list of (dx, dy, ore_id) for non-empty tiles. | 1 + radius ticks (radius capped by the scanner) | `for dx, dy, ore in scan(2): ...` | unlocks with the **Scout** achievement |
 | `stats` | `stats()` | Return per-ore mining statistics as {ore: {'attempts': n, 'successes': m}}. | 0 ticks | `stats()['stone']` | unlocks with the **Data Driven** achievement |
 | `buy_upgrade` | `buy_upgrade(upgrade_id)` | Buy the next level of the given upgrade and return the new level. | 0 ticks | `buy_upgrade('backpack')` | unlocks with the **First Sale** achievement |
-| `wait` | `wait(ticks)` | Wait for ticks (1 to 600) without doing anything else. | as many ticks as requested (1-600) | `wait(20)` | available from the start |
-| `tick` | `tick()` | Return the current game tick. | 0 ticks | `now = tick()` | available from the start |
-| `distance` | `distance()` | Return the Chebyshev distance from the base at (0, 0). | 0 ticks | `d = distance()` | available from the start |
-| `biome` | `biome()` | Return the id of the biome under the miner. | 0 ticks | `here = biome()` | available from the start |
-| `ore_info` | `ore_info(ore_id)` | Return {id, name, tier, hardness, base_value, regen_ticks} for a known ore, or None when it is unknown or locked. The mining probability is never included. | 0 ticks | `info = ore_info('coal')` | available from the start |
-| `inspect` | `inspect()` | Return {ore, mineable, reason, regrows_in} for the current tile. | 0 ticks | `seen = inspect()` | available from the start |
-| `submit_estimate` | `submit_estimate(ore_id, p)` | Submit an estimate p for the mining probability of an ore after at least 100 attempts. Allows three submissions per ore and returns {ok, close}. | 0 ticks | `submit_estimate('coal', 0.9)` | available from the start |
+| `wait` | `wait(ticks)` | Wait for ticks (1 to 600) without doing anything else. | as many ticks as requested (1-600) | `wait(20)` | unlocks with the **Patience** achievement |
+| `tick` | `tick()` | Return the current game tick. | 0 ticks | `now = tick()` | unlocks with the **Clockwork** achievement |
+| `distance` | `distance()` | Return the Chebyshev distance from the base at (0, 0). | 0 ticks | `d = distance()` | unlocks with the **Far From Home** achievement |
+| `biome` | `biome()` | Return the id of the biome under the miner. | 0 ticks | `here = biome()` | unlocks with the **Deep Diver** achievement |
+| `ore_info` | `ore_info(ore_id)` | Return {id, name, tier, hardness, base_value, regen_ticks} for a known ore, or None when it is unknown or locked. The mining probability is never included. | 0 ticks | `info = ore_info('coal')` | unlocks with the **Appraiser** achievement |
+| `inspect` | `inspect()` | Return {ore, mineable, reason, regrows_in} for the current tile. | 0 ticks | `seen = inspect()` | unlocks with the **Know Your Limits** achievement |
+| `submit_estimate` | `submit_estimate(ore_id, p)` | Submit an estimate p for the mining probability of an ore after at least 100 attempts. Allows three submissions per ore and returns {ok, close}. | 0 ticks | `submit_estimate('coal', 0.9)` | unlocks with the **Sampler** achievement |
 
 ### `move`
 
@@ -203,7 +203,7 @@ buy_upgrade('backpack')
 wait(20)
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Patience** achievement
 
 ### `tick`
 
@@ -221,7 +221,7 @@ wait(20)
 now = tick()
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Clockwork** achievement
 
 ### `distance`
 
@@ -239,7 +239,7 @@ now = tick()
 d = distance()
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Far From Home** achievement
 
 ### `biome`
 
@@ -257,7 +257,7 @@ d = distance()
 here = biome()
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Deep Diver** achievement
 
 ### `ore_info`
 
@@ -275,7 +275,7 @@ here = biome()
 info = ore_info('coal')
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Appraiser** achievement
 
 ### `inspect`
 
@@ -293,7 +293,7 @@ info = ore_info('coal')
 seen = inspect()
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Know Your Limits** achievement
 
 ### `submit_estimate`
 
@@ -311,7 +311,7 @@ seen = inspect()
 submit_estimate('coal', 0.9)
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Sampler** achievement
 
 ## minerlib helper module
 
@@ -463,10 +463,10 @@ Player scripts may import the standard-library modules below once the required a
 | `statistics` | unlocks with the **Data Driven** achievement |
 | `collections` | unlocks with the **Your Own Function** achievement |
 | `heapq` | unlocks with the **Your Own Function** achievement |
-| `itertools` | available from the start |
-| `functools` | available from the start |
-| `dataclasses` | available from the start |
-| `typing` | available from the start |
+| `itertools` | unlocks with the **Bring Your Tools** achievement |
+| `functools` | unlocks with the **One-Liner** achievement |
+| `dataclasses` | unlocks with the **Object Oriented** achievement |
+| `typing` | unlocks with the **Safe Hands** achievement |
 
 ## Safety
 

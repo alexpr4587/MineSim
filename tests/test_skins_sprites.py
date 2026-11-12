@@ -99,6 +99,7 @@ def test_selecting_a_skin_changes_world_view_pixels(qapp, content) -> None:
     view.show()
     qapp.processEvents()
     before = view.grab().toImage()
+    game.progression_state.unlock_skin("steel_walker")
     assert game.select_skin("steel_walker") == "steel_walker"
     view.update()
     qapp.processEvents()
@@ -154,6 +155,7 @@ def test_version_1_saves_load_and_migrate(tmp_path) -> None:
 
 def test_selected_skin_survives_save_round_trip(tmp_path, qapp) -> None:
     game = Game.new()
+    game.progression_state.unlock_skin("golden_hauler")
     game.select_skin("golden_hauler")
     path = tmp_path / "slot1.json"
     game.save(path)

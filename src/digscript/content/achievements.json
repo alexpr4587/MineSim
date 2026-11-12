@@ -24,7 +24,10 @@
     "title": "Scout",
     "description": "Make 50 mining attempts.",
     "criteria": {"type": "counter", "counter": "attempts:any", "target": 50},
-    "rewards": [{"type": "unlock_function", "id": "scan"}]
+    "rewards": [
+      {"type": "unlock_function", "id": "scan"},
+      {"type": "unlock_example", "id": "03_ore_hunter"}
+    ]
   },
   {
     "id": "data_driven",
@@ -49,6 +52,63 @@
       {"type": "unlock_module", "id": "collections"},
       {"type": "unlock_module", "id": "heapq"}
     ]
+  },
+  {
+    "id": "clockwork",
+    "tab": "code",
+    "parent": "hello_miner",
+    "title": "Clockwork",
+    "description": "Finish five scripts.",
+    "criteria": {"type": "counter", "counter": "scripts_finished", "target": 5},
+    "rewards": [{"type": "unlock_function", "id": "tick"}]
+  },
+  {
+    "id": "import_it",
+    "tab": "code",
+    "parent": "custom_function",
+    "title": "Bring Your Tools",
+    "description": "Use an import in a script.",
+    "criteria": {"type": "script_feature", "feature": "uses_import"},
+    "rewards": [{"type": "unlock_module", "id": "itertools"}]
+  },
+  {
+    "id": "one_liner",
+    "tab": "code",
+    "parent": "import_it",
+    "title": "One-Liner",
+    "description": "Use a comprehension in a script.",
+    "criteria": {"type": "script_feature", "feature": "uses_comprehension"},
+    "rewards": [{"type": "unlock_module", "id": "functools"}]
+  },
+  {
+    "id": "own_class",
+    "tab": "code",
+    "parent": "one_liner",
+    "title": "Object Oriented",
+    "description": "Define a class in a script.",
+    "criteria": {"type": "script_feature", "feature": "uses_class"},
+    "rewards": [
+      {"type": "unlock_module", "id": "dataclasses"},
+      {"type": "unlock_example", "id": "08_dataclass_logbook"}
+    ]
+  },
+  {
+    "id": "safe_hands",
+    "tab": "code",
+    "parent": "own_class",
+    "title": "Safe Hands",
+    "description": "Use try/except in a script.",
+    "criteria": {"type": "script_feature", "feature": "uses_try"},
+    "rewards": [{"type": "unlock_module", "id": "typing"}]
+  },
+  {
+    "id": "recursion",
+    "tab": "code",
+    "parent": "custom_function",
+    "title": "Down the Rabbit Hole",
+    "description": "Write a recursive function.",
+    "criteria": {"type": "script_feature", "feature": "uses_recursion"},
+    "rewards": [{"type": "money", "amount": 200}]
   },
   {
     "id": "first_dig",
@@ -78,7 +138,10 @@
     "title": "Copper Age",
     "description": "Mine 20 copper.",
     "criteria": {"type": "counter", "counter": "mined:copper", "target": 20},
-    "rewards": [{"type": "unlock_ore", "id": "iron"}]
+    "rewards": [
+      {"type": "unlock_ore", "id": "iron"},
+      {"type": "unlock_skin", "id": "copper_core"}
+    ]
   },
   {
     "id": "iron_will",
@@ -87,7 +150,10 @@
     "title": "Iron Will",
     "description": "Mine 20 iron.",
     "criteria": {"type": "counter", "counter": "mined:iron", "target": 20},
-    "rewards": [{"type": "unlock_ore", "id": "silver"}]
+    "rewards": [
+      {"type": "unlock_ore", "id": "silver"},
+      {"type": "unlock_skin", "id": "steel_walker"}
+    ]
   },
   {
     "id": "silver_lining",
@@ -105,7 +171,80 @@
     "title": "Gold Rush",
     "description": "Mine 10 gold.",
     "criteria": {"type": "counter", "counter": "mined:gold", "target": 10},
-    "rewards": [{"type": "unlock_ore", "id": "ruby"}]
+    "rewards": [
+      {"type": "unlock_ore", "id": "ruby"},
+      {"type": "unlock_skin", "id": "golden_hauler"},
+      {"type": "unlock_example", "id": "06_farm_ruby"}
+    ]
+  },
+  {
+    "id": "know_your_limits",
+    "tab": "mining",
+    "parent": "coal_miner",
+    "title": "Know Your Limits",
+    "description": "Try to mine an ore that is too hard.",
+    "criteria": {"type": "counter", "counter": "fail:tool_too_weak", "target": 1},
+    "rewards": [{"type": "unlock_function", "id": "inspect"}]
+  },
+  {
+    "id": "appraiser",
+    "tab": "mining",
+    "parent": "coal_miner",
+    "title": "Appraiser",
+    "description": "Mine three different ores.",
+    "criteria": {"type": "counter", "counter": "unique_ores_mined", "target": 3},
+    "rewards": [{"type": "unlock_function", "id": "ore_info"}]
+  },
+  {
+    "id": "patience",
+    "tab": "mining",
+    "parent": "first_dig",
+    "title": "Patience",
+    "description": "See a mined tile regenerate.",
+    "criteria": {"type": "counter", "counter": "regens", "target": 1},
+    "rewards": [
+      {"type": "unlock_function", "id": "wait"},
+      {"type": "unlock_example", "id": "07_regen_cycle"}
+    ]
+  },
+  {
+    "id": "lucky_strike",
+    "tab": "mining",
+    "parent": "copper_age",
+    "title": "Lucky Strike",
+    "description": "Succeed five mining attempts in a row.",
+    "criteria": {"type": "counter", "counter": "streak", "target": 5},
+    "rewards": [{"type": "money", "amount": 150}]
+  },
+  {
+    "id": "unlucky",
+    "tab": "mining",
+    "parent": "copper_age",
+    "title": "Better Luck Next Time",
+    "description": "Miss eight mining attempts in a row.",
+    "criteria": {"type": "counter", "counter": "fail_streak", "target": 8},
+    "rewards": [{"type": "money", "amount": 25}]
+  },
+  {
+    "id": "ruby_hunter",
+    "tab": "mining",
+    "parent": "gold_rush",
+    "title": "Ruby Hunter",
+    "description": "Mine a ruby.",
+    "criteria": {"type": "counter", "counter": "mined:ruby", "target": 1},
+    "rewards": [
+      {"type": "unlock_skin", "id": "ruby_runner"},
+      {"type": "money", "amount": 1000}
+    ]
+  },
+  {
+    "id": "completionist",
+    "tab": "mining",
+    "parent": "ruby_hunter",
+    "title": "Completionist",
+    "description": "Mine all seven ores.",
+    "criteria": {"type": "counter", "counter": "unique_ores_mined", "target": 7},
+    "rewards": [{"type": "money", "amount": 2000}]
   },
   {
     "id": "first_sale",
@@ -116,7 +255,8 @@
     "criteria": {"type": "counter", "counter": "sales", "target": 1},
     "rewards": [
       {"type": "unlock_function", "id": "buy_upgrade"},
-      {"type": "unlock_upgrade", "id": "backpack"}
+      {"type": "unlock_upgrade", "id": "backpack"},
+      {"type": "unlock_example", "id": "02_sweep_and_sell"}
     ]
   },
   {
@@ -148,5 +288,128 @@
     "description": "Earn 10000 money from selling ore.",
     "criteria": {"type": "counter", "counter": "money_earned", "target": 10000},
     "rewards": [{"type": "money", "amount": 500}]
+  },
+  {
+    "id": "big_haul",
+    "tab": "business",
+    "parent": "first_sale",
+    "title": "Big Haul",
+    "description": "Earn 100 money in a single sale.",
+    "criteria": {"type": "counter", "counter": "largest_sale", "target": 100},
+    "rewards": [{"type": "money", "amount": 100}]
+  },
+  {
+    "id": "wholesale",
+    "tab": "business",
+    "parent": "big_haul",
+    "title": "Wholesale",
+    "description": "Earn 1000 money in a single sale.",
+    "criteria": {"type": "counter", "counter": "largest_sale", "target": 1000},
+    "rewards": [{"type": "money", "amount": 500}]
+  },
+  {
+    "id": "diversified",
+    "tab": "business",
+    "parent": "first_sale",
+    "title": "Diversified Portfolio",
+    "description": "Sell four different ores at once.",
+    "criteria": {"type": "counter", "counter": "ores_in_one_sale", "target": 4},
+    "rewards": [{"type": "money", "amount": 200}]
+  },
+  {
+    "id": "upgrader",
+    "tab": "business",
+    "parent": "pocket_change",
+    "title": "Upgrade Addict",
+    "description": "Buy five upgrade levels.",
+    "criteria": {"type": "counter", "counter": "upgrades_bought", "target": 5},
+    "rewards": [{"type": "money", "amount": 300}]
+  },
+  {
+    "id": "far_from_home",
+    "tab": "explorer",
+    "parent": null,
+    "title": "Far From Home",
+    "description": "Reach distance 20 from the base.",
+    "criteria": {"type": "counter", "counter": "max_distance", "target": 20},
+    "rewards": [{"type": "unlock_function", "id": "distance"}]
+  },
+  {
+    "id": "deep_diver",
+    "tab": "explorer",
+    "parent": "far_from_home",
+    "title": "Deep Diver",
+    "description": "Reach distance 40 from the base.",
+    "criteria": {"type": "counter", "counter": "max_distance", "target": 40},
+    "rewards": [
+      {"type": "unlock_function", "id": "biome"},
+      {"type": "unlock_example", "id": "04_explorer_spiral"}
+    ]
+  },
+  {
+    "id": "crystal_hunter",
+    "tab": "explorer",
+    "parent": "deep_diver",
+    "title": "Crystal Hunter",
+    "description": "Visit the Crystal Caverns.",
+    "criteria": {"type": "counter", "counter": "biome:crystal_caverns", "target": 1},
+    "rewards": [{"type": "money", "amount": 500}]
+  },
+  {
+    "id": "cartographer",
+    "tab": "explorer",
+    "parent": "deep_diver",
+    "title": "Cartographer",
+    "description": "Visit three different biomes.",
+    "criteria": {"type": "counter", "counter": "biomes_visited", "target": 3},
+    "rewards": [{"type": "money", "amount": 300}]
+  },
+  {
+    "id": "marathon",
+    "tab": "explorer",
+    "parent": "far_from_home",
+    "title": "Marathon",
+    "description": "Move 2000 tiles.",
+    "criteria": {"type": "counter", "counter": "tiles_moved", "target": 2000},
+    "rewards": [{"type": "money", "amount": 300}]
+  },
+  {
+    "id": "sampler",
+    "tab": "data",
+    "parent": null,
+    "title": "Sampler",
+    "description": "Make 100 attempts on coal.",
+    "criteria": {"type": "counter", "counter": "attempts:coal", "target": 100},
+    "rewards": [
+      {"type": "unlock_function", "id": "submit_estimate"},
+      {"type": "unlock_example", "id": "05_probability_lab"}
+    ]
+  },
+  {
+    "id": "calibrated",
+    "tab": "data",
+    "parent": "sampler",
+    "title": "Calibrated",
+    "description": "Submit a good estimate.",
+    "criteria": {"type": "counter", "counter": "good_estimates", "target": 1},
+    "rewards": [{"type": "money", "amount": 250}]
+  },
+  {
+    "id": "well_calibrated",
+    "tab": "data",
+    "parent": "calibrated",
+    "title": "Well Calibrated",
+    "description": "Submit four good estimates.",
+    "criteria": {"type": "counter", "counter": "good_estimates", "target": 4},
+    "rewards": [{"type": "money", "amount": 1000}]
+  },
+  {
+    "id": "big_numbers",
+    "tab": "data",
+    "parent": "sampler",
+    "title": "Law of Large Numbers",
+    "description": "Make 2000 mining attempts.",
+    "criteria": {"type": "counter", "counter": "attempts:any", "target": 2000},
+    "rewards": [{"type": "money", "amount": 400}]
   }
 ]

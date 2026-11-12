@@ -19,7 +19,7 @@
     "id": "copper_core",
     "name": "Copper Core",
     "description": "Warm copper panels with a polished bronze frame.",
-    "unlocked_by": null,
+    "unlocked_by": "copper_age",
     "palette": {
       "b": "#c86b3c",
       "a": "#ffcf9e",
@@ -35,7 +35,7 @@
     "id": "steel_walker",
     "name": "Steel Walker",
     "description": "Cold brushed steel for miners who like their robots industrial.",
-    "unlocked_by": null,
+    "unlocked_by": "iron_will",
     "palette": {
       "b": "#9aa7b8",
       "a": "#e6f0ff",
@@ -51,7 +51,7 @@
     "id": "golden_hauler",
     "name": "Golden Hauler",
     "description": "A gilded hauler with a bright visor and dark trim.",
-    "unlocked_by": null,
+    "unlocked_by": "gold_rush",
     "palette": {
       "b": "#d9a520",
       "a": "#fff1a8",
@@ -67,7 +67,7 @@
     "id": "ruby_runner",
     "name": "Ruby Runner",
     "description": "A fast red racer with a rose-gold visor.",
-    "unlocked_by": null,
+    "unlocked_by": "ruby_hunter",
     "palette": {
       "b": "#c0392b",
       "a": "#ff9aa2",

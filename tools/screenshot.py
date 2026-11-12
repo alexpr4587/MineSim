@@ -10,7 +10,8 @@ renderer is used and the image is saved to ``artifacts/ui_lit.png``;
 Flags: ``--ticks`` (default 300), ``--size`` (``WIDTHxHEIGHT``,
 default 1024x768), ``--flat``, ``--skin`` (select a miner skin, saved as
 ``artifacts/ui_skin_<id>.png``), ``--moving`` (leave a Move command
-active so the walk animation is captured) and ``--output``.
+active so the walk animation is captured), ``--achievements`` (keep the
+achievements panel visible) and ``--output``.
 """
 
 from __future__ import annotations
@@ -150,6 +151,11 @@ def main() -> int:
         action="store_true",
         help="leave a Move command active so the walk animation is visible",
     )
+    parser.add_argument(
+        "--achievements",
+        action="store_true",
+        help="keep the achievements panel visible and save artifacts/ui_achievements.png",
+    )
     parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args()
     window = build_window(
@@ -166,6 +172,8 @@ def main() -> int:
         "editor_panel",
         "api_panel",
     ):
+        if args.achievements and panel_name == "achievements_panel":
+            continue
         panel = getattr(window, panel_name, None)
         if panel is not None:
             try:
@@ -183,6 +191,8 @@ def main() -> int:
     default_name = "ui_flat.png" if args.flat else "ui_lit.png"
     if args.skin:
         default_name = f"ui_skin_{args.skin}.png"
+    if args.achievements:
+        default_name = "ui_achievements.png"
     out = args.output or (Path(__file__).resolve().parents[1] / "artifacts" / default_name)
     out.parent.mkdir(parents=True, exist_ok=True)
     window.grab().save(str(out))

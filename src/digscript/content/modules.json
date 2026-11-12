@@ -21,18 +21,18 @@
   },
   {
     "name": "itertools",
-    "unlocked_by": null
+    "unlocked_by": "import_it"
   },
   {
     "name": "functools",
-    "unlocked_by": null
+    "unlocked_by": "one_liner"
   },
   {
     "name": "dataclasses",
-    "unlocked_by": null
+    "unlocked_by": "own_class"
   },
   {
     "name": "typing",
-    "unlocked_by": null
+    "unlocked_by": "safe_hands"
   }
 ]

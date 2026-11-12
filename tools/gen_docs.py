@@ -1,7 +1,8 @@
-"""Generate ``docs/API.md`` from ``functions.json`` and the ``minerlib`` docstrings.
+"""Generate ``docs/API.md`` and ``docs/GUIDE.md`` from the content files.
 
 Usage: ``python tools/gen_docs.py``
-The default output is ``docs/API.md`` relative to the repository root.
+The default outputs are ``docs/API.md`` and ``docs/GUIDE.md`` relative to
+the repository root.
 """
 
 from __future__ import annotations
@@ -21,7 +22,16 @@ _ROOT = Path(__file__).resolve().parents[1]
 _CONTENT = _ROOT / "src" / "digscript" / "content"
 _DOCS = _ROOT / "docs"
 
-__all__ = ["generate_api_md", "main"]
+__all__ = ["generate_api_md", "generate_guide_md", "main"]
+
+_TAB_ORDER = ("code", "mining", "business", "explorer", "data")
+_TAB_TITLES = {
+    "code": "Code",
+    "mining": "Mining",
+    "business": "Business",
+    "explorer": "Explorer",
+    "data": "Data",
+}
 
 
 def _load_json(name: str) -> Any:
@@ -200,12 +210,141 @@ def generate_api_md(output: str | Path | None = None) -> Path:
     return out
 
 
+def _criteria_label(criteria: Any) -> str:
+    """Return a human-readable description of an achievement criterion."""
+    if not isinstance(criteria, dict):
+        return "Unknown."
+    criteria_type = criteria.get("type")
+    if criteria_type == "counter":
+        counter = str(criteria.get("counter", ""))
+        target = criteria.get("target", 1)
+        return f"`{counter}` reaches {target}."
+    if criteria_type == "script_feature":
+        feature = str(criteria.get("feature", ""))
+        return f"A script uses `{feature}`."
+    if criteria_type == "script_defines_function":
+        return "A script defines a function."
+    return "Unknown."
+
+
+def _reward_label(reward: Any) -> str:
+    """Return a human-readable description of one achievement reward."""
+    if not isinstance(reward, dict):
+        return ""
+    reward_type = reward.get("type")
+    reward_id = reward.get("id")
+    if reward_type == "money":
+        return f"+{reward.get('amount', 0)} money"
+    if not reward_id:
+        return ""
+    labels = {
+        "unlock_function": "function",
+        "unlock_ore": "ore",
+        "unlock_upgrade": "upgrade",
+        "unlock_module": "module",
+        "unlock_skin": "skin",
+        "unlock_example": "example",
+    }
+    kind = labels.get(str(reward_type))
+    if kind is None:
+        return ""
+    return f"{kind} `{reward_id}`"
+
+
+def _unlocked_by_entries(achievement_id: str) -> list[str]:
+    """Return every content entry whose ``unlocked_by`` is the achievement."""
+    collections = (
+        ("ores.json", "id", "ore"),
+        ("functions.json", "name", "function"),
+        ("modules.json", "name", "module"),
+        ("upgrades.json", "id", "upgrade"),
+        ("skins.json", "id", "skin"),
+        ("examples.json", "id", "example"),
+    )
+    entries: list[str] = []
+    for filename, key, kind in collections:
+        try:
+            data = _load_json(filename)
+        except FileNotFoundError:
+            continue
+        for entry in data:
+            if isinstance(entry, dict) and entry.get("unlocked_by") == achievement_id:
+                entries.append(f"{kind} `{entry.get(key, '')}`")
+    return entries
+
+
+def generate_guide_md(output: str | Path | None = None) -> Path:
+    """Generate ``docs/GUIDE.md`` and return its path."""
+    achievements = _load_json("achievements.json")
+    titles = {
+        str(entry.get("id")): str(entry.get("title", entry.get("id")))
+        for entry in achievements
+        if isinstance(entry, dict)
+    }
+
+    lines: list[str] = []
+    lines.append("# DigScript Achievement Guide")
+    lines.append("")
+    lines.append(
+        "Every achievement belongs to one of five tabs: Code, Mining, Business, "
+        "Explorer and Data. An achievement becomes available once its parent is "
+        "completed. Completing it grants the rewards and unlocks listed below."
+    )
+    lines.append("")
+
+    for tab_id in _TAB_ORDER:
+        tab_achievements = [
+            entry
+            for entry in achievements
+            if isinstance(entry, dict) and entry.get("tab") == tab_id
+        ]
+        if not tab_achievements:
+            continue
+        lines.append(f"## {_TAB_TITLES[tab_id]}")
+        lines.append("")
+        for entry in tab_achievements:
+            achievement_id = str(entry.get("id", ""))
+            title = str(entry.get("title", achievement_id))
+            lines.append(f"### {title} (`{achievement_id}`)")
+            lines.append("")
+            description = str(entry.get("description", ""))
+            if description:
+                lines.append(description)
+                lines.append("")
+            parent = entry.get("parent")
+            if parent:
+                lines.append(f"**Requires:** {titles.get(str(parent), str(parent))}")
+                lines.append("")
+            lines.append(f"**Criteria:** {_criteria_label(entry.get('criteria'))}")
+            lines.append("")
+            rewards = [
+                label
+                for label in (_reward_label(reward) for reward in entry.get("rewards", []))
+                if label
+            ]
+            lines.append(f"**Rewards:** {'; '.join(rewards) if rewards else 'None.'}")
+            lines.append("")
+            unlocked = _unlocked_by_entries(achievement_id)
+            lines.append(f"**Unlocks:** {'; '.join(unlocked) if unlocked else 'Nothing.'}")
+            lines.append("")
+
+    out = Path(output) if output else (_DOCS / "GUIDE.md")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines), encoding="utf-8")
+    return out
+
+
 def main(argv: list[str] | None = None) -> int:
     """Entry point for the docs generator."""
     args = list(sys.argv[1:] if argv is None else argv)
-    output = args[0] if args else None
-    path = generate_api_md(output)
-    print(str(path))
+    if args:
+        api_path = generate_api_md(args[0])
+        guide_path = generate_guide_md(Path(args[0]).with_name("GUIDE.md"))
+    else:
+        api_path = generate_api_md()
+        guide_path = generate_guide_md()
+    print(str(api_path))
+    print(str(guide_path))
     return 0
 
 

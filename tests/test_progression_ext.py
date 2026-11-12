@@ -335,7 +335,8 @@ def test_saved_version_2_fixture_migrates(content):
         assert state.is_skin_unlocked(skin.id) is (skin.unlocked_by is None)
     for example in content.examples.values():
         assert state.is_example_unlocked(example.id) is (example.unlocked_by is None)
-    assert game.selected_skin == "steel_walker"
+    assert not state.is_skin_unlocked("steel_walker")
+    assert game.selected_skin == DEFAULT_SKIN
 
 
 def _copy_content(tmp_path: Path) -> Path:

@@ -223,7 +223,7 @@ class Achievement(_ContentModel):
     """An achievement (achievements.json)."""
 
     id: str = Field(min_length=1)
-    tab: Literal["code", "mining", "business"]
+    tab: Literal["code", "mining", "business", "explorer", "data"]
     parent: str | None = None
     title: str = Field(min_length=1)
     description: str = ""

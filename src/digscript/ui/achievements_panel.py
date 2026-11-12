@@ -43,7 +43,11 @@ _TAB_LABELS = {
     "code": "Code",
     "mining": "Mining",
     "business": "Business",
+    "explorer": "Explorer",
+    "data": "Data",
 }
+
+_TAB_ORDER = ("code", "mining", "business", "explorer", "data")
 
 
 def _get(obj: Any, name: str, default: Any = None) -> Any:
@@ -285,7 +289,7 @@ class AchievementsPanel(FloatingPanel):
     def _build_tabs(self) -> None:
         self.tabs.clear()
         self._views = {}
-        for tab_id in ("code", "mining", "business"):
+        for tab_id in _TAB_ORDER:
             view = _AchievementsView(self.tabs)
             self._views[tab_id] = view
             container = QWidget()
@@ -349,6 +353,10 @@ class AchievementsPanel(FloatingPanel):
                 parts.append(f"Unlocks upgrade: {reward_id}")
             elif reward_type == "unlock_module" and reward_id:
                 parts.append(f"Unlocks module: {reward_id}")
+            elif reward_type == "unlock_skin" and reward_id:
+                parts.append(f"Unlocks skin: {reward_id}")
+            elif reward_type == "unlock_example" and reward_id:
+                parts.append(f"Unlocks example: {reward_id}")
             elif reward_type == "money" and amount is not None:
                 parts.append(f"+{amount} money")
         return "; ".join(parts)

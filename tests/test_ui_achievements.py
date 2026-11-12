@@ -55,6 +55,27 @@ def test_layout_tree_no_overlaps_parents_left():
     assert pos["b"][1] != pos["c"][1]  # siblings never overlap
 
 
+def test_panel_has_five_tabs_without_overlaps(qapp):
+    game = Game.new()
+    panel = AchievementsPanel(game=game)
+    panel.refresh()
+    assert panel.tabs.count() == 5
+    labels = [panel.tabs.tabText(index) for index in range(panel.tabs.count())]
+    assert labels == ["Code", "Mining", "Business", "Explorer", "Data"]
+    for tab_id, view in panel._views.items():
+        nodes = [node for node in panel._achievements() if str(node.get("tab")) == tab_id]
+        assert nodes
+        positions = layout_tree(nodes)
+        cells = list(positions.values())
+        assert len(cells) == len(set(cells))
+        for node in nodes:
+            parent = node.get("parent")
+            if parent is not None:
+                assert positions[str(parent)][0] < positions[str(node["id"])][0]
+        assert view.scene() is not None
+    panel.close()
+
+
 # -- helpers -------------------------------------------------------------------
 
 

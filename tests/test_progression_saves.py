@@ -171,7 +171,9 @@ def test_sales_and_money_chain_and_money_reward():
     game.miner.money = 7
     bus.publish(Sold(money=9000, items={"stone": 9000}))
     assert "tycoon" in game.progression_state.completed
-    assert game.miner.money == 507
+    assert "big_haul" in game.progression_state.completed
+    assert "wholesale" in game.progression_state.completed
+    assert game.miner.money == 1007
     assert game.progression_state.counters["money_earned"] == 10000
 
 

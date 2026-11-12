@@ -85,7 +85,7 @@
     "signature": "wait(ticks)",
     "doc": "Wait for ticks (1 to 600) without doing anything else.",
     "category": "timing",
-    "unlocked_by": null,
+    "unlocked_by": "patience",
     "cost": "as many ticks as requested (1-600)",
     "example": "wait(20)"
   },
@@ -94,7 +94,7 @@
     "signature": "tick()",
     "doc": "Return the current game tick.",
     "category": "timing",
-    "unlocked_by": null,
+    "unlocked_by": "clockwork",
     "cost": "0 ticks",
     "example": "now = tick()"
   },
@@ -103,7 +103,7 @@
     "signature": "distance()",
     "doc": "Return the Chebyshev distance from the base at (0, 0).",
     "category": "movement",
-    "unlocked_by": null,
+    "unlocked_by": "far_from_home",
     "cost": "0 ticks",
     "example": "d = distance()"
   },
@@ -112,7 +112,7 @@
     "signature": "biome()",
     "doc": "Return the id of the biome under the miner.",
     "category": "world",
-    "unlocked_by": null,
+    "unlocked_by": "deep_diver",
     "cost": "0 ticks",
     "example": "here = biome()"
   },
@@ -121,7 +121,7 @@
     "signature": "ore_info(ore_id)",
     "doc": "Return {id, name, tier, hardness, base_value, regen_ticks} for a known ore, or None when it is unknown or locked. The mining probability is never included.",
     "category": "mining",
-    "unlocked_by": null,
+    "unlocked_by": "appraiser",
     "cost": "0 ticks",
     "example": "info = ore_info('coal')"
   },
@@ -130,7 +130,7 @@
     "signature": "inspect()",
     "doc": "Return {ore, mineable, reason, regrows_in} for the current tile.",
     "category": "mining",
-    "unlocked_by": null,
+    "unlocked_by": "know_your_limits",
     "cost": "0 ticks",
     "example": "seen = inspect()"
   },
@@ -139,7 +139,7 @@
     "signature": "submit_estimate(ore_id, p)",
     "doc": "Submit an estimate p for the mining probability of an ore after at least 100 attempts. Allows three submissions per ore and returns {ok, close}.",
     "category": "data",
-    "unlocked_by": null,
+    "unlocked_by": "sampler",
     "cost": "0 ticks",
     "example": "submit_estimate('coal', 0.9)"
   }
