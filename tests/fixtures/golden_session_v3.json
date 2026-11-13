@@ -1,0 +1,832 @@
+{
+  "attempt_counter": 4,
+  "events": [
+    {
+      "tick": 1,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 2,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 3,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 4,
+      "type": "TickAdvanced"
+    },
+    {
+      "direction": "east",
+      "drone_id": 0,
+      "type": "Moved",
+      "x": 1,
+      "y": 0
+    },
+    {
+      "tick": 5,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 6,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 7,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 8,
+      "type": "TickAdvanced"
+    },
+    {
+      "direction": "east",
+      "drone_id": 0,
+      "type": "Moved",
+      "x": 2,
+      "y": 0
+    },
+    {
+      "tick": 9,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 10,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 11,
+      "type": "TickAdvanced"
+    },
+    {
+      "drone_id": 0,
+      "ore_id": "stone",
+      "reason": null,
+      "success": true,
+      "type": "MineAttempted"
+    },
+    {
+      "amount": 1,
+      "drone_id": 0,
+      "ore_id": "stone",
+      "type": "OreMined"
+    },
+    {
+      "drone_id": 0,
+      "ore_id": null,
+      "reason": "nothing_to_mine",
+      "success": false,
+      "type": "MineAttempted"
+    },
+    {
+      "drone_id": 0,
+      "ore_id": null,
+      "reason": "nothing_to_mine",
+      "success": false,
+      "type": "MineAttempted"
+    },
+    {
+      "drone_id": 0,
+      "ore_id": null,
+      "reason": "nothing_to_mine",
+      "success": false,
+      "type": "MineAttempted"
+    },
+    {
+      "drone_id": 0,
+      "ore_id": null,
+      "reason": "nothing_to_mine",
+      "success": false,
+      "type": "MineAttempted"
+    },
+    {
+      "drone_id": 0,
+      "ore_id": null,
+      "reason": "nothing_to_mine",
+      "success": false,
+      "type": "MineAttempted"
+    },
+    {
+      "drone_id": 0,
+      "ore_id": null,
+      "reason": "nothing_to_mine",
+      "success": false,
+      "type": "MineAttempted"
+    },
+    {
+      "drone_id": 0,
+      "ore_id": null,
+      "reason": "nothing_to_mine",
+      "success": false,
+      "type": "MineAttempted"
+    },
+    {
+      "drone_id": 0,
+      "ore_id": null,
+      "reason": "nothing_to_mine",
+      "success": false,
+      "type": "MineAttempted"
+    },
+    {
+      "drone_id": 0,
+      "ore_id": null,
+      "reason": "nothing_to_mine",
+      "success": false,
+      "type": "MineAttempted"
+    },
+    {
+      "drone_id": 0,
+      "ore_id": null,
+      "reason": "nothing_to_mine",
+      "success": false,
+      "type": "MineAttempted"
+    },
+    {
+      "drone_id": 0,
+      "ore_id": null,
+      "reason": "nothing_to_mine",
+      "success": false,
+      "type": "MineAttempted"
+    },
+    {
+      "tick": 12,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 13,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 14,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 15,
+      "type": "TickAdvanced"
+    },
+    {
+      "direction": "west",
+      "drone_id": 0,
+      "type": "Moved",
+      "x": 1,
+      "y": 0
+    },
+    {
+      "tick": 16,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 17,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 18,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 19,
+      "type": "TickAdvanced"
+    },
+    {
+      "direction": "west",
+      "drone_id": 0,
+      "type": "Moved",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "tick": 20,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 21,
+      "type": "TickAdvanced"
+    },
+    {
+      "drone_id": 0,
+      "items": {
+        "stone": 1
+      },
+      "money": 1,
+      "type": "Sold"
+    },
+    {
+      "drone_id": 0,
+      "id": "backpack",
+      "level": 1,
+      "type": "UpgradeBought"
+    },
+    {
+      "drone_id": 0,
+      "id": "backpack",
+      "level": 2,
+      "type": "UpgradeBought"
+    },
+    {
+      "drone_id": 0,
+      "id": "pickaxe",
+      "level": 1,
+      "type": "UpgradeBought"
+    },
+    {
+      "drone_id": 0,
+      "id": "motor",
+      "level": 1,
+      "type": "UpgradeBought"
+    },
+    {
+      "drone_id": 0,
+      "id": "scanner",
+      "level": 1,
+      "type": "UpgradeBought"
+    },
+    {
+      "tick": 22,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 23,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 24,
+      "type": "TickAdvanced"
+    },
+    {
+      "direction": "east",
+      "drone_id": 0,
+      "type": "Moved",
+      "x": 1,
+      "y": 0
+    },
+    {
+      "tick": 25,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 26,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 27,
+      "type": "TickAdvanced"
+    },
+    {
+      "direction": "east",
+      "drone_id": 0,
+      "type": "Moved",
+      "x": 2,
+      "y": 0
+    },
+    {
+      "drone_id": 0,
+      "ore_id": null,
+      "reason": "nothing_to_mine",
+      "success": false,
+      "type": "MineAttempted"
+    },
+    {
+      "drone_id": 0,
+      "ore_id": null,
+      "reason": "nothing_to_mine",
+      "success": false,
+      "type": "MineAttempted"
+    },
+    {
+      "drone_id": 0,
+      "ore_id": null,
+      "reason": "nothing_to_mine",
+      "success": false,
+      "type": "MineAttempted"
+    },
+    {
+      "tick": 28,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 29,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 30,
+      "type": "TickAdvanced"
+    },
+    {
+      "direction": "north",
+      "drone_id": 0,
+      "type": "Moved",
+      "x": 2,
+      "y": -1
+    },
+    {
+      "tick": 31,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 32,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 33,
+      "type": "TickAdvanced"
+    },
+    {
+      "direction": "north",
+      "drone_id": 0,
+      "type": "Moved",
+      "x": 2,
+      "y": -2
+    },
+    {
+      "tick": 34,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 35,
+      "type": "TickAdvanced"
+    },
+    {
+      "drone_id": 0,
+      "ore_id": "stone",
+      "reason": null,
+      "success": true,
+      "type": "MineAttempted"
+    },
+    {
+      "amount": 1,
+      "drone_id": 0,
+      "ore_id": "stone",
+      "type": "OreMined"
+    },
+    {
+      "tick": 36,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 37,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 38,
+      "type": "TickAdvanced"
+    },
+    {
+      "direction": "south",
+      "drone_id": 0,
+      "type": "Moved",
+      "x": 2,
+      "y": -1
+    },
+    {
+      "tick": 39,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 40,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 41,
+      "type": "TickAdvanced"
+    },
+    {
+      "direction": "south",
+      "drone_id": 0,
+      "type": "Moved",
+      "x": 2,
+      "y": 0
+    },
+    {
+      "tick": 42,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 43,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 44,
+      "type": "TickAdvanced"
+    },
+    {
+      "direction": "south",
+      "drone_id": 0,
+      "type": "Moved",
+      "x": 2,
+      "y": 1
+    },
+    {
+      "tick": 45,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 46,
+      "type": "TickAdvanced"
+    },
+    {
+      "drone_id": 0,
+      "ore_id": "stone",
+      "reason": null,
+      "success": true,
+      "type": "MineAttempted"
+    },
+    {
+      "amount": 1,
+      "drone_id": 0,
+      "ore_id": "stone",
+      "type": "OreMined"
+    },
+    {
+      "tick": 47,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 48,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 49,
+      "type": "TickAdvanced"
+    },
+    {
+      "direction": "west",
+      "drone_id": 0,
+      "type": "Moved",
+      "x": 1,
+      "y": 1
+    },
+    {
+      "tick": 50,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 51,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 52,
+      "type": "TickAdvanced"
+    },
+    {
+      "direction": "west",
+      "drone_id": 0,
+      "type": "Moved",
+      "x": 0,
+      "y": 1
+    },
+    {
+      "tick": 53,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 54,
+      "type": "TickAdvanced"
+    },
+    {
+      "drone_id": 0,
+      "items": {
+        "stone": 2
+      },
+      "money": 2,
+      "type": "Sold"
+    },
+    {
+      "tick": 55,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 56,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 57,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 58,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 59,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 60,
+      "type": "TickAdvanced"
+    },
+    {
+      "direction": "south",
+      "drone_id": 0,
+      "type": "Moved",
+      "x": 0,
+      "y": 2
+    },
+    {
+      "tick": 61,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 62,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 63,
+      "type": "TickAdvanced"
+    },
+    {
+      "direction": "south",
+      "drone_id": 0,
+      "type": "Moved",
+      "x": 0,
+      "y": 3
+    },
+    {
+      "tick": 64,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 65,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 66,
+      "type": "TickAdvanced"
+    },
+    {
+      "direction": "east",
+      "drone_id": 0,
+      "type": "Moved",
+      "x": 1,
+      "y": 3
+    },
+    {
+      "tick": 67,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 68,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 69,
+      "type": "TickAdvanced"
+    },
+    {
+      "direction": "east",
+      "drone_id": 0,
+      "type": "Moved",
+      "x": 2,
+      "y": 3
+    },
+    {
+      "tick": 70,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 71,
+      "type": "TickAdvanced"
+    },
+    {
+      "drone_id": 0,
+      "ore_id": "stone",
+      "reason": null,
+      "success": true,
+      "type": "MineAttempted"
+    },
+    {
+      "amount": 1,
+      "drone_id": 0,
+      "ore_id": "stone",
+      "type": "OreMined"
+    },
+    {
+      "drone_id": 0,
+      "ore_id": null,
+      "reason": "nothing_to_mine",
+      "success": false,
+      "type": "MineAttempted"
+    },
+    {
+      "tick": 72,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 73,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 74,
+      "type": "TickAdvanced"
+    },
+    {
+      "direction": "north",
+      "drone_id": 0,
+      "type": "Moved",
+      "x": 2,
+      "y": 2
+    },
+    {
+      "tick": 75,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 76,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 77,
+      "type": "TickAdvanced"
+    },
+    {
+      "direction": "north",
+      "drone_id": 0,
+      "type": "Moved",
+      "x": 2,
+      "y": 1
+    },
+    {
+      "tick": 78,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 79,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 80,
+      "type": "TickAdvanced"
+    },
+    {
+      "direction": "west",
+      "drone_id": 0,
+      "type": "Moved",
+      "x": 1,
+      "y": 1
+    },
+    {
+      "tick": 81,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 82,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 83,
+      "type": "TickAdvanced"
+    },
+    {
+      "direction": "west",
+      "drone_id": 0,
+      "type": "Moved",
+      "x": 0,
+      "y": 1
+    },
+    {
+      "tick": 84,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 85,
+      "type": "TickAdvanced"
+    },
+    {
+      "drone_id": 0,
+      "items": {
+        "stone": 1
+      },
+      "money": 1,
+      "type": "Sold"
+    },
+    {
+      "drone_id": 0,
+      "id": "backpack",
+      "level": 3,
+      "type": "UpgradeBought"
+    },
+    {
+      "drone_id": 0,
+      "ore_id": null,
+      "reason": "nothing_to_mine",
+      "success": false,
+      "type": "MineAttempted"
+    },
+    {
+      "tick": 86,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 87,
+      "type": "TickAdvanced"
+    }
+  ],
+  "miner": {
+    "capacity": 40,
+    "estimates": {},
+    "facing": "west",
+    "inventory": {},
+    "money": 479,
+    "move_ticks": 3,
+    "scan_radius": 3,
+    "stats": {
+      "attempts": {
+        "stone": 4
+      },
+      "sales": 3,
+      "successes": {
+        "stone": 4
+      },
+      "tiles_moved": 21,
+      "total_earned": 4,
+      "total_mined": 4
+    },
+    "tool_power": 2,
+    "tool_tier": 1,
+    "upgrades": {
+      "backpack": 3,
+      "motor": 1,
+      "pickaxe": 1,
+      "scanner": 1
+    },
+    "x": 0,
+    "y": 1
+  },
+  "progression": {
+    "completed": {
+      "first_dig": 11,
+      "first_sale": 21
+    },
+    "counters": {
+      "attempts:any": 4,
+      "attempts:stone": 4,
+      "biome:quarry": 1,
+      "biomes_visited": 1,
+      "fail:nothing_to_mine": 16,
+      "largest_sale": 2,
+      "max_distance": 3,
+      "mined:any": 4,
+      "mined:stone": 4,
+      "money_earned": 4,
+      "ores_in_one_sale": 1,
+      "sales": 3,
+      "streak": 4,
+      "tiles_moved": 21,
+      "unique_ores_mined": 1,
+      "upgrades_bought": 6
+    },
+    "current_fail_streak": 0,
+    "current_streak": 4,
+    "unlocked_examples": [
+      "01_hello",
+      "02_sweep_and_sell"
+    ],
+    "unlocked_functions": [
+      "buy_upgrade",
+      "mine",
+      "move",
+      "peek",
+      "position",
+      "sell"
+    ],
+    "unlocked_modules": [
+      "math"
+    ],
+    "unlocked_ores": [
+      "coal",
+      "stone"
+    ],
+    "unlocked_skins": [
+      "rusty_bot"
+    ],
+    "unlocked_upgrades": [
+      "backpack",
+      "drone_bay",
+      "motor",
+      "pickaxe",
+      "scanner"
+    ]
+  },
+  "seed": 12345,
+  "tick": 87,
+  "world": {
+    "delta": {
+      "2,-2": [
+        0,
+        335
+      ],
+      "2,0": [
+        0,
+        311
+      ],
+      "2,1": [
+        0,
+        346
+      ],
+      "2,3": [
+        0,
+        371
+      ]
+    }
+  }
+}

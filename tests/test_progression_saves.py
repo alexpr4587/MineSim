@@ -206,11 +206,13 @@ def test_save_load_round_trip_and_next_500_ticks(tmp_path):
         "seed",
         "tick",
         "selected_skin",
-        "miner",
+        "fleet",
+        "player_stats",
         "world_delta",
         "progression",
     }
-    assert raw["version"] == 3
+    assert raw["version"] == 4
+    assert [drone["id"] for drone in raw["fleet"]] == [0]
     assert raw["selected_skin"] == "rusty_bot"
     loaded = Game.load(path)
     assert loaded.seed == game.seed

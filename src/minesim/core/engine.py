@@ -1,12 +1,18 @@
-"""The tick engine: FIFO commands, tick costs and events."""
+"""The tick engine: one FIFO command slot per drone, tick costs and events."""
 
 from __future__ import annotations
 
-from collections import deque
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from minesim.core.events import EventBus, TickAdvanced, TileRegenerated
+from minesim.core.events import (
+    DroneRemoved,
+    DroneSpawned,
+    EventBus,
+    TickAdvanced,
+    TileRegenerated,
+)
+from minesim.core.miner import Drone, PlayerStats
 
 __all__ = ["AllUnlocked", "GameEngine", "ProgressionView", "Ticket"]
 
@@ -18,6 +24,8 @@ _ZERO_COST_NAMES = {
     "OreInfo",
     "Peek",
     "Position",
+    "RemoveDrone",
+    "SpawnDrone",
     "Stats",
     "SubmitEstimate",
     "Tick",
@@ -87,6 +95,7 @@ class Ticket:
     command: Any = None
     done: bool = False
     result: dict[str, Any] | None = None
+    drone_id: int = 0
 
     @property
     def is_done(self) -> bool:
@@ -101,15 +110,16 @@ class _Entry:
     command: Any
     ticket: Ticket
     remaining: int = 0
+    drone_id: int = 0
 
 
 class GameEngine:
-    """Runs commands on a tick counter, FIFO, publishing events."""
+    """Runs one FIFO command slot per drone, publishing events."""
 
     def __init__(
         self,
         world: Any,
-        miner: Any,
+        miner: Any = None,
         content: Any = None,
         events: Any = None,
         progression_view: Any = None,
@@ -122,16 +132,35 @@ class GameEngine:
         if content is None:
             content = kwargs.get("content")
         self.world = world
-        self.miner = miner
         self.content = content if content is not None else getattr(world, "content", None)
         self._events = events if events is not None else EventBus()
         self.progression_view = progression_view if progression_view is not None else AllUnlocked()
         self.progression = self.progression_view
         self.tick: int = 0
         self.attempt_counter: int = 0
-        self._queue: deque[_Entry] = deque()
-        self._active: _Entry | None = None
         self._upgrade_levels: dict[str, int] = {}
+        if miner is None:
+            drone = Drone.from_config(self.content) if self.content is not None else Drone()
+        else:
+            drone = miner
+        player_stats = getattr(drone, "player_stats", None)
+        if player_stats is None:
+            player_stats = (
+                PlayerStats.from_config(self.content) if self.content is not None else PlayerStats()
+            )
+            try:
+                drone.player_stats = player_stats
+            except Exception:
+                pass
+        self.player_stats: PlayerStats = player_stats
+        try:
+            drone.id = 0
+        except Exception:
+            pass
+        self._drones: dict[int, Any] = {0: drone}
+        self._next_id = 1
+
+    # -- compatibility properties -------------------------------------------
 
     @property
     def events(self) -> Any:
@@ -177,34 +206,120 @@ class GameEngine:
 
     @property
     def upgrade_levels(self) -> dict[str, int]:
-        """Upgrade levels bought so far (mirrors ``miner.upgrades``)."""
-        upgrades = getattr(self.miner, "upgrades", None)
+        """Upgrade levels bought so far (shared by all drones)."""
+        upgrades = getattr(self.player_stats, "upgrades", None)
         if upgrades is None:
             return self._upgrade_levels
         return upgrades
 
     @property
+    def max_drones(self) -> int:
+        """The current fleet size limit (1 + drone_bay level)."""
+        return 1 + int(self.upgrade_levels.get("drone_bay", 0))
+
+    # -- fleet ---------------------------------------------------------------
+
+    @property
+    def drones(self) -> dict[int, Any]:
+        """The fleet, keyed by drone id."""
+        return self._drones
+
+    def drone(self, drone_id: int = 0) -> Any:
+        """Return the drone with ``drone_id`` (KeyError if unknown)."""
+        try:
+            return self._drones[int(drone_id)]
+        except KeyError:
+            raise KeyError(f"unknown drone id {drone_id}") from None
+
+    def has_drone(self, drone_id: int) -> bool:
+        """Return True if ``drone_id`` is in the fleet."""
+        return int(drone_id) in self._drones
+
+    def spawn_drone(self) -> Any:
+        """Add a new drone on the base with the next free id."""
+        next_id = 0
+        while next_id in self._drones:
+            next_id += 1
+        drone = Drone(
+            id=next_id,
+            x=0,
+            y=0,
+            inventory={},
+            player_stats=self.player_stats,
+        )
+        self._drones[next_id] = drone
+        self._next_id = max(self._next_id, next_id + 1)
+        self._events.publish(DroneSpawned(id=next_id))
+        return drone
+
+    def remove_drone(self, drone_id: int) -> bool:
+        """Remove ``drone_id`` from the fleet (never drone 0).
+
+        Returns True when a drone was removed; its inventory is lost.
+        """
+        drone_id = int(drone_id)
+        if drone_id == 0 or drone_id not in self._drones:
+            return False
+        drone = self._drones.pop(drone_id)
+        try:
+            drone.queue.clear()
+        except Exception:
+            pass
+        drone.active = None
+        drone.busy_timer = 0
+        self._events.publish(DroneRemoved(id=drone_id))
+        return True
+
+    # -- legacy single-miner view -------------------------------------------
+
+    @property
+    def miner(self) -> Any:
+        """Drone 0 (kept for backwards compatibility)."""
+        return self._drones[0]
+
+    @miner.setter
+    def miner(self, value: Any) -> None:
+        player_stats = getattr(value, "player_stats", None)
+        if player_stats is not None:
+            self.player_stats = player_stats
+        try:
+            value.id = 0
+        except Exception:
+            pass
+        self._drones[0] = value
+
+    @property
     def is_idle(self) -> bool:
-        """Return True when no command is active or queued."""
-        return self._active is None and not self._queue
+        """Return True when no drone has a command active or queued."""
+        return all(drone.active is None and not drone.queue for drone in self._drones.values())
 
     @property
     def pending(self) -> int:
-        """Number of commands not yet done."""
-        count = len(self._queue)
-        if self._active is not None:
-            count += 1
+        """Number of commands not yet done across the fleet."""
+        count = 0
+        for drone in self._drones.values():
+            count += len(drone.queue)
+            if drone.active is not None:
+                count += 1
         return count
 
     @property
     def active_command(self) -> Any:
-        """The command currently occupying the miner, if any."""
-        return self._active.command if self._active is not None else None
+        """The command currently occupying drone 0, if any."""
+        active = self._drones[0].active
+        return active.command if active is not None else None
+
+    def active_command_for(self, drone_id: int = 0) -> Any:
+        """The command currently occupying ``drone_id``, if any."""
+        active = self.drone(drone_id).active
+        return active.command if active is not None else None
 
     @property
     def queue(self) -> list[Any]:
-        """Queued commands (excluding the active one)."""
-        return [entry.command for entry in self._queue]
+        """Drone 0's queued commands (excluding the active one)."""
+        return [entry.command for entry in self._drones[0].queue]
+
+    # -- scheduling ----------------------------------------------------------
 
     def _is_static_zero_cost(self, command: Any) -> bool:
         if type(command).__name__ in _ZERO_COST_NAMES:
@@ -213,48 +328,51 @@ class GameEngine:
         return bool(result) if result is not None else False
 
     def _execute_now(self, entry: _Entry) -> None:
-        result = entry.command.execute(self)
+        drone = self._drones[entry.drone_id]
+        result = entry.command.execute(self, drone)
         entry.ticket.result = result
         entry.ticket.done = True
 
-    def _activate_next(self) -> None:
-        """Promote queued commands until one occupies the miner or the queue empties.
+    def _activate_next(self, drone: Any) -> None:
+        """Promote queued commands until one occupies ``drone`` or it empties.
 
         Zero-cost commands at the head execute immediately without
         consuming a tick; the first positive-cost command becomes active.
         """
-        while self._active is None and self._queue:
-            entry = self._queue[0]
+        while drone.active is None and drone.queue:
+            entry = drone.queue[0]
             try:
-                cost = int(entry.command.cost_ticks(self))
+                cost = int(entry.command.cost_ticks(self, drone))
             except Exception:
                 cost = 0
             if cost <= 0:
-                self._queue.popleft()
+                drone.queue.popleft()
                 self._execute_now(entry)
                 continue
-            self._queue.popleft()
+            drone.queue.popleft()
             entry.remaining = cost
-            self._active = entry
+            drone.active = entry
+            drone.busy_timer = cost
 
-    def submit(self, command: Any) -> Ticket:
-        """Submit ``command`` and return its ticket.
+    def submit(self, command: Any, drone_id: int = 0) -> Ticket:
+        """Submit ``command`` to ``drone_id`` and return its ticket.
 
         Zero-cost commands execute immediately on submit; other
-        commands run FIFO, occupying the miner for their tick cost.
+        commands run FIFO per drone, occupying it for their tick cost.
         """
-        ticket = Ticket(command=command)
-        entry = _Entry(command=command, ticket=ticket)
+        drone = self.drone(drone_id)
+        ticket = Ticket(command=command, drone_id=int(drone_id))
+        entry = _Entry(command=command, ticket=ticket, drone_id=int(drone_id))
         if self._is_static_zero_cost(command):
             self._execute_now(entry)
             return ticket
-        self._queue.append(entry)
-        if self._active is None:
-            self._activate_next()
+        drone.queue.append(entry)
+        if drone.active is None:
+            self._activate_next(drone)
         return ticket
 
     def step(self) -> None:
-        """Advance the engine by one tick."""
+        """Advance the engine by one tick, processing drones by id."""
         self.tick += 1
         self._events.publish(TickAdvanced(tick=self.tick))
         advance = getattr(self.world, "advance", None)
@@ -266,15 +384,20 @@ class GameEngine:
             if regenerated:
                 for x, y in regenerated:
                     self._events.publish(TileRegenerated(x=x, y=y))
-        if self._active is None:
-            self._activate_next()
-        if self._active is not None:
-            self._active.remaining -= 1
-            if self._active.remaining <= 0:
-                entry = self._active
-                self._active = None
-                self._execute_now(entry)
-                self._activate_next()
+        for drone_id in sorted(self._drones):
+            drone = self._drones[drone_id]
+            if drone.active is None:
+                self._activate_next(drone)
+            active = drone.active
+            if active is None:
+                continue
+            active.remaining -= 1
+            drone.busy_timer = max(0, active.remaining)
+            if active.remaining <= 0:
+                drone.active = None
+                drone.busy_timer = 0
+                self._execute_now(active)
+                self._activate_next(drone)
 
     def run_until_idle(self, max_ticks: int = 10000) -> None:
         """Step until idle or ``max_ticks`` ticks have passed."""

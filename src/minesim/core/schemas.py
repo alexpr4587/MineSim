@@ -38,6 +38,7 @@ class Config(_ContentModel):
     start_tool_power: int = Field(default=1, ge=1)
     start_tool_tier: int = Field(default=0, ge=0)
     start_scan_radius: int = Field(default=0, ge=0)
+    drone_costs: list[int] = Field(default_factory=lambda: [300, 800, 2000, 5000])
     free_calls_before_forced_tick: int = Field(default=200, ge=0)
     script_idle_timeout_s: float = Field(default=5, ge=0)
     console_max_lines: int = Field(default=500, ge=0)

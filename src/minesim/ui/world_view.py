@@ -34,6 +34,7 @@ from minesim.ui.theme import (
     BACKGROUND,
     BASE_BORDER,
     BASE_LABEL,
+    DRONE_ID_COLORS,
     FONT_FAMILY,
     GRID,
     LOCKED_MARK,
@@ -260,6 +261,19 @@ class WorldView(QWidget):
             return (0.5, 0.5)
         return (float(self.miner.x) + 0.5, float(self.miner.y) + 0.5)
 
+    def _drones(self) -> list[Any]:
+        """Every drone in the fleet, in increasing id order."""
+        engine = self.engine
+        drones = _get(engine, "drones")
+        if isinstance(drones, dict) and drones:
+            return [drones[drone_id] for drone_id in sorted(drones)]
+        return [self.miner] if self.miner is not None else []
+
+    @property
+    def drones(self) -> list[Any]:
+        """The drones this view draws."""
+        return self._drones()
+
     def set_game(self, game: Any) -> None:
         """Re-bind this view to ``game`` (world, miner, content and sprites)."""
         self.game = game
@@ -279,8 +293,8 @@ class WorldView(QWidget):
             return str(skin)
         return DEFAULT_SKIN
 
-    def _sprite_direction(self) -> str:
-        facing = _get(self.miner, "facing")
+    def _sprite_direction(self, drone: Any = None) -> str:
+        facing = _get(drone if drone is not None else self.miner, "facing")
         name = getattr(facing, "name", None)
         key = str(name or facing or "north").lower()
         return {
@@ -290,7 +304,12 @@ class WorldView(QWidget):
             "east": "right",
         }.get(key, "down")
 
-    def _active_command(self) -> Any:
+    def _active_command(self, drone: Any = None) -> Any:
+        target = drone if drone is not None else self.miner
+        entry = _get(target, "active")
+        command = _get(entry, "command")
+        if command is not None:
+            return command
         engine = self.engine
         command = _get(engine, "active_command")
         if command is not None:
@@ -298,9 +317,9 @@ class WorldView(QWidget):
         entry = _get(engine, "_active")
         return _get(entry, "command")
 
-    def _animation_state(self) -> tuple[str, int, bool]:
+    def _animation_state(self, drone: Any = None) -> tuple[str, int, bool]:
         """Return ``(animation, frame, is_active)`` for the current situtation."""
-        command = self._active_command()
+        command = self._active_command(drone)
         name = type(command).__name__ if command is not None else ""
         tick = self._tick()
         if name == "Move":
@@ -309,14 +328,14 @@ class WorldView(QWidget):
             return ("mine", (tick // 2) % 2, True)
         return ("walk", 0, False)
 
-    def miner_pixmap(self) -> QPixmap | None:
-        """Return the miner pixmap that would be drawn right now."""
+    def miner_pixmap(self, drone: Any = None) -> QPixmap | None:
+        """Return the pixmap for ``drone`` (drone 0 by default)."""
         if self.sprite_book is None:
             return None
-        animation, frame, _ = self._animation_state()
+        animation, frame, _ = self._animation_state(drone)
         return self.sprite_book.miner_pixmap(
             self._selected_skin(),
-            self._sprite_direction(),
+            self._sprite_direction(drone),
             animation,
             frame,
             self.tile_px,
@@ -745,44 +764,88 @@ class WorldView(QWidget):
                 int(height * 2),
             )
 
-    def _draw_miner(self, painter: QPainter) -> None:
-        if self.miner is None:
-            return
-        sx, sy = self.world_to_screen(self._visual_x, self._visual_y)
+    def _draw_drone_badge(self, painter: QPainter, sx: float, sy: float, drone_id: int) -> None:
+        """Draw a small coloured id badge next to a secondary drone."""
+        color = QColor(DRONE_ID_COLORS[(int(drone_id) - 1) % len(DRONE_ID_COLORS)])
+        radius = max(6.0, self.tile_px * 0.23)
+        cx = sx + self.tile_px * 0.34
+        cy = sy - self.tile_px * 0.34
+        painter.setPen(QPen(QColor(MINER_DETAIL), 1))
+        painter.setBrush(color)
+        painter.drawEllipse(
+            int(cx - radius),
+            int(cy - radius),
+            int(radius * 2),
+            int(radius * 2),
+        )
+        font = QFont(FONT_FAMILY)
+        font.setBold(True)
+        font.setPointSize(max(6, int(radius)))
+        painter.setFont(font)
+        painter.setPen(QPen(QColor(MINER_DETAIL)))
+        text = str(int(drone_id))
+        metrics = painter.fontMetrics()
+        text_width = metrics.horizontalAdvance(text)
+        text_height = metrics.ascent()
+        painter.drawText(
+            int(cx - text_width / 2),
+            int(cy + text_height / 2 - 1),
+            text,
+        )
+
+    def _draw_one_drone(
+        self, painter: QPainter, drone: Any, sx: float, sy: float, *, badge: bool
+    ) -> None:
         radius = max(4.0, self.tile_px * 0.36)
         self._draw_miner_shadow(painter, sx, sy, radius)
-        pixmap = self.miner_pixmap()
+        pixmap = self.miner_pixmap(drone)
         if pixmap is not None:
-            _, _, is_active = self._animation_state()
+            _, _, is_active = self._animation_state(drone)
             bob = 0 if is_active else (self._tick() // 5) % 2
             painter.drawPixmap(
                 int(round(sx - self.tile_px / 2.0)),
                 int(round(sy - self.tile_px / 2.0 - bob)),
                 pixmap,
             )
-            return
-        facing = _get(self.miner, "facing")
-        dx = float(_get(facing, "dx", 0) or 0)
-        dy = float(_get(facing, "dy", -1) if _get(facing, "dy") is not None else -1)
-        if dx == 0 and dy == 0:
-            dx, dy = 0.0, -1.0
-        painter.setPen(QPen(QColor(MINER_DETAIL), 2))
-        painter.setBrush(QColor(MINER_BODY))
-        painter.drawEllipse(int(sx - radius), int(sy - radius), int(radius * 2), int(radius * 2))
-        tip_x = sx + dx * radius * 1.5
-        tip_y = sy + dy * radius * 1.5
-        painter.setBrush(QColor(MINER_BODY))
-        painter.drawPolygon(
-            QPolygonF(
-                [
-                    QPointF(tip_x, tip_y),
-                    QPointF(sx - dy * radius * 0.5, sy + dx * radius * 0.5),
-                    QPointF(sx + dy * radius * 0.5, sy - dx * radius * 0.5),
-                ]
+        else:
+            facing = _get(drone, "facing")
+            dx = float(_get(facing, "dx", 0) or 0)
+            dy = float(_get(facing, "dy", -1) if _get(facing, "dy") is not None else -1)
+            if dx == 0 and dy == 0:
+                dx, dy = 0.0, -1.0
+            painter.setPen(QPen(QColor(MINER_DETAIL), 2))
+            painter.setBrush(QColor(MINER_BODY))
+            painter.drawEllipse(
+                int(sx - radius), int(sy - radius), int(radius * 2), int(radius * 2)
             )
-        )
-        painter.setBrush(QColor(MINER_DETAIL))
-        painter.drawEllipse(int(sx - 2), int(sy - 2), 4, 4)
+            tip_x = sx + dx * radius * 1.5
+            tip_y = sy + dy * radius * 1.5
+            painter.setBrush(QColor(MINER_BODY))
+            painter.drawPolygon(
+                QPolygonF(
+                    [
+                        QPointF(tip_x, tip_y),
+                        QPointF(sx - dy * radius * 0.5, sy + dx * radius * 0.5),
+                        QPointF(sx + dy * radius * 0.5, sy - dx * radius * 0.5),
+                    ]
+                )
+            )
+            painter.setBrush(QColor(MINER_DETAIL))
+            painter.drawEllipse(int(sx - 2), int(sy - 2), 4, 4)
+        if badge:
+            self._draw_drone_badge(painter, sx, sy, int(_get(drone, "id", 0) or 0))
+
+    def _draw_miner(self, painter: QPainter) -> None:
+        for drone in self._drones():
+            drone_id = int(_get(drone, "id", 0) or 0)
+            if drone_id == 0:
+                sx, sy = self.world_to_screen(self._visual_x, self._visual_y)
+                self._draw_one_drone(painter, drone, sx, sy, badge=False)
+                continue
+            center_x = float(_get(drone, "x", 0) or 0) + 0.5
+            center_y = float(_get(drone, "y", 0) or 0) + 0.5
+            sx, sy = self.world_to_screen(center_x, center_y)
+            self._draw_one_drone(painter, drone, sx, sy, badge=True)
 
     def paintEvent(self, event: Any) -> None:  # noqa: N802 - Qt override name
         """Draw visible chunk pixmaps, grid, base and the miner."""

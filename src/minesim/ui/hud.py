@@ -54,11 +54,13 @@ class HUD(QWidget):
         layout.setContentsMargins(6, 4, 6, 4)
         self.money_label = QLabel("Money: 0", self)
         self.inventory_label = QLabel("Inventory: 0/10", self)
+        self.drones_label = QLabel("Drones: 1", self)
         self.tick_label = QLabel("Tick: 0", self)
         self.position_label = QLabel("Pos: (0, 0)", self)
         for label in (
             self.money_label,
             self.inventory_label,
+            self.drones_label,
             self.tick_label,
             self.position_label,
         ):
@@ -174,8 +176,14 @@ class HUD(QWidget):
         position = _get(miner, "position")
         if position is None:
             position = (_get(miner, "x", 0) or 0, _get(miner, "y", 0) or 0)
+        engine = _get(game, "engine")
+        drones = _get(game, "drones")
+        if not isinstance(drones, dict):
+            drones = _get(engine, "drones")
+        drone_count = len(drones) if isinstance(drones, dict) else 1
         self.money_label.setText(f"Money: {int(money)}")
         self.inventory_label.setText(f"Inventory: {int(used)}/{int(capacity)}")
+        self.drones_label.setText(f"Drones: {int(drone_count)}")
         self.tick_label.setText(f"Tick: {int(tick)}")
         self.position_label.setText(f"Pos: ({int(position[0])}, {int(position[1])})")
         if self.game_loop is not None:

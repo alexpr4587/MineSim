@@ -29,7 +29,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-CURRENT_VERSION = 3
+CURRENT_VERSION = 4
 SAVE_VERSION = CURRENT_VERSION
 DEFAULT_SKIN = "rusty_bot"
 
@@ -76,9 +76,42 @@ def _migrate_v2_to_v3(data: dict[str, Any]) -> dict[str, Any]:
     return migrated
 
 
+def _migrate_v3_to_v4(data: dict[str, Any]) -> dict[str, Any]:
+    """Split the single version-3 miner into player stats and drone 0."""
+    migrated = dict(data)
+    miner = migrated.pop("miner", {}) or {}
+    if not isinstance(miner, dict):
+        miner = {}
+    if "player_stats" not in migrated:
+        migrated["player_stats"] = {
+            "money": int(miner.get("money", 0)),
+            "capacity": int(miner.get("capacity", 10)),
+            "tool_power": int(miner.get("tool_power", 1)),
+            "tool_tier": int(miner.get("tool_tier", 0)),
+            "move_ticks": int(miner.get("move_ticks", 4)),
+            "scan_radius": int(miner.get("scan_radius", 0)),
+            "stats": dict(miner.get("stats", {}) or {}),
+            "upgrades": dict(miner.get("upgrades", {}) or {}),
+            "estimates": dict(miner.get("estimates", {}) or {}),
+        }
+    if "fleet" not in migrated:
+        migrated["fleet"] = [
+            {
+                "id": 0,
+                "x": int(miner.get("x", 0)),
+                "y": int(miner.get("y", 0)),
+                "facing": miner.get("facing", "north"),
+                "inventory": dict(miner.get("inventory", {}) or {}),
+            }
+        ]
+    migrated["version"] = 4
+    return migrated
+
+
 MIGRATIONS: dict[int, Callable[[dict[str, Any]], dict[str, Any]]] = {
     1: _migrate_v1_to_v2,
     2: _migrate_v2_to_v3,
+    3: _migrate_v3_to_v4,
 }
 
 
@@ -119,7 +152,7 @@ def migrate(data: Any) -> dict[str, Any]:
 
 
 class SaveGame(BaseModel):
-    """A serialised game state (save file schema, version 3)."""
+    """A serialised game state (save file schema, version 4)."""
 
     model_config = ConfigDict(extra="ignore")
 
@@ -127,7 +160,8 @@ class SaveGame(BaseModel):
     seed: int
     tick: int = 0
     selected_skin: str = DEFAULT_SKIN
-    miner: dict[str, Any] = Field(default_factory=dict)
+    fleet: list[dict[str, Any]] = Field(default_factory=list)
+    player_stats: dict[str, Any] = Field(default_factory=dict)
     world_delta: dict[str, Any] = Field(default_factory=dict)
     progression: dict[str, Any] = Field(default_factory=dict)
 

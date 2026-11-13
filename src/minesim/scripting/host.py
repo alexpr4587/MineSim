@@ -381,6 +381,7 @@ class ScriptHost:
         content: Any = None,
         progression_view: Any = None,
         scripts_dir: Any = None,
+        drone_id: int = 0,
         **kwargs: Any,
     ) -> None:
         if engine is None:
@@ -406,6 +407,9 @@ class ScriptHost:
         self.progression_view = progression_view
         self.progression = progression_view
         self.scripts_dir = Path(scripts_dir)
+        if drone_id is None:
+            drone_id = kwargs.get("drone_id", 0)
+        self.drone_id: int = int(drone_id or 0)
         self._bus = _event_bus(
             engine, kwargs.get("events") or kwargs.get("event_bus") or kwargs.get("bus")
         )
@@ -717,6 +721,24 @@ class ScriptHost:
 
     # -- request translation ----------------------------------------------
 
+    def _acting_drone(self) -> Any:
+        if self.engine is None:
+            return None
+        getter = getattr(self.engine, "drone", None)
+        if callable(getter):
+            try:
+                return getter(self.drone_id)
+            except KeyError:
+                return None
+        return getattr(self.engine, "miner", None)
+
+    def _submit(self, command: Any) -> Any:
+        """Submit ``command`` to this host's drone."""
+        try:
+            return self.engine.submit(command, drone_id=self.drone_id)
+        except TypeError:
+            return self.engine.submit(command)
+
     def _build_command(self, name: str, args: list[Any], kwargs: dict[str, Any]) -> Any:
         """Translate a player API call into an engine command."""
         if name == "move":
@@ -854,7 +876,7 @@ class ScriptHost:
         if name == "buy_upgrade":
             if result.get("ok"):
                 return int(result.get("level", 0) or 0)
-            miner = getattr(self.engine, "miner", None) if self.engine is not None else None
+            miner = self._acting_drone()
             upgrades = getattr(miner, "upgrades", {}) if miner is not None else {}
             upgrade_id = result.get("id") or result.get("upgrade")
             if upgrade_id and isinstance(upgrades, dict):
@@ -918,7 +940,7 @@ class ScriptHost:
             self._reply_error(request_id, type(exc).__name__, str(exc))
             return
         try:
-            cost = int(command.cost_ticks(self.engine))
+            cost = int(command.cost_ticks(self.engine, self._acting_drone()))
         except Exception:
             cost = 0
         if cost > 0:
@@ -928,7 +950,7 @@ class ScriptHost:
             limit = self._free_limit()
             if limit > 0 and self._zero_streak >= limit:
                 self._zero_streak = 0
-                wait_ticket = self.engine.submit(Wait(1))
+                wait_ticket = self._submit(Wait(1))
                 if not wait_ticket.done:
                     self._pending = _Pending(
                         request_id=request_id,
@@ -938,7 +960,7 @@ class ScriptHost:
                         wait_ticket=wait_ticket,
                     )
                     return
-        ticket = self.engine.submit(command)
+        ticket = self._submit(command)
         if ticket.done:
             self._reply(request_id, result=self._extract_result(name, ticket.result))
         else:
@@ -953,7 +975,7 @@ class ScriptHost:
         if pending.wait_ticket is not None:
             if not pending.wait_ticket.done:
                 return
-            ticket = self.engine.submit(pending.command)
+            ticket = self._submit(pending.command)
             if ticket.done:
                 self._pending = None
                 self._reply(

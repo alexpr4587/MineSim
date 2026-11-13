@@ -32,3 +32,6 @@ Build tasks live in kit/prompts/NN-*.md and are run one per session, in order.
 - If unsure about a PySide6 or pydantic API, inspect the installed package (for example uv run python -c 'import PySide6.QtWidgets as m; help(m.QPlainTextEdit)') instead of guessing.
 - End every task with a short report: what changed, commands run and their results, known limitations. Use Conventional Commits.
 - Player scripts run in a subprocess with a restricted namespace. This is NOT a security sandbox; never claim it is.
+
+- numpy is allowed only in ui/ (never in core/).
+- floating-point math in core/ uses only + - * / comparisons, min, max, abs, ceil, floor and sqrt (no sin, cos, exp, log or fractional powers) so results are identical on every OS.

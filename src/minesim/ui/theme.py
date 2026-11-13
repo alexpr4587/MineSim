@@ -24,6 +24,7 @@ __all__ = [
     "CONSOLE_INFO",
     "CONSOLE_OUT",
     "DISABLED_TEXT",
+    "DRONE_ID_COLORS",
     "ERROR",
     "FONT_FAMILY",
     "FONT_SIZE",
@@ -135,6 +136,17 @@ CONSOLE_OUT = COLORS["console_out"]
 CONSOLE_ERR = COLORS["console_err"]
 CONSOLE_INFO = COLORS["console_info"]
 ERROR = COLORS["error"]
+
+DRONE_ID_COLORS: tuple[str, ...] = (
+    "#f2a541",
+    "#7dcfff",
+    "#c3e88d",
+    "#f7768e",
+    "#c792ea",
+    "#ffcb6b",
+    "#82aaff",
+    "#89ddff",
+)
 
 MONOSPACE_FONT = "Consolas, 'DejaVu Sans Mono', 'Liberation Mono', monospace"
 FONT_FAMILY = MONOSPACE_FONT

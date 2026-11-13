@@ -6,17 +6,35 @@
     "stat": "capacity",
     "per_level": 10,
     "max_level": 5,
-    "costs": [25, 60, 140, 300, 700],
+    "costs": [
+      25,
+      60,
+      140,
+      300,
+      700
+    ],
     "unlocked_by": "first_sale"
   },
   {
     "id": "pickaxe",
     "name": "Pickaxe",
     "description": "Mine faster and break harder ore: tool_power +1 and tool_tier +1 per level.",
-    "stat": ["tool_power", "tool_tier"],
-    "per_level": {"tool_power": 1, "tool_tier": 1},
+    "stat": [
+      "tool_power",
+      "tool_tier"
+    ],
+    "per_level": {
+      "tool_power": 1,
+      "tool_tier": 1
+    },
     "max_level": 5,
-    "costs": [50, 150, 400, 1000, 2500],
+    "costs": [
+      50,
+      150,
+      400,
+      1000,
+      2500
+    ],
     "unlocked_by": "pocket_change"
   },
   {
@@ -26,7 +44,11 @@
     "stat": "move_ticks",
     "per_level": -1,
     "max_level": 3,
-    "costs": [100, 400, 1500],
+    "costs": [
+      100,
+      400,
+      1500
+    ],
     "unlocked_by": "investor"
   },
   {
@@ -36,7 +58,27 @@
     "stat": "scan_radius",
     "per_level": 1,
     "max_level": 4,
-    "costs": [150, 500, 1500, 4000],
+    "costs": [
+      150,
+      500,
+      1500,
+      4000
+    ],
     "unlocked_by": "investor"
+  },
+  {
+    "id": "drone_bay",
+    "name": "Drone Bay",
+    "description": "Dock one more drone: max drones +1 per level.",
+    "stat": "drone_slots",
+    "per_level": 1,
+    "max_level": 4,
+    "costs": [
+      200,
+      600,
+      1500,
+      4000
+    ],
+    "unlocked_by": null
   }
 ]

@@ -8,6 +8,8 @@ from typing import Any
 
 __all__ = [
     "AchievementUnlocked",
+    "DroneRemoved",
+    "DroneSpawned",
     "EstimateSubmitted",
     "EventBus",
     "MineAttempted",
@@ -25,8 +27,9 @@ __all__ = [
 
 @dataclass(frozen=True, slots=True)
 class Moved:
-    """The miner moved one tile."""
+    """A drone moved one tile."""
 
+    drone_id: int = 0
     x: int = 0
     y: int = 0
     direction: str | None = None
@@ -42,6 +45,7 @@ class MineAttempted:
     a success or a ``'miss'`` counts as an attempt.
     """
 
+    drone_id: int = 0
     ore_id: str | None = None
     success: bool = False
     reason: str | None = None
@@ -51,14 +55,16 @@ class MineAttempted:
 class OreMined:
     """An ore item was mined."""
 
+    drone_id: int = 0
     ore_id: str | None = None
     amount: int = 1
 
 
 @dataclass(frozen=True, slots=True)
 class Sold:
-    """The miner sold ore at the base."""
+    """A drone sold ore at the base."""
 
+    drone_id: int = 0
     money: int = 0
     items: dict[str, int] | None = None
 
@@ -86,8 +92,23 @@ class EstimateSubmitted:
 class UpgradeBought:
     """An upgrade level was bought."""
 
+    drone_id: int = 0
     id: str = ""
     level: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class DroneSpawned:
+    """A drone was added to the fleet."""
+
+    id: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class DroneRemoved:
+    """A drone was removed from the fleet."""
+
+    id: int = 0
 
 
 @dataclass(frozen=True, slots=True)

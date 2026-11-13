@@ -95,7 +95,7 @@ def test_initial_unlock_sets(content):
     assert state.unlocked_ores == {"stone"}
     assert state.unlocked_functions == {"move", "mine", "peek", "position"}
     assert state.unlocked_modules == {"math"}
-    assert state.unlocked_upgrades == set()
+    assert state.unlocked_upgrades == {"drone_bay"}
     assert state.unlocked_skins == {"rusty_bot"}
     assert state.unlocked_examples == {"01_hello"}
 

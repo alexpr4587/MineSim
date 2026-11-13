@@ -76,6 +76,7 @@ def build_window(
     flat: bool = False,
     skin: str | None = None,
     moving: bool = False,
+    fleet: int = 0,
 ) -> MainWindow:
     """Build the real main window and run ``ticks`` engine ticks."""
     app = QApplication.instance() or QApplication([])
@@ -83,6 +84,15 @@ def build_window(
     game = Game.new()
     if skin:
         game.select_skin(skin)
+    for _ in range(max(0, int(fleet))):
+        game.engine.spawn_drone()
+    offsets = ((2, 0), (-2, 0), (0, 2), (0, -2))
+    for index, drone_id in enumerate(sorted(game.engine.drones)):
+        if drone_id == 0:
+            continue
+        dx, dy = offsets[(index - 1) % len(offsets)]
+        game.engine.drone(drone_id).x = dx
+        game.engine.drone(drone_id).y = dy
     window = MainWindow(game)
     window.world_view.set_terrain_lighting(not flat, persist=False)
     window.resize(size[0], size[1])
@@ -153,6 +163,12 @@ def main() -> int:
         help="leave a Move command active so the walk animation is visible",
     )
     parser.add_argument(
+        "--fleet",
+        type=int,
+        default=0,
+        help="spawn N extra drones and save artifacts/ui_fleet.png",
+    )
+    parser.add_argument(
         "--achievements",
         action="store_true",
         help="keep the achievements panel visible and save artifacts/ui_achievements.png",
@@ -170,6 +186,7 @@ def main() -> int:
         flat=args.flat,
         skin=args.skin,
         moving=args.moving,
+        fleet=args.fleet,
     )
     for panel_name in (
         "achievements_panel",
@@ -206,6 +223,8 @@ def main() -> int:
         default_name = f"ui_skin_{args.skin}.png"
     if args.achievements:
         default_name = "ui_achievements.png"
+    if args.fleet:
+        default_name = "ui_fleet.png"
     if args.wardrobe:
         default_name = "ui_wardrobe.png"
     out = args.output or (Path(__file__).resolve().parents[1] / "artifacts" / default_name)

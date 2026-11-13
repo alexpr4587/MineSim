@@ -6,56 +6,15 @@ from pathlib import Path
 from typing import Any
 
 from minesim.core.content import load_content
-from minesim.core.direction import Direction
 from minesim.core.engine import GameEngine
 from minesim.core.events import EventBus
-from minesim.core.miner import Miner, MinerStats
+from minesim.core.miner import Drone, Miner, PlayerStats
 from minesim.core.progression.service import ProgressionService
 from minesim.core.progression.state import ProgressionState
 from minesim.core.save import CURRENT_VERSION, DEFAULT_SKIN, SaveGame, default_save_path
 from minesim.core.world import World, WorldGenerator
 
 __all__ = ["Game"]
-
-
-def _miner_from_dict(data: Any) -> Miner:
-    """Rebuild a Miner from its ``to_dict()`` payload."""
-    if not isinstance(data, dict):
-        raise ValueError("miner save data must be a mapping")
-    stats_data = data.get("stats") or {}
-    if not isinstance(stats_data, dict):
-        stats_data = {}
-    stats = MinerStats(
-        attempts={str(k): int(v) for k, v in dict(stats_data.get("attempts", {})).items()},
-        successes={str(k): int(v) for k, v in dict(stats_data.get("successes", {})).items()},
-        total_mined=int(stats_data.get("total_mined", 0)),
-        total_earned=int(stats_data.get("total_earned", 0)),
-        tiles_moved=int(stats_data.get("tiles_moved", 0)),
-        sales=int(stats_data.get("sales", 0)),
-    )
-    facing_raw = data.get("facing", "north")
-    try:
-        facing = Direction.parse(facing_raw) if isinstance(facing_raw, str) else facing_raw
-    except ValueError:
-        facing = Direction.NORTH
-    inventory = {str(k): int(v) for k, v in dict(data.get("inventory", {})).items()}
-    upgrades = {str(k): int(v) for k, v in dict(data.get("upgrades", {})).items()}
-    estimates = {str(k): int(v) for k, v in dict(data.get("estimates", {})).items()}
-    return Miner(
-        x=int(data.get("x", 0)),
-        y=int(data.get("y", 0)),
-        facing=facing,
-        inventory=inventory,
-        capacity=int(data.get("capacity", 10)),
-        money=int(data.get("money", 0)),
-        tool_power=int(data.get("tool_power", 1)),
-        tool_tier=int(data.get("tool_tier", 0)),
-        move_ticks=int(data.get("move_ticks", 4)),
-        scan_radius=int(data.get("scan_radius", 0)),
-        stats=stats,
-        upgrades=upgrades,
-        estimates=estimates,
-    )
 
 
 class Game:
@@ -95,6 +54,15 @@ class Game:
                 else getattr(engine, "content", None) or getattr(self._world, "content", None)
             )
             self._events = events if events is not None else getattr(engine, "events", EventBus())
+            self._player_stats = getattr(engine, "player_stats", None)
+            if self._player_stats is None:
+                self._player_stats = getattr(self._miner, "player_stats", None)
+            if self._player_stats is None:
+                self._player_stats = (
+                    PlayerStats.from_config(self._content)
+                    if self._content is not None
+                    else PlayerStats()
+                )
             if progression_service is not None:
                 self._progression_service = progression_service
                 self._progression_state = (
@@ -140,6 +108,7 @@ class Game:
         self._engine = engine
         self._progression_state = progression_state
         self._progression_service = progression_service
+        self._player_stats = engine.player_stats
 
     @property
     def content(self) -> Any:
@@ -159,11 +128,24 @@ class Game:
     @miner.setter
     def miner(self, value: Any) -> None:
         self._miner = value
+        player_stats = getattr(value, "player_stats", None)
+        if player_stats is not None:
+            self._player_stats = player_stats
         if self._engine is not None:
             try:
                 self._engine.miner = value
             except Exception:
                 pass
+
+    @property
+    def player_stats(self) -> PlayerStats:
+        """Money, upgrades and aggregate stats shared by the fleet."""
+        return self._player_stats
+
+    @property
+    def drones(self) -> dict[int, Any]:
+        """The fleet, keyed by drone id."""
+        return self._engine.drones
 
     @property
     def engine(self) -> Any:
@@ -309,7 +291,8 @@ class Game:
             seed=self.seed,
             tick=self.tick,
             selected_skin=self._selected_skin,
-            miner=self._miner.to_dict(),
+            fleet=[drone.to_fleet_dict() for drone in self._engine.drones.values()],
+            player_stats=self._player_stats.to_dict(),
             world_delta=self._world.to_dict(),
             progression=self._progression_state.to_dict(),
         )
@@ -324,12 +307,18 @@ class Game:
         if content is None:
             content = load_content()
         game = cls.new(savegame.seed, content)
-        miner = _miner_from_dict(savegame.miner)
-        game._miner = miner
-        try:
-            game._engine.miner = miner
-        except Exception:
-            pass
+        player_stats = PlayerStats.from_dict(savegame.player_stats, content=content)
+        drones = [Drone.from_fleet_dict(entry, player_stats) for entry in savegame.fleet]
+        if not any(drone.id == 0 for drone in drones):
+            drones.insert(0, Drone(id=0, player_stats=player_stats))
+        engine = game._engine
+        engine.player_stats = player_stats
+        engine.drones.clear()
+        for drone in drones:
+            drone.player_stats = player_stats
+            engine.drones[drone.id] = drone
+        game._player_stats = player_stats
+        game._miner = engine.miner
         game._world.load_dict(savegame.world_delta)
         restored = ProgressionState.from_dict(savegame.progression, content=content)
         game._progression_state = restored
@@ -339,7 +328,7 @@ class Game:
         except ValueError:
             game._selected_skin = DEFAULT_SKIN
         game._engine.tick = int(savegame.tick)
-        attempts = miner.stats.attempts or {}
+        attempts = player_stats.stats.attempts or {}
         try:
             game._engine.attempt_counter = int(sum(int(v) for v in attempts.values()))
         except Exception:
@@ -356,9 +345,9 @@ class Game:
         """Alias for :meth:`load`."""
         return cls.load(path, content)
 
-    def submit(self, command: Any) -> Any:
-        """Submit ``command`` to the engine and return its ticket."""
-        return self._engine.submit(command)
+    def submit(self, command: Any, drone_id: int = 0) -> Any:
+        """Submit ``command`` to ``drone_id`` and return its ticket."""
+        return self._engine.submit(command, drone_id=drone_id)
 
     def step(self) -> None:
         """Advance the engine by one tick."""
