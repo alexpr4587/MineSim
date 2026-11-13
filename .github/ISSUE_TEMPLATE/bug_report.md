@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Create a report to help us improve DigScript
+about: Create a report to help us improve MineSim
 title: "[BUG] "
 labels: ["bug"]
 ---
@@ -27,7 +27,7 @@ If applicable, add screenshots to help explain your problem.
 ## Environment
 
 - OS: [e.g. Ubuntu 22.04, Windows 11]
-- DigScript version: [e.g. v0.1.0]
+- MineSim version: [e.g. v0.1.0]
 - Python version: [e.g. 3.12]
 
 ## Additional context

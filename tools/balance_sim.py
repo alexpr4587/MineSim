@@ -19,9 +19,9 @@ _SRC = Path(__file__).resolve().parents[1] / "src"
 if _SRC.is_dir() and str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
-from digscript.core.commands import BuyUpgrade, Mine, Move, Sell  # noqa: E402
-from digscript.core.direction import Direction  # noqa: E402
-from digscript.core.game import Game  # noqa: E402
+from minesim.core.commands import BuyUpgrade, Mine, Move, Sell  # noqa: E402
+from minesim.core.direction import Direction  # noqa: E402
+from minesim.core.game import Game  # noqa: E402
 
 _ROOT = Path(__file__).resolve().parents[1]
 _DOCS = _ROOT / "docs"

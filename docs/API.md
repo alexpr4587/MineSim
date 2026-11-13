@@ -1,6 +1,6 @@
-# DigScript API
+# MineSim API
 
-DigScript exposes a small, deterministic API to player scripts. The game process never executes player code; scripts run in a separate subprocess started by `digscript.scripting.host`. See the README for the safety note.
+MineSim exposes a small, deterministic API to player scripts. The game process never executes player code; scripts run in a separate subprocess started by `minesim.scripting.host`. See the README for the safety note.
 
 ## Player API functions
 
@@ -315,7 +315,7 @@ submit_estimate('coal', 0.9)
 
 ## minerlib helper module
 
-`minerlib` is a pure-Python helper module importable by player scripts. The primitive API functions (`move`, `mine`, `peek`, `position`) are injected by the runner; the helpers below are implemented in `src/digscript/runner/minerlib.py`.
+`minerlib` is a pure-Python helper module importable by player scripts. The primitive API functions (`move`, `mine`, `peek`, `position`) are injected by the runner; the helpers below are implemented in `src/minesim/runner/minerlib.py`.
 
 ### `minerlib.goto`
 

@@ -1,6 +1,6 @@
 # MineSim
 
-DigScript is an open-source 2D top-down programming game. You write real Python
+MineSim is an open-source 2D top-down programming game. You write real Python
 in an in-game floating editor to control a mining robot on an infinite,
 procedurally generated, regenerating grid. Every ore has its own mining
 probability. Achievements (key **L**, like Minecraft advancements) unlock API
@@ -10,11 +10,11 @@ functions, ores, upgrades and Python modules.
 
 Lit 2.5D terrain:
 
-![DigScript lit terrain](docs/screenshot.png)
+![MineSim lit terrain](docs/screenshot.png)
 
 Wardrobe and miner skins:
 
-![DigScript wardrobe](docs/screenshot-wardrobe.png)
+![MineSim wardrobe](docs/screenshot-wardrobe.png)
 
 ## Features
 
@@ -79,7 +79,7 @@ ore with `sell()` and buy the **Backpack** upgrade with `buy_upgrade("backpack")
 ## Install from source
 
 ```sh
-uv sync && uv run digscript
+uv sync && uv run minesim
 ```
 
 Linux note: `sudo apt install libxcb-cursor0`

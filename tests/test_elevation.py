@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from digscript.core.content import load_content
-from digscript.core.world import World, WorldGenerator
-from digscript.core.world.elevation import tile_height
+from minesim.core.content import load_content
+from minesim.core.world import World, WorldGenerator
+from minesim.core.world.elevation import tile_height
 
 
 @pytest.fixture(scope="module")
@@ -20,7 +20,7 @@ def world(content):
 
 
 def test_elevation_is_deterministic_and_in_range() -> None:
-    from digscript.core.world.elevation import elevation_at
+    from minesim.core.world.elevation import elevation_at
 
     coordinates = [(0, 0), (1, 0), (-7, 13), (999, -999), (-5000, 5000)]
     for seed in (0, 1, 12345, 2**40):
@@ -31,14 +31,14 @@ def test_elevation_is_deterministic_and_in_range() -> None:
 
 
 def test_elevation_changes_with_seed_and_position() -> None:
-    from digscript.core.world.elevation import elevation_at
+    from minesim.core.world.elevation import elevation_at
 
     assert elevation_at(1, 0, 0) != elevation_at(2, 0, 0)
     assert elevation_at(1, 0, 0) != elevation_at(1, 10, 10)
 
 
 def test_elevation_is_continuous_between_neighbours() -> None:
-    from digscript.core.world.elevation import elevation_at
+    from minesim.core.world.elevation import elevation_at
 
     for seed in (0, 12345):
         for x in range(-30, 30):

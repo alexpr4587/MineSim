@@ -1,10 +1,10 @@
 [project]
-name = "digscript"
+name = "minesim"
 version = "0.2.0"
-description = "DigScript - a 2D top-down programming game"
+description = "MineSim - a 2D top-down programming game"
 readme = "README.md"
 license = { text = "MIT" }
-authors = [{ name = "DigScript contributors" }]
+authors = [{ name = "MineSim contributors" }]
 requires-python = ">=3.12"
 dependencies = [
     "PySide6>=6.7",
@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-digscript = "digscript.__main__:main"
+minesim = "minesim.__main__:main"
 
 [dependency-groups]
 dev = [
@@ -30,13 +30,13 @@ build-backend = "uv_build"
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-extend-exclude = ["digscript_api.pyi", "docs/API.md"]
+extend-exclude = ["minesim_api.pyi", "docs/API.md"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 
 [tool.ruff.lint.per-file-ignores]
-"src/digscript/examples/*.py" = ["F821"]
+"src/minesim/examples/*.py" = ["F821"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

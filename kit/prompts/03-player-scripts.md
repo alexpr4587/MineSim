@@ -24,10 +24,10 @@ runner/main.py: child entry point run(conn, source, filename, spec, allowed_modu
 - API proxies are generated from spec. Every proxy sends a request and blocks for the reply.
 - Errors are reported as {type, message, line, traceback_text} using the player's file name, with internal frames stripped.
 runner/minerlib.py (importable by players, pure Python on top of the primitives): goto(x, y), go_home(), sweep(width, height) (serpentine generator of positions), spiral() (generator), mine_here() (peek, then mine if possible). Docstrings are mandatory.
-tools/gen_stubs.py: generates digscript_api.pyi from functions.json and minerlib so VS Code can autocomplete. ScriptHost writes it into scripts_dir when a script starts.
-CLI: `digscript --selftest` runs a headless game, executes a tiny script through the real subprocess runner, prints OK and exits 0 (used by CI and later by the frozen build).
+tools/gen_stubs.py: generates minesim_api.pyi from functions.json and minerlib so VS Code can autocomplete. ScriptHost writes it into scripts_dir when a script starts.
+CLI: `minesim --selftest` runs a headless game, executes a tiny script through the real subprocess runner, prints OK and exits 0 (used by CI and later by the frozen build).
 
 TESTS (real subprocess, marked integration, each under about 5 s): a script that moves and mines changes the engine state as expected; `while True: pass` is killed by the watchdog; stop() kills a running script; a locked function raises NotUnlockedError with the right line number; forbidden builtins fail with NameError; importing random fails before the unlock and works after; a syntax error is reported with its line; print output arrives as console lines; modules in scripts_dir can be imported; 100000 zero-cost calls in a loop do not freeze the engine.
 
-ACCEPTANCE: uv run digscript --selftest prints OK on Linux and Windows (CI).
+ACCEPTANCE: uv run minesim --selftest prints OK on Linux and Windows (CI).
 COMMIT: feat(scripting): subprocess runner, host and player API

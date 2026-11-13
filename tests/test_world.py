@@ -8,10 +8,10 @@ from pathlib import Path
 
 import pytest
 
-from digscript.core.content import ContentError, load_content
-from digscript.core.rng import mix64, unit, weighted_choice
-from digscript.core.world import World, WorldGenerator
-from digscript.core.world.biomes import biome_for_region, region_for_tile
+from minesim.core.content import ContentError, load_content
+from minesim.core.rng import mix64, unit, weighted_choice
+from minesim.core.world import World, WorldGenerator
+from minesim.core.world.biomes import biome_for_region, region_for_tile
 
 
 @pytest.fixture(scope="module")

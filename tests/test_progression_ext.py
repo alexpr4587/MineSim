@@ -9,10 +9,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from digscript.core.commands import BuyUpgrade, Mine, Move, Sell
-from digscript.core.content import load_content
-from digscript.core.direction import Direction
-from digscript.core.events import (
+from minesim.core.commands import BuyUpgrade, Mine, Move, Sell
+from minesim.core.content import load_content
+from minesim.core.direction import Direction
+from minesim.core.events import (
     EstimateSubmitted,
     MineAttempted,
     Moved,
@@ -23,17 +23,17 @@ from digscript.core.events import (
     TileRegenerated,
     UpgradeBought,
 )
-from digscript.core.game import Game
-from digscript.core.progression.state import ProgressionState
-from digscript.core.save import DEFAULT_SKIN, SaveGame, migrate
-from digscript.core.schemas import (
+from minesim.core.game import Game
+from minesim.core.progression.state import ProgressionState
+from minesim.core.save import DEFAULT_SKIN, SaveGame, migrate
+from minesim.core.schemas import (
     Achievement,
     ContentError,
     CounterCriteria,
     Reward,
     ScriptFeatureCriteria,
 )
-from digscript.scripting.host import analyze_features
+from minesim.scripting.host import analyze_features
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 FEATURES = (
@@ -340,7 +340,7 @@ def test_saved_version_2_fixture_migrates(content):
 
 
 def _copy_content(tmp_path: Path) -> Path:
-    source = Path(__file__).resolve().parents[1] / "src" / "digscript" / "content"
+    source = Path(__file__).resolve().parents[1] / "src" / "minesim" / "content"
     destination = tmp_path / "content"
     destination.mkdir()
     for item in source.iterdir():

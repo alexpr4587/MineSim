@@ -1,7 +1,7 @@
 # AGENTS.md: rules for every task in this repo
 
 ## Project
-DigScript (working title; the package is `digscript`) is an open-source 2D top-down programming game. The player writes real Python in an in-game floating editor to control a mining robot on an infinite, procedurally generated, regenerating grid. Every ore has its own mining probability. Achievements (key L, like Minecraft advancements) unlock API functions, ores, upgrades and Python modules. Targets: Windows and Linux. License: MIT. All code, docs and in-game text in English.
+MineSim (working title; the package is `minesim`) is an open-source 2D top-down programming game. The player writes real Python in an in-game floating editor to control a mining robot on an infinite, procedurally generated, regenerating grid. Every ore has its own mining probability. Achievements (key L, like Minecraft advancements) unlock API functions, ores, upgrades and Python modules. Targets: Windows and Linux. License: MIT. All code, docs and in-game text in English.
 Build tasks live in kit/prompts/NN-*.md and are run one per session, in order.
 
 ## Stack and checks
@@ -17,7 +17,7 @@ Build tasks live in kit/prompts/NN-*.md and are run one per session, in order.
 - No global mutable state or singletons. Pass dependencies through constructors. Systems talk through the typed EventBus in core/events.py.
 
 ## Data-driven
-- All gameplay numbers and content live in src/digscript/content/*.json, validated by pydantic models in core/schemas.py. No magic numbers in code. Invalid data raises ContentError with the file name and JSON path.
+- All gameplay numbers and content live in src/minesim/content/*.json, validated by pydantic models in core/schemas.py. No magic numbers in code. Invalid data raises ContentError with the file name and JSON path.
 - Randomness only through core/rng.py (seeded pure functions). Never use random, hash() or time inside core/.
 
 ## Code style

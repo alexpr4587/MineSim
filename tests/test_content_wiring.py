@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from digscript.core.content import load_content
-from digscript.core.events import (
+from minesim.core.content import load_content
+from minesim.core.events import (
     EstimateSubmitted,
     MineAttempted,
     Moved,
@@ -18,8 +18,8 @@ from digscript.core.events import (
     ScriptStarted,
     TileRegenerated,
 )
-from digscript.core.game import Game
-from digscript.core.progression.state import ProgressionState
+from minesim.core.game import Game
+from minesim.core.progression.state import ProgressionState
 
 ROOT = Path(__file__).resolve().parents[1]
 TABS = {"code", "mining", "business", "explorer", "data"}

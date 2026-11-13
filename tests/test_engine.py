@@ -6,7 +6,7 @@ import math
 
 import pytest
 
-from digscript.core.commands import (
+from minesim.core.commands import (
     BuyUpgrade,
     Inventory,
     Mine,
@@ -18,10 +18,10 @@ from digscript.core.commands import (
     Stats,
     Wait,
 )
-from digscript.core.content import load_content
-from digscript.core.direction import Direction
-from digscript.core.engine import AllUnlocked, GameEngine
-from digscript.core.events import (
+from minesim.core.content import load_content
+from minesim.core.direction import Direction
+from minesim.core.engine import AllUnlocked, GameEngine
+from minesim.core.events import (
     EventBus,
     MineAttempted,
     Moved,
@@ -30,8 +30,8 @@ from digscript.core.events import (
     TickAdvanced,
     UpgradeBought,
 )
-from digscript.core.miner import Miner
-from digscript.core.world import World, WorldGenerator
+from minesim.core.miner import Miner
+from minesim.core.world import World, WorldGenerator
 
 
 @pytest.fixture(scope="module")

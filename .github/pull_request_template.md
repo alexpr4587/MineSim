@@ -1,6 +1,6 @@
-# DigScript v0.2.0 release checklist
+# MineSim v0.2.0 release checklist
 
-- [ ] A clean clone runs with `uv sync && uv run digscript`
+- [ ] A clean clone runs with `uv sync && uv run minesim`
 - [ ] CI is green on both `ubuntu-latest` and `windows-latest`
 - [ ] The frozen Windows and Linux binaries pass both `--selftest` and `--selftest-ui`
 - [ ] A v0.1.0 save (`tests/fixtures/save_v1.json`) loads in v0.2.0

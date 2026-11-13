@@ -11,20 +11,20 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 import numpy as np
 import pytest
 
-from digscript.core.content import load_content
-from digscript.core.world import World, WorldGenerator
-from digscript.core.world.world import Tile
+from minesim.core.content import load_content
+from minesim.core.world import World, WorldGenerator
+from minesim.core.world.world import Tile
 
 pytest.importorskip("PySide6")
 
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
-from digscript.ui.terrain_shader import (  # noqa: E402
+from minesim.ui.terrain_shader import (  # noqa: E402
     compute_light,
     posterize,
     render_chunk,
 )
-from digscript.ui.world_view import WorldView  # noqa: E402
+from minesim.ui.world_view import WorldView  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ def _pixmap_variance(pixmap) -> int:
 
 
 def test_flat_height_field_has_uniform_lighting(monkeypatch, content) -> None:
-    import digscript.ui.terrain_shader as shader
+    import minesim.ui.terrain_shader as shader
 
     monkeypatch.setattr(shader, "tile_height", lambda *args, **kwargs: 1.0)
     world = _FlatWorld(content)

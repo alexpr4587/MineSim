@@ -2,7 +2,7 @@
 
 Follow AGENTS.md. Implement the infinite world in core/ (no Qt, no miner yet).
 
-CONTENT (JSON in src/digscript/content/, pydantic models in core/schemas.py, loader in core/content.py using importlib.resources):
+CONTENT (JSON in src/minesim/content/, pydantic models in core/schemas.py, loader in core/content.py using importlib.resources):
 - config.json: seed_default 12345, chunk_size 16, region_size_chunks 2, base_half_size 1, tick_hz 10. Later prompts add more keys.
 - ores.json: list of {id, name, tier, hardness, base_value, mine_probability, regen_ticks, color, unlocked_by}. unlocked_by is an achievement id (null = available from the start). Initial ores (id: tier, hardness, base_value, mine_probability, regen_ticks, color, unlocked_by):
   stone: 0, 1, 1, 0.95, 300, #7a7a7a, null

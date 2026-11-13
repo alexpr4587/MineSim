@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "src" / "digscript"
+SRC = ROOT / "src" / "minesim"
 
 
 def _imports(path: Path) -> set[str]:
@@ -30,14 +30,14 @@ def test_no_pyside6_or_ui_in_core_scripting_runner() -> None:
         for path in _py_files(package):
             for module in _imports(path):
                 assert not module.startswith("PySide6"), f"{path}: imports PySide6"
-                assert not module.startswith("digscript.ui"), f"{path}: imports digscript.ui"
+                assert not module.startswith("minesim.ui"), f"{path}: imports minesim.ui"
 
 
 def test_core_does_not_import_scripting_or_runner() -> None:
     for path in _py_files("core"):
         for module in _imports(path):
-            assert not module.startswith("digscript.scripting"), path
-            assert not module.startswith("digscript.runner"), path
+            assert not module.startswith("minesim.scripting"), path
+            assert not module.startswith("minesim.runner"), path
 
 
 def test_runner_imports_only_stdlib_and_runner() -> None:
@@ -45,6 +45,6 @@ def test_runner_imports_only_stdlib_and_runner() -> None:
     for path in _py_files("runner"):
         for module in _imports(path):
             top = module.split(".")[0]
-            assert top in allowed or module.startswith("digscript.runner"), (
+            assert top in allowed or module.startswith("minesim.runner"), (
                 f"{path}: runner imports {module}"
             )

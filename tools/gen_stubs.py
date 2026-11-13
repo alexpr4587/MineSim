@@ -1,7 +1,7 @@
-"""Generate ``digscript_api.pyi`` from functions.json and minerlib.
+"""Generate ``minesim_api.pyi`` from functions.json and minerlib.
 
 Usage: ``python tools/gen_stubs.py [output]``
-The default output is ``digscript_api.pyi`` in the current directory.
+The default output is ``minesim_api.pyi`` in the current directory.
 """
 
 from __future__ import annotations
@@ -14,15 +14,15 @@ _SRC = Path(__file__).resolve().parents[1] / "src"
 if _SRC.is_dir() and str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
-from digscript.scripting.stubs import generate_stub_text, write_stubs  # noqa: E402
+from minesim.scripting.stubs import generate_stub_text, write_stubs  # noqa: E402
 
 __all__ = ["generate_stubs", "generate_stub_text", "main"]
 
 
 def generate_stubs(output: str | Path | None = None) -> Path:
-    """Generate ``digscript_api.pyi`` and return its path."""
+    """Generate ``minesim_api.pyi`` and return its path."""
     if output is None:
-        path = Path("digscript_api.pyi")
+        path = Path("minesim_api.pyi")
         path.write_text(generate_stub_text(), encoding="utf-8")
         return path
     # write_stubs expects a directory; handle the file-path case here.

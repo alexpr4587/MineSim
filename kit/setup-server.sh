@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-time setup of the build server for DigScript (Ubuntu/Debian).
+# One-time setup of the build server for MineSim (Ubuntu/Debian).
 set -euo pipefail
 
 echo '==> System packages (git, unzip, curl, Qt offscreen libraries, fonts)'
@@ -18,4 +18,4 @@ echo '==> Python 3.12 (managed by uv)'
 uv python install 3.12
 
 echo
-echo 'Done. Close and reopen the terminal, then run: cd ~/digscript && opencode'
+echo 'Done. Close and reopen the terminal, then run: cd ~/minesim && opencode'

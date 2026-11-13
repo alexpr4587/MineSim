@@ -8,21 +8,21 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 
-from digscript.core.content import load_content
-from digscript.core.game import Game
-from digscript.core.world import World, WorldGenerator
+from minesim.core.content import load_content
+from minesim.core.game import Game
+from minesim.core.world import World, WorldGenerator
 
 pytest.importorskip("PySide6")
 
 from PySide6.QtCore import Qt  # noqa: E402
 from PySide6.QtWidgets import QApplication, QPushButton  # noqa: E402
 
-from digscript.ui.app import load_game_or_new  # noqa: E402
-from digscript.ui.game_loop import MAX_TICKS_PER_FRAME, GameLoop  # noqa: E402
-from digscript.ui.hud import HUD  # noqa: E402
-from digscript.ui.main_window import MainWindow  # noqa: E402
-from digscript.ui.theme import COLORS, FONT_FAMILY, STYLESHEET  # noqa: E402
-from digscript.ui.world_view import MAX_TILE_PX, MIN_TILE_PX, WorldView  # noqa: E402
+from minesim.ui.app import load_game_or_new  # noqa: E402
+from minesim.ui.game_loop import MAX_TICKS_PER_FRAME, GameLoop  # noqa: E402
+from minesim.ui.hud import HUD  # noqa: E402
+from minesim.ui.main_window import MainWindow  # noqa: E402
+from minesim.ui.theme import COLORS, FONT_FAMILY, STYLESHEET  # noqa: E402
+from minesim.ui.world_view import MAX_TILE_PX, MIN_TILE_PX, WorldView  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -64,7 +64,7 @@ def test_window_builds(qapp) -> None:
     assert isinstance(window.world_view, WorldView)
     assert isinstance(window.hud, HUD)
     assert window.game is game
-    assert window.windowTitle() == "DigScript"
+    assert window.windowTitle() == "MineSim"
     window.close()
 
 

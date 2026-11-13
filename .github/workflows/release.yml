@@ -24,30 +24,30 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pytest -q
-      - run: uv run pyinstaller digscript.spec --distpath dist/digscript --workpath build/digscript
+      - run: uv run pyinstaller minesim.spec --distpath dist/minesim --workpath build/minesim
       - if: runner.os == 'Linux'
-        run: dist/digscript/digscript/digscript --selftest
+        run: dist/minesim/minesim/minesim --selftest
       - if: runner.os == 'Linux'
-        run: dist/digscript/digscript/digscript --selftest-ui
+        run: dist/minesim/minesim/minesim --selftest-ui
       - if: runner.os == 'Windows'
-        run: dist/digscript/digscript/digscript.exe --selftest
+        run: dist/minesim/minesim/minesim.exe --selftest
       - if: runner.os == 'Windows'
-        run: dist/digscript/digscript/digscript.exe --selftest-ui
+        run: dist/minesim/minesim/minesim.exe --selftest-ui
       - name: Package (Linux)
         if: runner.os == 'Linux'
-        run: tar -czf digscript-linux.tar.gz -C dist/digscript digscript
+        run: tar -czf minesim-linux.tar.gz -C dist/minesim minesim
       - name: Package (Windows)
         if: runner.os == 'Windows'
-        run: powershell -Command "Compress-Archive -Path 'dist/digscript/digscript/*' -DestinationPath digscript-windows.zip"
+        run: powershell -Command "Compress-Archive -Path 'dist/minesim/minesim/*' -DestinationPath minesim-windows.zip"
       - uses: softprops/action-gh-release@v1
         if: runner.os == 'Linux'
         with:
-          files: digscript-linux.tar.gz
+          files: minesim-linux.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: softprops/action-gh-release@v1
         if: runner.os == 'Windows'
         with:
-          files: digscript-windows.zip
+          files: minesim-windows.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

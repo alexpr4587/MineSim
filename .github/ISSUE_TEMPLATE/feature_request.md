@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest an idea for DigScript
+about: Suggest an idea for MineSim
 title: "[FEATURE] "
 labels: ["enhancement"]
 ---

@@ -1,6 +1,6 @@
-# Contributing to DigScript
+# Contributing to MineSim
 
-DigScript is an open-source 2D top-down programming game. Contributions are
+MineSim is an open-source 2D top-down programming game. Contributions are
 welcome: bug fixes, features, content, documentation and translations.
 
 ## Setup
@@ -8,7 +8,7 @@ welcome: bug fixes, features, content, documentation and translations.
 1. Clone the repository:
    ```sh
    git clone <repo-url>
-   cd digscript
+   cd minesim
    ```
 2. Install [uv](https://astral.sh/) and sync the project:
    ```sh
@@ -16,7 +16,7 @@ welcome: bug fixes, features, content, documentation and translations.
    ```
 3. Run the game:
    ```sh
-   uv run digscript
+   uv run minesim
    ```
    Linux note: `sudo apt install libxcb-cursor0`
 
@@ -36,7 +36,7 @@ commit).
 
 ## Architecture
 
-DigScript follows strict architecture rules (enforced by
+MineSim follows strict architecture rules (enforced by
 `tests/test_architecture.py` and described in `AGENTS.md`):
 
 - `core/` is pure Python: no PySide6, no threads, no subprocess, no wall-clock
@@ -53,7 +53,7 @@ DigScript follows strict architecture rules (enforced by
 
 ## Data-driven content
 
-All gameplay numbers and content live in `src/digscript/content/*.json`,
+All gameplay numbers and content live in `src/minesim/content/*.json`,
 validated by pydantic models in `core/schemas.py`. Invalid data raises
 `ContentError` with the file name and JSON path. Randomness only through
 `core/rng.py` (seeded pure functions).

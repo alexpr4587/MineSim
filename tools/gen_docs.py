@@ -19,7 +19,7 @@ if _SRC.is_dir() and str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
 _ROOT = Path(__file__).resolve().parents[1]
-_CONTENT = _ROOT / "src" / "digscript" / "content"
+_CONTENT = _ROOT / "src" / "minesim" / "content"
 _DOCS = _ROOT / "docs"
 
 __all__ = ["generate_api_md", "generate_guide_md", "main"]
@@ -40,8 +40,8 @@ def _load_json(name: str) -> Any:
 
 
 def _minerlib_doc(name: str) -> str:
-    """Return the docstring of a :mod:`digscript.runner.minerlib` function."""
-    from digscript.runner import minerlib
+    """Return the docstring of a :mod:`minesim.runner.minerlib` function."""
+    from minesim.runner import minerlib
 
     fn = getattr(minerlib, name, None)
     if fn is None:
@@ -71,12 +71,12 @@ def generate_api_md(output: str | Path | None = None) -> Path:
     titles = _achievement_titles()
 
     lines: list[str] = []
-    lines.append("# DigScript API")
+    lines.append("# MineSim API")
     lines.append("")
     lines.append(
-        "DigScript exposes a small, deterministic API to player scripts. "
+        "MineSim exposes a small, deterministic API to player scripts. "
         "The game process never executes player code; scripts run in a "
-        "separate subprocess started by `digscript.scripting.host`. "
+        "separate subprocess started by `minesim.scripting.host`. "
         "See the README for the safety note."
     )
     lines.append("")
@@ -135,7 +135,7 @@ def generate_api_md(output: str | Path | None = None) -> Path:
         "`minerlib` is a pure-Python helper module importable by player scripts. "
         "The primitive API functions (`move`, `mine`, `peek`, `position`) are "
         "injected by the runner; the helpers below are implemented in "
-        "`src/digscript/runner/minerlib.py`."
+        "`src/minesim/runner/minerlib.py`."
     )
     lines.append("")
 
@@ -283,7 +283,7 @@ def generate_guide_md(output: str | Path | None = None) -> Path:
     }
 
     lines: list[str] = []
-    lines.append("# DigScript Achievement Guide")
+    lines.append("# MineSim Achievement Guide")
     lines.append("")
     lines.append(
         "Every achievement belongs to one of five tabs: Code, Mining, Business, "

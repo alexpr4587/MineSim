@@ -1,4 +1,4 @@
-# DigScript Achievement Guide
+# MineSim Achievement Guide
 
 Every achievement belongs to one of five tabs: Code, Mining, Business, Explorer and Data. An achievement becomes available once its parent is completed. Completing it grants the rewards and unlocks listed below.
 

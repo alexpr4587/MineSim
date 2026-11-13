@@ -6,13 +6,13 @@ import time
 
 import pytest
 
-from digscript.core.content import load_content
-from digscript.core.engine import AllUnlocked, GameEngine
-from digscript.core.events import EventBus, ScriptFailed, ScriptFinished, ScriptStarted
-from digscript.core.miner import Miner
-from digscript.core.world import World, WorldGenerator
-from digscript.runner import minerlib
-from digscript.scripting.host import ScriptHost, ScriptState
+from minesim.core.content import load_content
+from minesim.core.engine import AllUnlocked, GameEngine
+from minesim.core.events import EventBus, ScriptFailed, ScriptFinished, ScriptStarted
+from minesim.core.miner import Miner
+from minesim.core.world import World, WorldGenerator
+from minesim.runner import minerlib
+from minesim.scripting.host import ScriptHost, ScriptState
 
 pytestmark = pytest.mark.integration
 
@@ -94,7 +94,7 @@ def test_move_and_mine_change_engine_state(content, tmp_path):
     assert (miner.x, miner.y) == (2, 0)
     assert started and started[0].defines_function is False
     assert finished
-    assert (tmp_path / "digscript_api.pyi").is_file()
+    assert (tmp_path / "minesim_api.pyi").is_file()
     host.stop()
 
 

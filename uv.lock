@@ -30,7 +30,7 @@ wheels = [
 ]
 
 [[package]]
-name = "digscript"
+name = "minesim"
 version = "0.2.0"
 source = { editable = "." }
 dependencies = [

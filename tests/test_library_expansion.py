@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from digscript.core.commands import (
+from minesim.core.commands import (
     Biome,
     Distance,
     Inspect,
@@ -21,15 +21,15 @@ from digscript.core.commands import (
     SubmitEstimate,
     Tick,
 )
-from digscript.core.content import load_content
-from digscript.core.direction import Direction
-from digscript.core.engine import AllUnlocked, GameEngine
-from digscript.core.events import EstimateSubmitted, EventBus
-from digscript.core.miner import Miner
-from digscript.core.world import World, WorldGenerator
-from digscript.runner import minerlib
-from digscript.scripting.host import ScriptHost, ScriptState
-from digscript.scripting.stubs import generate_stub_text
+from minesim.core.content import load_content
+from minesim.core.direction import Direction
+from minesim.core.engine import AllUnlocked, GameEngine
+from minesim.core.events import EstimateSubmitted, EventBus
+from minesim.core.miner import Miner
+from minesim.core.world import World, WorldGenerator
+from minesim.runner import minerlib
+from minesim.scripting.host import ScriptHost, ScriptState
+from minesim.scripting.stubs import generate_stub_text
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -269,7 +269,7 @@ def test_minerlib_helpers_against_engine(content, monkeypatch):
 
 
 def test_examples_exist_and_compile(content):
-    examples_dir = ROOT / "src" / "digscript" / "examples"
+    examples_dir = ROOT / "src" / "minesim" / "examples"
     assert len(content.examples) >= 8
     for example in content.examples.values():
         path = examples_dir / example.file
@@ -297,7 +297,7 @@ def test_docs_are_up_to_date(tmp_path):
 
 def test_generated_stub_contains_new_api():
     stub = generate_stub_text()
-    assert (ROOT / "digscript_api.pyi").read_text(encoding="utf-8") == stub
+    assert (ROOT / "minesim_api.pyi").read_text(encoding="utf-8") == stub
     for name in (
         "wait",
         "tick",
@@ -321,7 +321,7 @@ def test_generated_stub_contains_new_api():
 @pytest.mark.parametrize("example_id", list(load_content().examples))
 def test_every_example_runs_in_subprocess_without_error(example_id, content, tmp_path):
     example = content.examples[example_id]
-    source = (ROOT / "src" / "digscript" / "examples" / example.file).read_text(encoding="utf-8")
+    source = (ROOT / "src" / "minesim" / "examples" / example.file).read_text(encoding="utf-8")
     engine, _world, _miner, _bus = _engine(content)
     host = ScriptHost(engine, content, AllUnlocked(), tmp_path)
     host.start(example.file, source)

@@ -1,4 +1,4 @@
-# DigScript — kit de arranque
+# MineSim — kit de arranque
 
 Este kit deja todo listo para que OpenCode construya la v0.1 en tu servidor.
 
@@ -9,18 +9,18 @@ Este kit deja todo listo para que OpenCode construya la v0.1 en tu servidor.
 - `kit/START-HERE.md`: esta guía.
 
 ## A. Preparar el servidor (una sola vez)
-1. Pasá el zip al servidor. Desde tu PC: `scp digscript-kit.zip usuario@servidor:~/`
+1. Pasá el zip al servidor. Desde tu PC: `scp minesim-kit.zip usuario@servidor:~/`
 2. En el servidor:
 
-       mkdir -p ~/digscript && cd ~/digscript
-       unzip ~/digscript-kit.zip
+       mkdir -p ~/minesim && cd ~/minesim
+       unzip ~/minesim-kit.zip
        bash kit/setup-server.sh
 
    Si falta unzip: `sudo apt install unzip`. Después cerrá y volvé a abrir la terminal para que `uv` quede en el PATH.
 3. En GitHub creá un repo vacío (público, sin README ni licencia) y guardá su URL. Para hacer push desde el servidor necesitás una clave SSH o un token de GitHub.
 
 ## B. Prompt 0 (crea el proyecto)
-4. `cd ~/digscript && opencode`
+4. `cd ~/minesim && opencode`
 5. Escribí: `Read kit/prompts/00-bootstrap.md and do exactly what it says.`
 6. Cuando termine, el reporte tiene que mostrar ruff, pytest y la captura en verde. Después, en la terminal:
 
@@ -38,8 +38,8 @@ Este kit deja todo listo para que OpenCode construya la v0.1 en tu servidor.
 Archivos, en orden: `01-world`, `02-miner-engine-economy`, `03-player-scripts`, `04-progression-saves`, `05-ui-world-view`, `06-ui-editor-and-run`, `07-ui-achievements-upgrades`, `08-release`.
 
 ## D. Ver y jugar
-- El servidor no tiene pantalla. Para ver la interfaz, bajá las capturas que genera OpenCode: `scp usuario@servidor:~/digscript/artifacts/ui_main.png .`
-- Para jugar, en tu PC (Windows o Linux): `git clone URL-DEL-REPO`, `cd digscript`, `uv sync`, `uv run digscript`.
+- El servidor no tiene pantalla. Para ver la interfaz, bajá las capturas que genera OpenCode: `scp usuario@servidor:~/minesim/artifacts/ui_main.png .`
+- Para jugar, en tu PC (Windows o Linux): `git clone URL-DEL-REPO`, `cd minesim`, `uv sync`, `uv run minesim`.
   - Windows: instalá uv con `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`.
   - Linux: `sudo apt install libxcb-cursor0`.
 - Probá a mano los prompts 05, 06 y 07 en tu PC: son los que más cambian lo que ves.

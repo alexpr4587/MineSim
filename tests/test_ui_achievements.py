@@ -14,12 +14,12 @@ from PySide6.QtCore import QSettings, Qt  # noqa: E402
 from PySide6.QtGui import QKeyEvent  # noqa: E402
 from PySide6.QtWidgets import QApplication, QWidget  # noqa: E402
 
-from digscript.core.events import AchievementUnlocked  # noqa: E402
-from digscript.core.game import Game  # noqa: E402
-from digscript.ui.achievements_panel import AchievementsPanel, layout_tree  # noqa: E402
-from digscript.ui.main_window import MainWindow  # noqa: E402
-from digscript.ui.toasts import ToastManager  # noqa: E402
-from digscript.ui.upgrades_panel import UpgradesPanel  # noqa: E402
+from minesim.core.events import AchievementUnlocked  # noqa: E402
+from minesim.core.game import Game  # noqa: E402
+from minesim.ui.achievements_panel import AchievementsPanel, layout_tree  # noqa: E402
+from minesim.ui.main_window import MainWindow  # noqa: E402
+from minesim.ui.toasts import ToastManager  # noqa: E402
+from minesim.ui.upgrades_panel import UpgradesPanel  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -29,9 +29,9 @@ def qapp():
 
 @pytest.fixture(autouse=True)
 def _clean_settings(qapp):
-    QSettings("DigScript", "DigScript").clear()
+    QSettings("MineSim", "MineSim").clear()
     yield
-    QSettings("DigScript", "DigScript").clear()
+    QSettings("MineSim", "MineSim").clear()
 
 
 # -- layout_tree ---------------------------------------------------------------

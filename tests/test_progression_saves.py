@@ -8,10 +8,10 @@ from pathlib import Path
 
 import pytest
 
-from digscript.core.commands import Mine, Move, Sell, Wait
-from digscript.core.content import load_content
-from digscript.core.direction import Direction
-from digscript.core.events import (
+from minesim.core.commands import Mine, Move, Sell, Wait
+from minesim.core.content import load_content
+from minesim.core.direction import Direction
+from minesim.core.events import (
     AchievementUnlocked,
     MineAttempted,
     Moved,
@@ -20,10 +20,10 @@ from digscript.core.events import (
     ScriptStarted,
     Sold,
 )
-from digscript.core.game import Game
-from digscript.core.progression.state import ProgressionState
-from digscript.core.save import SaveError, SaveGame, default_save_path, migrate
-from digscript.core.schemas import ContentError
+from minesim.core.game import Game
+from minesim.core.progression.state import ProgressionState
+from minesim.core.save import SaveError, SaveGame, default_save_path, migrate
+from minesim.core.schemas import ContentError
 
 
 @pytest.fixture(scope="module")
@@ -276,11 +276,11 @@ def test_default_save_path():
     path = default_save_path()
     assert path.name == "slot1.json"
     assert path.parent.name == "saves"
-    assert "DigScript" in path.parts
+    assert "MineSim" in path.parts
 
 
 def _copy_content(tmp_path: Path) -> Path:
-    source = Path(__file__).resolve().parents[1] / "src" / "digscript" / "content"
+    source = Path(__file__).resolve().parents[1] / "src" / "minesim" / "content"
     destination = tmp_path / "content"
     destination.mkdir()
     for item in source.iterdir():

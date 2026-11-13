@@ -56,15 +56,15 @@ def test_readme_documents_features_and_links() -> None:
 
 
 def test_spec_bundles_examples_assets_and_numpy() -> None:
-    spec = _read("digscript.spec")
-    assert '"src/digscript/examples"' in spec
+    spec = _read("minesim.spec")
+    assert '"src/minesim/examples"' in spec
     assert '"assets"' in spec
     assert '"numpy"' in spec
 
 
 def test_selftest_ui_renders_chunk_and_sprite(qapp, capsys) -> None:
     pytest.importorskip("PySide6")
-    from digscript.__main__ import _run_selftest_ui
+    from minesim.__main__ import _run_selftest_ui
 
     assert _run_selftest_ui() == 0
     output = capsys.readouterr().out

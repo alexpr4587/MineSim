@@ -1,6 +1,6 @@
 """Screenshot the real main window offscreen.
 
-Builds the real :class:`~digscript.ui.main_window.MainWindow`, runs N
+Builds the real :class:`~minesim.ui.main_window.MainWindow`, runs N
 ticks with a hard-coded command sequence submitted straight to the
 engine, shows the editor panel over the world (with the console below
 it), grabs the window and saves a PNG. By default the lit terrain
@@ -25,11 +25,11 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
-from digscript.core.commands import Mine, Move, Sell  # noqa: E402
-from digscript.core.direction import Direction  # noqa: E402
-from digscript.core.game import Game  # noqa: E402
-from digscript.ui.main_window import MainWindow  # noqa: E402
-from digscript.ui.theme import apply_theme  # noqa: E402
+from minesim.core.commands import Mine, Move, Sell  # noqa: E402
+from minesim.core.direction import Direction  # noqa: E402
+from minesim.core.game import Game  # noqa: E402
+from minesim.ui.main_window import MainWindow  # noqa: E402
+from minesim.ui.theme import apply_theme  # noqa: E402
 
 __all__ = ["COMMAND_SEQUENCE", "build_window", "main", "parse_size"]
 
@@ -100,7 +100,7 @@ def build_window(
     window.hud.refresh()
     editor_panel = getattr(window, "editor_panel", None)
     if editor_panel is not None:
-        from digscript.ui.editor_panel import STARTER_SCRIPT
+        from minesim.ui.editor_panel import STARTER_SCRIPT
 
         editor = getattr(editor_panel, "editor", None) or getattr(editor_panel, "code_editor", None)
         if editor is not None and not editor.toPlainText().strip():
@@ -111,7 +111,7 @@ def build_window(
             editor_panel.show()
         console = getattr(window, "console_panel", None)
         if console is not None:
-            console.append_line("hello from DigScript", "out")
+            console.append_line("hello from MineSim", "out")
             console.append_line("miner ready", "info")
         editor_panel.raise_()
         # Run the starter script so the first achievement (hello_miner) completes,

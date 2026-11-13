@@ -10,19 +10,19 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 
-from digscript.core.content import load_content
-from digscript.core.game import Game
-from digscript.core.save import DEFAULT_SKIN, SaveGame, migrate
-from digscript.core.schemas import ContentError, Skin
+from minesim.core.content import load_content
+from minesim.core.game import Game
+from minesim.core.save import DEFAULT_SKIN, SaveGame, migrate
+from minesim.core.schemas import ContentError, Skin
 
 pytest.importorskip("PySide6")
 
 from PySide6.QtGui import QColor, QImage  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
-from digscript.ui.sprites import BASE_SIZE, MINER_SIZE, SpriteBook  # noqa: E402
-from digscript.ui.wardrobe_panel import WardrobePanel  # noqa: E402
-from digscript.ui.world_view import WorldView  # noqa: E402
+from minesim.ui.sprites import BASE_SIZE, MINER_SIZE, SpriteBook  # noqa: E402
+from minesim.ui.wardrobe_panel import WardrobePanel  # noqa: E402
+from minesim.ui.world_view import WorldView  # noqa: E402
 
 
 @pytest.fixture(scope="module")

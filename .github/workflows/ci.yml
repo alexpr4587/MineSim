@@ -24,4 +24,4 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
       - name: Chunk render timing
-        run: uv run python -m digscript --selftest-ui
+        run: uv run python -m minesim --selftest-ui

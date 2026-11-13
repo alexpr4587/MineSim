@@ -15,12 +15,12 @@ from PySide6.QtGui import QKeyEvent, QTextCursor  # noqa: E402
 from PySide6.QtTest import QTest  # noqa: E402
 from PySide6.QtWidgets import QApplication, QWidget  # noqa: E402
 
-from digscript.core.game import Game  # noqa: E402
-from digscript.ui.code_editor import CodeEditor, PythonHighlighter  # noqa: E402
-from digscript.ui.console_panel import ConsolePanel  # noqa: E402
-from digscript.ui.editor_panel import STARTER_SCRIPT  # noqa: E402
-from digscript.ui.floating_panel import FloatingPanel  # noqa: E402
-from digscript.ui.main_window import MainWindow  # noqa: E402
+from minesim.core.game import Game  # noqa: E402
+from minesim.ui.code_editor import CodeEditor, PythonHighlighter  # noqa: E402
+from minesim.ui.console_panel import ConsolePanel  # noqa: E402
+from minesim.ui.editor_panel import STARTER_SCRIPT  # noqa: E402
+from minesim.ui.floating_panel import FloatingPanel  # noqa: E402
+from minesim.ui.main_window import MainWindow  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -30,9 +30,9 @@ def qapp():
 
 @pytest.fixture(autouse=True)
 def _clean_settings(qapp):
-    QSettings("DigScript", "DigScript").clear()
+    QSettings("MineSim", "MineSim").clear()
     yield
-    QSettings("DigScript", "DigScript").clear()
+    QSettings("MineSim", "MineSim").clear()
 
 
 def _window(qapp, tmp_path):

@@ -19,7 +19,7 @@
 
 ### Added
 
-- First public release of DigScript, a 2D top-down programming game.
+- First public release of MineSim, a 2D top-down programming game.
 - Infinite procedurally generated, regenerating grid with per-ore mining
   probabilities.
 - Player API (`move`, `mine`, `peek`, `position`, `sell`, `inventory`, `scan`,
