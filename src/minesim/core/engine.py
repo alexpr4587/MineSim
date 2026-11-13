@@ -12,7 +12,10 @@ from minesim.core.events import (
     TickAdvanced,
     TileRegenerated,
 )
+from minesim.core.items import ItemCatalog
+from minesim.core.market import Market
 from minesim.core.miner import Drone, PlayerStats
+from minesim.core.warehouse import Warehouse
 
 __all__ = ["AllUnlocked", "GameEngine", "ProgressionView", "Ticket"]
 
@@ -24,9 +27,13 @@ _ZERO_COST_NAMES = {
     "OreInfo",
     "Peek",
     "Position",
+    "Price",
+    "PriceHistory",
+    "Prices",
     "RemoveDrone",
     "SpawnDrone",
     "Stats",
+    "Stock",
     "SubmitEstimate",
     "Tick",
 }
@@ -159,6 +166,19 @@ class GameEngine:
             pass
         self._drones: dict[int, Any] = {0: drone}
         self._next_id = 1
+        config = getattr(self.content, "config", None)
+        self.catalog: ItemCatalog = kwargs.get("catalog") or ItemCatalog(self.content)
+        self.warehouse: Warehouse = kwargs.get("warehouse") or Warehouse(
+            int(getattr(config, "warehouse_start_capacity", 0) or 0)
+        )
+        self.market: Market | None = kwargs.get("market")
+        if self.market is None and config is not None:
+            self.market = Market(
+                self.seed,
+                self.catalog,
+                config,
+                getattr(self.content, "market", None),
+            )
 
     # -- compatibility properties -------------------------------------------
 
@@ -255,12 +275,25 @@ class GameEngine:
     def remove_drone(self, drone_id: int) -> bool:
         """Remove ``drone_id`` from the fleet (never drone 0).
 
-        Returns True when a drone was removed; its inventory is lost.
+        A drone removed while standing on the base unloads its
+        inventory into the warehouse (up to its capacity); otherwise
+        the inventory is lost. Returns True when a drone was removed.
         """
         drone_id = int(drone_id)
         if drone_id == 0 or drone_id not in self._drones:
             return False
         drone = self._drones.pop(drone_id)
+        try:
+            tile = self.world.tile_at(drone.x, drone.y, self.tick)
+        except Exception:
+            tile = None
+        if tile is not None and getattr(tile, "is_base", False):
+            for item_id, count in sorted(dict(drone.inventory).items()):
+                accepted = self.warehouse.add(item_id, int(count))
+                if accepted >= int(count):
+                    drone.inventory.pop(item_id, None)
+                elif accepted > 0:
+                    drone.inventory[item_id] = int(count) - accepted
         try:
             drone.queue.clear()
         except Exception:
@@ -384,6 +417,8 @@ class GameEngine:
             if regenerated:
                 for x, y in regenerated:
                     self._events.publish(TileRegenerated(x=x, y=y))
+        if self.market is not None:
+            self.market.advance(self.tick)
         for drone_id in sorted(self._drones):
             drone = self._drones[drone_id]
             if drone.active is None:

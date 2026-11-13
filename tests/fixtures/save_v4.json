@@ -1,0 +1,95 @@
+{
+  "fleet": [
+    {
+      "facing": "west",
+      "id": 0,
+      "inventory": {},
+      "x": 0,
+      "y": 0
+    }
+  ],
+  "player_stats": {
+    "capacity": 10,
+    "estimates": {},
+    "money": 43,
+    "move_ticks": 4,
+    "scan_radius": 2,
+    "stats": {
+      "attempts": {
+        "stone": 1
+      },
+      "sales": 1,
+      "successes": {
+        "stone": 1
+      },
+      "tiles_moved": 4,
+      "total_earned": 1,
+      "total_mined": 1
+    },
+    "tool_power": 1,
+    "tool_tier": 0,
+    "upgrades": {}
+  },
+  "progression": {
+    "completed": {
+      "first_dig": 11,
+      "first_sale": 21
+    },
+    "counters": {
+      "attempts:any": 1,
+      "attempts:stone": 1,
+      "biome:quarry": 1,
+      "biomes_visited": 1,
+      "fail:nothing_to_mine": 1,
+      "largest_sale": 1,
+      "max_distance": 2,
+      "mined:any": 1,
+      "mined:stone": 1,
+      "money_earned": 1,
+      "ores_in_one_sale": 1,
+      "sales": 1,
+      "streak": 1,
+      "tiles_moved": 4,
+      "unique_ores_mined": 1
+    },
+    "current_fail_streak": 0,
+    "current_streak": 1,
+    "unlocked_examples": [
+      "01_hello",
+      "02_sweep_and_sell"
+    ],
+    "unlocked_functions": [
+      "buy_upgrade",
+      "mine",
+      "move",
+      "peek",
+      "position",
+      "sell"
+    ],
+    "unlocked_modules": [
+      "math"
+    ],
+    "unlocked_ores": [
+      "coal",
+      "stone"
+    ],
+    "unlocked_skins": [
+      "rusty_bot"
+    ],
+    "unlocked_upgrades": [
+      "backpack"
+    ]
+  },
+  "seed": 12345,
+  "selected_skin": "rusty_bot",
+  "tick": 21,
+  "version": 4,
+  "world_delta": {
+    "delta": {
+      "2,0": [
+        0,
+        311
+      ]
+    }
+  }
+}

@@ -210,8 +210,10 @@ def test_save_load_round_trip_and_next_500_ticks(tmp_path):
         "player_stats",
         "world_delta",
         "progression",
+        "warehouse",
+        "market",
     }
-    assert raw["version"] == 4
+    assert raw["version"] == 5
     assert [drone["id"] for drone in raw["fleet"]] == [0]
     assert raw["selected_skin"] == "rusty_bot"
     loaded = Game.load(path)

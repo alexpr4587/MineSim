@@ -50,6 +50,12 @@ class Config(_ContentModel):
     pit_depth: float = Field(default=0.8, ge=0.0)
     ore_bump_per_hardness: float = Field(default=0.12, ge=0.0)
     terrain_noise_scale: float = Field(default=12.0, gt=0.0)
+    market_interval_ticks: int = Field(default=100, ge=1)
+    market_history_len: int = Field(default=240, ge=1)
+    warehouse_start_capacity: int = Field(default=100, ge=0)
+    impact_per_unit: float = Field(default=0.01, ge=0.0)
+    impact_recovery: float = Field(default=0.15, ge=0.0, le=1.0)
+    impact_cap: float = Field(default=0.5, ge=0.0, le=1.0)
 
     @field_validator("sun_dir")
     @classmethod
@@ -73,6 +79,35 @@ class Ore(_ContentModel):
     regen_ticks: int = Field(ge=0)
     color: str = Field(min_length=1)
     unlocked_by: str | None = None
+
+
+class Product(_ContentModel):
+    """A refined product (products.json)."""
+
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    base_value: int = Field(ge=0)
+    color: str = Field(min_length=1)
+    unlocked_by: str | None = None
+
+
+class MarketEntry(_ContentModel):
+    """Per-item market parameters (market.json)."""
+
+    item: str = Field(min_length=1)
+    volatility: float = Field(ge=0.0)
+    reversion: float = Field(ge=0.0, le=1.0)
+    min_index: float = Field(gt=0.0)
+    max_index: float = Field(gt=0.0)
+
+    @field_validator("max_index")
+    @classmethod
+    def _check_bounds(cls, value: float, info: object) -> float:
+        data = getattr(info, "data", {})
+        minimum = data.get("min_index")
+        if minimum is not None and value < float(minimum):
+            raise ValueError("max_index must be >= min_index")
+        return value
 
 
 class Biome(_ContentModel):
@@ -295,10 +330,12 @@ __all__ = [
     "Criteria",
     "Example",
     "FunctionSpec",
+    "MarketEntry",
     "MinerFrames",
     "MinerSprites",
     "ModuleSpec",
     "Ore",
+    "Product",
     "Reward",
     "ScriptDefinesFunctionCriteria",
     "ScriptFeatureCriteria",

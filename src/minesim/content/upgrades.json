@@ -80,5 +80,21 @@
       4000
     ],
     "unlocked_by": null
+  },
+  {
+    "id": "warehouse",
+    "name": "Warehouse",
+    "description": "Store more stock: warehouse capacity +100 per level.",
+    "stat": "warehouse_capacity",
+    "per_level": 100,
+    "max_level": 5,
+    "costs": [
+      150,
+      400,
+      1000,
+      2500,
+      6000
+    ],
+    "unlocked_by": null
   }
 ]

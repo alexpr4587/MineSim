@@ -45,6 +45,60 @@
     "example": "earned = sell()"
   },
   {
+    "name": "unload",
+    "signature": "unload()",
+    "doc": "Move the drone inventory into the base warehouse and return {moved, left}.",
+    "category": "business",
+    "unlocked_by": null,
+    "cost": "1 tick at the base",
+    "example": "result = unload()"
+  },
+  {
+    "name": "stock",
+    "signature": "stock()",
+    "doc": "Return the warehouse contents and capacity as {items, capacity, used, free}.",
+    "category": "business",
+    "unlocked_by": null,
+    "cost": "0 ticks",
+    "example": "stock()['items']"
+  },
+  {
+    "name": "sell_stock",
+    "signature": "sell_stock(item, amount=None)",
+    "doc": "Sell items from the warehouse at market prices and return the money gained.",
+    "category": "business",
+    "unlocked_by": null,
+    "cost": "2 ticks at the base",
+    "example": "earned = sell_stock('stone', 10)"
+  },
+  {
+    "name": "price",
+    "signature": "price(item)",
+    "doc": "Return the current market price of an unlocked item, or None.",
+    "category": "market",
+    "unlocked_by": null,
+    "cost": "0 ticks",
+    "example": "price('stone')"
+  },
+  {
+    "name": "prices",
+    "signature": "prices()",
+    "doc": "Return a dict of current market prices for every unlocked item.",
+    "category": "market",
+    "unlocked_by": null,
+    "cost": "0 ticks",
+    "example": "prices()['stone']"
+  },
+  {
+    "name": "price_history",
+    "signature": "price_history(item, n=50)",
+    "doc": "Return up to n recent price samples for an unlocked item, or None.",
+    "category": "market",
+    "unlocked_by": null,
+    "cost": "0 ticks",
+    "example": "price_history('stone', 20)"
+  },
+  {
     "name": "inventory",
     "signature": "inventory()",
     "doc": "Return the inventory as a dict of ore id to count.",

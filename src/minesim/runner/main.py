@@ -63,6 +63,32 @@ _DEFAULT_FUNCTIONS: tuple[dict[str, Any], ...] = (
     {"name": "position", "signature": "position()", "doc": "Return (x, y).", "category": ""},
     {"name": "sell", "signature": "sell()", "doc": "Sell the inventory.", "category": ""},
     {
+        "name": "unload",
+        "signature": "unload()",
+        "doc": "Unload into the warehouse.",
+        "category": "",
+    },
+    {
+        "name": "stock",
+        "signature": "stock()",
+        "doc": "Return the warehouse stock.",
+        "category": "",
+    },
+    {
+        "name": "sell_stock",
+        "signature": "sell_stock(item, amount=None)",
+        "doc": "Sell warehouse items.",
+        "category": "",
+    },
+    {"name": "price", "signature": "price(item)", "doc": "Return an item price.", "category": ""},
+    {"name": "prices", "signature": "prices()", "doc": "Return all item prices.", "category": ""},
+    {
+        "name": "price_history",
+        "signature": "price_history(item, n=50)",
+        "doc": "Return recent price samples.",
+        "category": "",
+    },
+    {
         "name": "inventory",
         "signature": "inventory()",
         "doc": "Return the inventory.",

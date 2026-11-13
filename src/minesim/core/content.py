@@ -24,8 +24,10 @@ from minesim.core.schemas import (
     ContentError,
     Example,
     FunctionSpec,
+    MarketEntry,
     ModuleSpec,
     Ore,
+    Product,
     Skin,
     Sprites,
     Upgrade,
@@ -47,6 +49,8 @@ class Content:
 
     config: Config
     ores: dict[str, Ore] = field(default_factory=dict)
+    products: dict[str, Product] = field(default_factory=dict)
+    market: dict[str, MarketEntry] = field(default_factory=dict)
     biomes: dict[str, Biome] = field(default_factory=dict)
     upgrades: dict[str, Upgrade] = field(default_factory=dict)
     functions: dict[str, FunctionSpec] = field(default_factory=dict)
@@ -127,6 +131,34 @@ class Content:
             return self.ores[ore_id]
         except KeyError:
             raise ContentError(f"ores.json: $.id: unknown ore id '{ore_id}'") from None
+
+    def get_product(self, product_id: str) -> Product:
+        """Return the product with ``product_id`` or raise ContentError."""
+        try:
+            return self.products[product_id]
+        except KeyError:
+            raise ContentError(f"products.json: $.id: unknown product id '{product_id}'") from None
+
+    def product(self, product_id: str) -> Product:
+        """Alias for :meth:`get_product`."""
+        return self.get_product(product_id)
+
+    @property
+    def product_list(self) -> list[Product]:
+        """All products in file order."""
+        return list(self.products.values())
+
+    @property
+    def products_by_id(self) -> dict[str, Product]:
+        """Alias for :attr:`products`."""
+        return self.products
+
+    def get_market_entry(self, item_id: str) -> MarketEntry:
+        """Return the market parameters for ``item_id`` or raise ContentError."""
+        try:
+            return self.market[item_id]
+        except KeyError:
+            raise ContentError(f"market.json: $.item: unknown item id '{item_id}'") from None
 
     def get_biome(self, biome_id: str) -> Biome:
         """Return the biome with ``biome_id`` or raise ContentError."""
@@ -345,7 +377,22 @@ def _cross_validate(
     modules: dict[str, ModuleSpec] | None = None,
     skins: dict[str, Skin] | None = None,
     examples: dict[str, Example] | None = None,
+    products: dict[str, Product] | None = None,
+    market: dict[str, MarketEntry] | None = None,
 ) -> None:
+    products = products or {}
+    market = market or {}
+    for product_id in products:
+        if product_id in ores:
+            raise ContentError(
+                f"products.json: $.id: duplicate item id '{product_id}' (already an ore)"
+            )
+    known_items = set(ores) | set(products)
+    for item_id in market:
+        if item_id not in known_items:
+            raise ContentError(
+                f"market.json: $.item: unknown item id '{item_id}' (expected an ore or product)"
+            )
     for biome_index, biome in enumerate(biomes.values()):
         for ore_id in biome.ore_weights:
             if ore_id not in ores:
@@ -492,6 +539,7 @@ def _cross_validate(
                 )
 
     _check_unlocked_by(ores, "ores.json", "id")
+    _check_unlocked_by(products, "products.json", "id")
     _check_unlocked_by(upgrades, "upgrades.json", "id")
     _check_unlocked_by(functions, "functions.json", "name")
     _check_unlocked_by(modules, "modules.json", "name")
@@ -520,6 +568,35 @@ def load_content(content_dir: str | Path | None = None) -> Content:
         ores_data = ores_data.get("ores", ores_data)
     ores_list = _validate(ores_data, TypeAdapter(list[Ore]), "ores.json")
     ores = _index_by_id(ores_list, "ores.json", "ore")
+
+    products: dict[str, Product] = {}
+    try:
+        products_data = _read_json(base_path, "products.json")
+    except ContentError as exc:
+        if "file not found" not in str(exc):
+            raise
+    else:
+        if isinstance(products_data, dict):
+            products_data = products_data.get("products", products_data)
+        products_list = _validate(products_data, TypeAdapter(list[Product]), "products.json")
+        products = _index_by_id(products_list, "products.json", "product")
+
+    market: dict[str, MarketEntry] = {}
+    try:
+        market_data = _read_json(base_path, "market.json")
+    except ContentError as exc:
+        if "file not found" not in str(exc):
+            raise
+    else:
+        if isinstance(market_data, dict):
+            market_data = market_data.get("market", market_data)
+        market_list = _validate(market_data, TypeAdapter(list[MarketEntry]), "market.json")
+        for index, entry in enumerate(market_list):
+            if entry.item in market:
+                raise ContentError(
+                    f"market.json: $.{index}.item: duplicate market item '{entry.item}'"
+                )
+            market[entry.item] = entry
 
     biomes_data = _read_json(base_path, "biomes.json")
     if isinstance(biomes_data, dict):
@@ -604,11 +681,15 @@ def load_content(content_dir: str | Path | None = None) -> Content:
         modules,
         skins,
         examples if examples_present else None,
+        products,
+        market,
     )
     logger.debug(
-        "Loaded content: %d ores, %d biomes, %d upgrades, %d functions, %d modules, "
-        "%d achievements, %d skins, %d examples",
+        "Loaded content: %d ores, %d products, %d market entries, %d biomes, "
+        "%d upgrades, %d functions, %d modules, %d achievements, %d skins, %d examples",
         len(ores),
+        len(products),
+        len(market),
         len(biomes),
         len(upgrades),
         len(functions),
@@ -620,6 +701,8 @@ def load_content(content_dir: str | Path | None = None) -> Content:
     return Content(
         config=config,
         ores=ores,
+        products=products,
+        market=market,
         biomes=biomes,
         upgrades=upgrades,
         functions=functions,

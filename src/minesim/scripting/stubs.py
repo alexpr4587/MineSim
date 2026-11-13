@@ -18,6 +18,8 @@ _PARAM_TYPES: dict[str, str] = {
     "upgrade_id": "str",
     "id": "str",
     "ore_id": "str",
+    "item": "str",
+    "amount": "int | None",
     "p": "float",
     "ticks": "int",
     "n": "int",
@@ -36,6 +38,12 @@ _RETURN_TYPES: dict[str, str] = {
     "peek": "str | None",
     "position": "tuple[int, int]",
     "sell": "int",
+    "unload": "dict",
+    "stock": "dict",
+    "sell_stock": "int",
+    "price": "float | None",
+    "prices": "dict",
+    "price_history": "list[float] | None",
     "inventory": "dict",
     "scan": "list[tuple[int, int, str]]",
     "stats": "dict",
@@ -99,6 +107,20 @@ def _function_entries(content: Any) -> list[dict[str, Any]]:
         {"name": "peek", "signature": "peek()", "doc": "Look at the current tile."},
         {"name": "position", "signature": "position()", "doc": "Return (x, y)."},
         {"name": "sell", "signature": "sell()", "doc": "Sell the inventory."},
+        {"name": "unload", "signature": "unload()", "doc": "Unload into the warehouse."},
+        {"name": "stock", "signature": "stock()", "doc": "Return the warehouse stock."},
+        {
+            "name": "sell_stock",
+            "signature": "sell_stock(item, amount=None)",
+            "doc": "Sell warehouse items.",
+        },
+        {"name": "price", "signature": "price(item)", "doc": "Return an item price."},
+        {"name": "prices", "signature": "prices()", "doc": "Return all item prices."},
+        {
+            "name": "price_history",
+            "signature": "price_history(item, n=50)",
+            "doc": "Return recent price samples.",
+        },
         {"name": "inventory", "signature": "inventory()", "doc": "Return the inventory."},
         {"name": "scan", "signature": "scan(radius)", "doc": "Scan for ore."},
         {"name": "stats", "signature": "stats()", "doc": "Return mining stats."},
@@ -117,21 +139,25 @@ def _function_entries(content: Any) -> list[dict[str, Any]]:
     ]
 
 
-def _signature_params(signature: str, name: str) -> list[str]:
-    """Extract parameter names from a ``name(a, b)`` signature string."""
+def _signature_params(signature: str, name: str) -> list[tuple[str, str | None]]:
+    """Extract parameter names and defaults from a signature string."""
     text = (signature or "").strip()
     if "(" in text and ")" in text:
         inner = text[text.index("(") + 1 : text.rindex(")")]
     else:
         inner = ""
-    params: list[str] = []
+    params: list[tuple[str, str | None]] = []
     for part in inner.split(","):
         part = part.strip()
         if not part:
             continue
-        part = part.split("=")[0].split(":")[0].strip().lstrip("*")
+        default: str | None = None
+        if "=" in part:
+            part, default = part.split("=", 1)
+            default = default.strip()
+        part = part.split(":")[0].strip().lstrip("*")
         if part:
-            params.append(part)
+            params.append((part, default))
     return params
 
 
@@ -177,7 +203,10 @@ def _format_entry(entry: dict[str, Any]) -> str:
     name = str(entry.get("name") or "")
     signature = str(entry.get("signature") or f"{name}()")
     params = _signature_params(signature, name)
-    typed = ", ".join(f"{param}: {_PARAM_TYPES.get(param, 'Any')}" for param in params)
+    typed = ", ".join(
+        f"{param}: {_PARAM_TYPES.get(param, 'Any')}" + (f" = {default}" if default else "")
+        for param, default in params
+    )
     return_type = _RETURN_TYPES.get(name, "Any")
     doc = str(entry.get("doc") or "").strip()
     if doc:

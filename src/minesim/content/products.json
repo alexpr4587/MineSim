@@ -1,0 +1,44 @@
+[
+  {
+    "id": "copper_bar",
+    "name": "Copper Bar",
+    "base_value": 40,
+    "color": "#c9773a",
+    "unlocked_by": null
+  },
+  {
+    "id": "iron_bar",
+    "name": "Iron Bar",
+    "base_value": 90,
+    "color": "#8c949e",
+    "unlocked_by": null
+  },
+  {
+    "id": "steel_bar",
+    "name": "Steel Bar",
+    "base_value": 260,
+    "color": "#6f7b8a",
+    "unlocked_by": null
+  },
+  {
+    "id": "silver_bar",
+    "name": "Silver Bar",
+    "base_value": 170,
+    "color": "#dfe6ee",
+    "unlocked_by": null
+  },
+  {
+    "id": "gold_bar",
+    "name": "Gold Bar",
+    "base_value": 420,
+    "color": "#f2c230",
+    "unlocked_by": null
+  },
+  {
+    "id": "cut_ruby",
+    "name": "Cut Ruby",
+    "base_value": 1100,
+    "color": "#e0335a",
+    "unlocked_by": null
+  }
+]

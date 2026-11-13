@@ -1,0 +1,93 @@
+[
+  {
+    "item": "stone",
+    "volatility": 0.02,
+    "reversion": 0.15,
+    "min_index": 0.8,
+    "max_index": 1.25
+  },
+  {
+    "item": "coal",
+    "volatility": 0.03,
+    "reversion": 0.12,
+    "min_index": 0.7,
+    "max_index": 1.4
+  },
+  {
+    "item": "copper",
+    "volatility": 0.04,
+    "reversion": 0.1,
+    "min_index": 0.6,
+    "max_index": 1.6
+  },
+  {
+    "item": "iron",
+    "volatility": 0.05,
+    "reversion": 0.1,
+    "min_index": 0.55,
+    "max_index": 1.8
+  },
+  {
+    "item": "silver",
+    "volatility": 0.07,
+    "reversion": 0.08,
+    "min_index": 0.5,
+    "max_index": 2.0
+  },
+  {
+    "item": "gold",
+    "volatility": 0.09,
+    "reversion": 0.08,
+    "min_index": 0.45,
+    "max_index": 2.3
+  },
+  {
+    "item": "ruby",
+    "volatility": 0.12,
+    "reversion": 0.06,
+    "min_index": 0.4,
+    "max_index": 2.6
+  },
+  {
+    "item": "copper_bar",
+    "volatility": 0.032,
+    "reversion": 0.1,
+    "min_index": 0.6,
+    "max_index": 1.6
+  },
+  {
+    "item": "iron_bar",
+    "volatility": 0.04,
+    "reversion": 0.1,
+    "min_index": 0.55,
+    "max_index": 1.8
+  },
+  {
+    "item": "steel_bar",
+    "volatility": 0.04,
+    "reversion": 0.1,
+    "min_index": 0.55,
+    "max_index": 1.8
+  },
+  {
+    "item": "silver_bar",
+    "volatility": 0.056,
+    "reversion": 0.08,
+    "min_index": 0.5,
+    "max_index": 2.0
+  },
+  {
+    "item": "gold_bar",
+    "volatility": 0.072,
+    "reversion": 0.08,
+    "min_index": 0.45,
+    "max_index": 2.3
+  },
+  {
+    "item": "cut_ruby",
+    "volatility": 0.096,
+    "reversion": 0.06,
+    "min_index": 0.4,
+    "max_index": 2.6
+  }
+]

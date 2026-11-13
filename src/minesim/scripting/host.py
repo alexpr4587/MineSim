@@ -36,11 +36,17 @@ from minesim.core.commands import (
     OreInfo,
     Peek,
     Position,
+    Price,
+    PriceHistory,
+    Prices,
     Scan,
     Sell,
+    SellStock,
     Stats,
+    Stock,
     SubmitEstimate,
     Tick,
+    Unload,
     Wait,
 )
 from minesim.core.direction import Direction
@@ -225,6 +231,48 @@ _DEFAULT_FUNCTIONS: tuple[dict[str, Any], ...] = (
         "doc": "Sell the inventory.",
         "category": "business",
         "unlocked_by": "first_dig",
+    },
+    {
+        "name": "unload",
+        "signature": "unload()",
+        "doc": "Move the inventory into the warehouse.",
+        "category": "business",
+        "unlocked_by": None,
+    },
+    {
+        "name": "stock",
+        "signature": "stock()",
+        "doc": "Return the warehouse contents.",
+        "category": "business",
+        "unlocked_by": None,
+    },
+    {
+        "name": "sell_stock",
+        "signature": "sell_stock(item, amount=None)",
+        "doc": "Sell warehouse items at market prices.",
+        "category": "business",
+        "unlocked_by": None,
+    },
+    {
+        "name": "price",
+        "signature": "price(item)",
+        "doc": "Return the current market price.",
+        "category": "market",
+        "unlocked_by": None,
+    },
+    {
+        "name": "prices",
+        "signature": "prices()",
+        "doc": "Return all current market prices.",
+        "category": "market",
+        "unlocked_by": None,
+    },
+    {
+        "name": "price_history",
+        "signature": "price_history(item, n=50)",
+        "doc": "Return recent price samples.",
+        "category": "market",
+        "unlocked_by": None,
     },
     {
         "name": "inventory",
@@ -774,6 +822,41 @@ class ScriptHost:
             if args or kwargs:
                 raise TypeError("sell() takes no arguments")
             return Sell()
+        if name == "unload":
+            if args or kwargs:
+                raise TypeError("unload() takes no arguments")
+            return Unload()
+        if name == "stock":
+            if args or kwargs:
+                raise TypeError("stock() takes no arguments")
+            return Stock()
+        if name == "sell_stock":
+            item = args[0] if args else (kwargs.get("item") or kwargs.get("id"))
+            if item is None:
+                raise TypeError("sell_stock() missing required argument 'item'")
+            if len(args) > 1:
+                amount = args[1]
+            else:
+                amount = kwargs.get("amount")
+            return SellStock(str(item), None if amount is None else int(amount))
+        if name == "price":
+            item = args[0] if args else (kwargs.get("item") or kwargs.get("id"))
+            if item is None:
+                raise TypeError("price() missing required argument 'item'")
+            return Price(str(item))
+        if name == "prices":
+            if args or kwargs:
+                raise TypeError("prices() takes no arguments")
+            return Prices()
+        if name == "price_history":
+            item = args[0] if args else (kwargs.get("item") or kwargs.get("id"))
+            if item is None:
+                raise TypeError("price_history() missing required argument 'item'")
+            if len(args) > 1:
+                n = args[1]
+            else:
+                n = kwargs.get("n", 50)
+            return PriceHistory(str(item), int(n))
         if name == "scan":
             radius = args[0] if args else kwargs.get("radius")
             if radius is None:
@@ -873,6 +956,27 @@ class ScriptHost:
             }
         if name == "sell":
             return int(result.get("money", result.get("earned", 0)) or 0) if result.get("ok") else 0
+        if name == "unload":
+            return {
+                "moved": dict(result.get("moved") or {}),
+                "left": dict(result.get("left") or {}),
+            }
+        if name == "stock":
+            return {
+                "items": dict(result.get("items") or {}),
+                "capacity": int(result.get("capacity", 0) or 0),
+                "used": int(result.get("used", 0) or 0),
+                "free": int(result.get("free", 0) or 0),
+            }
+        if name == "sell_stock":
+            return int(result.get("money", result.get("earned", 0)) or 0) if result.get("ok") else 0
+        if name == "price":
+            return result.get("price")
+        if name == "prices":
+            return dict(result.get("prices") or {})
+        if name == "price_history":
+            history = result.get("history")
+            return None if history is None else list(history)
         if name == "buy_upgrade":
             if result.get("ok"):
                 return int(result.get("level", 0) or 0)

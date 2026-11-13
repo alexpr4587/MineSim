@@ -295,6 +295,8 @@ class Game:
             player_stats=self._player_stats.to_dict(),
             world_delta=self._world.to_dict(),
             progression=self._progression_state.to_dict(),
+            warehouse=self._engine.warehouse.to_dict(),
+            market=self._engine.market.to_dict() if self._engine.market is not None else {},
         )
         return savegame.save(path)
 
@@ -320,6 +322,9 @@ class Game:
         game._player_stats = player_stats
         game._miner = engine.miner
         game._world.load_dict(savegame.world_delta)
+        engine.warehouse.from_dict(savegame.warehouse)
+        if engine.market is not None:
+            engine.market.from_dict(savegame.market)
         restored = ProgressionState.from_dict(savegame.progression, content=content)
         game._progression_state = restored
         game._progression_service.state = restored

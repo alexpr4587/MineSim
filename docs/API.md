@@ -13,6 +13,12 @@ Functions are called directly, e.g. `move(East)`, `mine()`, `sell()`. Locked fun
 | `peek` | `peek()` | Return the ore on the current tile, None if empty, or 'unknown' if the ore is locked. | 0 ticks | `ore = peek()` | available from the start |
 | `position` | `position()` | Return the miner position as (x, y). | 0 ticks | `x, y = position()` | available from the start |
 | `sell` | `sell()` | Sell the whole inventory at the base and return the money gained. | 2 ticks at the base | `earned = sell()` | unlocks with the **First Dig** achievement |
+| `unload` | `unload()` | Move the drone inventory into the base warehouse and return {moved, left}. | 1 tick at the base | `result = unload()` | available from the start |
+| `stock` | `stock()` | Return the warehouse contents and capacity as {items, capacity, used, free}. | 0 ticks | `stock()['items']` | available from the start |
+| `sell_stock` | `sell_stock(item, amount=None)` | Sell items from the warehouse at market prices and return the money gained. | 2 ticks at the base | `earned = sell_stock('stone', 10)` | available from the start |
+| `price` | `price(item)` | Return the current market price of an unlocked item, or None. | 0 ticks | `price('stone')` | available from the start |
+| `prices` | `prices()` | Return a dict of current market prices for every unlocked item. | 0 ticks | `prices()['stone']` | available from the start |
+| `price_history` | `price_history(item, n=50)` | Return up to n recent price samples for an unlocked item, or None. | 0 ticks | `price_history('stone', 20)` | available from the start |
 | `inventory` | `inventory()` | Return the inventory as a dict of ore id to count. | 0 ticks | `items = inventory()` | unlocks with the **Hello, Miner** achievement |
 | `scan` | `scan(radius)` | Scan for ore within radius tiles. Returns a list of (dx, dy, ore_id) for non-empty tiles. | 1 + radius ticks (radius capped by the scanner) | `for dx, dy, ore in scan(2): ...` | unlocks with the **Scout** achievement |
 | `stats` | `stats()` | Return per-ore mining statistics as {ore: {'attempts': n, 'successes': m}}. | 0 ticks | `stats()['stone']` | unlocks with the **Data Driven** achievement |
@@ -114,6 +120,114 @@ earned = sell()
 ```
 
 **Unlocked by:** unlocks with the **First Dig** achievement
+
+### `unload`
+
+**Signature:** `unload()`
+
+**Category:** business
+
+**Description:** Move the drone inventory into the base warehouse and return {moved, left}.
+
+**Cost:** 1 tick at the base
+
+**Example:**
+
+```python
+result = unload()
+```
+
+**Unlocked by:** available from the start
+
+### `stock`
+
+**Signature:** `stock()`
+
+**Category:** business
+
+**Description:** Return the warehouse contents and capacity as {items, capacity, used, free}.
+
+**Cost:** 0 ticks
+
+**Example:**
+
+```python
+stock()['items']
+```
+
+**Unlocked by:** available from the start
+
+### `sell_stock`
+
+**Signature:** `sell_stock(item, amount=None)`
+
+**Category:** business
+
+**Description:** Sell items from the warehouse at market prices and return the money gained.
+
+**Cost:** 2 ticks at the base
+
+**Example:**
+
+```python
+earned = sell_stock('stone', 10)
+```
+
+**Unlocked by:** available from the start
+
+### `price`
+
+**Signature:** `price(item)`
+
+**Category:** market
+
+**Description:** Return the current market price of an unlocked item, or None.
+
+**Cost:** 0 ticks
+
+**Example:**
+
+```python
+price('stone')
+```
+
+**Unlocked by:** available from the start
+
+### `prices`
+
+**Signature:** `prices()`
+
+**Category:** market
+
+**Description:** Return a dict of current market prices for every unlocked item.
+
+**Cost:** 0 ticks
+
+**Example:**
+
+```python
+prices()['stone']
+```
+
+**Unlocked by:** available from the start
+
+### `price_history`
+
+**Signature:** `price_history(item, n=50)`
+
+**Category:** market
+
+**Description:** Return up to n recent price samples for an unlocked item, or None.
+
+**Cost:** 0 ticks
+
+**Example:**
+
+```python
+price_history('stone', 20)
+```
+
+**Unlocked by:** available from the start
 
 ### `inventory`
 

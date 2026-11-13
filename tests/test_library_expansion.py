@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import time
 from pathlib import Path
 
@@ -262,7 +263,9 @@ def test_minerlib_helpers_against_engine(content, monkeypatch):
     before = miner.money
     miner.x, miner.y = 2, 3
     earned = minerlib.haul()
-    assert earned == 2 * content.get_ore("stone").base_value
+    base = content.get_ore("stone").base_value
+    expected = math.floor(base) + math.floor(base * (1.0 - content.config.impact_per_unit))
+    assert earned == expected
     assert miner.money == before + earned
     assert miner.inventory == {}
     assert (miner.x, miner.y) == (2, 3)

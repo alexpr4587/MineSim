@@ -204,6 +204,7 @@
       "type": "TickAdvanced"
     },
     {
+      "avg_index": 1.0,
       "drone_id": 0,
       "items": {
         "stone": 1
@@ -484,11 +485,12 @@
       "type": "TickAdvanced"
     },
     {
+      "avg_index": 1.0,
       "drone_id": 0,
       "items": {
         "stone": 2
       },
-      "money": 2,
+      "money": 1,
       "type": "Sold"
     },
     {
@@ -693,14 +695,6 @@
     },
     {
       "drone_id": 0,
-      "items": {
-        "stone": 1
-      },
-      "money": 1,
-      "type": "Sold"
-    },
-    {
-      "drone_id": 0,
       "id": "backpack",
       "level": 3,
       "type": "UpgradeBought"
@@ -726,19 +720,19 @@
     "estimates": {},
     "facing": "west",
     "inventory": {},
-    "money": 479,
+    "money": 477,
     "move_ticks": 3,
     "scan_radius": 3,
     "stats": {
       "attempts": {
         "stone": 4
       },
-      "sales": 3,
+      "sales": 2,
       "successes": {
         "stone": 4
       },
       "tiles_moved": 21,
-      "total_earned": 4,
+      "total_earned": 2,
       "total_mined": 4
     },
     "tool_power": 2,
@@ -763,13 +757,13 @@
       "biome:quarry": 1,
       "biomes_visited": 1,
       "fail:nothing_to_mine": 16,
-      "largest_sale": 2,
+      "largest_sale": 1,
       "max_distance": 3,
       "mined:any": 4,
       "mined:stone": 4,
-      "money_earned": 4,
+      "money_earned": 2,
       "ores_in_one_sale": 1,
-      "sales": 3,
+      "sales": 2,
       "streak": 4,
       "tiles_moved": 21,
       "unique_ores_mined": 1,
@@ -787,7 +781,13 @@
       "move",
       "peek",
       "position",
-      "sell"
+      "price",
+      "price_history",
+      "prices",
+      "sell",
+      "sell_stock",
+      "stock",
+      "unload"
     ],
     "unlocked_modules": [
       "math"
@@ -804,7 +804,8 @@
       "drone_bay",
       "motor",
       "pickaxe",
-      "scanner"
+      "scanner",
+      "warehouse"
     ]
   },
   "seed": 12345,

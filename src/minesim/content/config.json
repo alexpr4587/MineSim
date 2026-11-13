@@ -32,5 +32,11 @@
     800,
     2000,
     5000
-  ]
+  ],
+  "market_interval_ticks": 100,
+  "market_history_len": 240,
+  "warehouse_start_capacity": 100,
+  "impact_per_unit": 0.01,
+  "impact_recovery": 0.15,
+  "impact_cap": 0.5
 }

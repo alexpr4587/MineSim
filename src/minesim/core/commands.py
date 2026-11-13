@@ -13,6 +13,8 @@ from minesim.core.events import (
     Moved,
     OreMined,
     Sold,
+    StockSold,
+    Unloaded,
     UpgradeBought,
 )
 from minesim.core.rng import mix64, unit
@@ -28,13 +30,19 @@ __all__ = [
     "OreInfo",
     "Peek",
     "Position",
+    "Price",
+    "PriceHistory",
+    "Prices",
     "RemoveDrone",
     "Scan",
     "Sell",
+    "SellStock",
     "SpawnDrone",
     "Stats",
+    "Stock",
     "SubmitEstimate",
     "Tick",
+    "Unload",
     "Wait",
 ]
 
@@ -46,7 +54,11 @@ _ZERO_COST_NAMES = {
     "OreInfo",
     "Peek",
     "Position",
+    "Price",
+    "PriceHistory",
+    "Prices",
     "Stats",
+    "Stock",
     "SubmitEstimate",
     "Tick",
 }
@@ -162,6 +174,62 @@ def _is_upgrade_unlocked(engine: Any, content: Any, upgrade_id: str) -> bool:
 
 def _get_ore(content: Any, ore_id: str) -> Any:
     return content.get_ore(ore_id)
+
+
+def _warehouse(engine: Any) -> Any:
+    return _get(engine, "warehouse")
+
+
+def _market(engine: Any) -> Any:
+    return _get(engine, "market")
+
+
+def _catalog(engine: Any) -> Any:
+    return _get(engine, "catalog")
+
+
+def _on_base(engine: Any, miner: Any) -> bool:
+    world = _get(engine, "world")
+    if miner is None or world is None:
+        return False
+    try:
+        return bool(world.tile_at(miner.x, miner.y, _tick(engine)).is_base)
+    except Exception:
+        return False
+
+
+def _item_unlocked(engine: Any, item_id: str) -> bool:
+    catalog = _catalog(engine)
+    if catalog is None:
+        return False
+    try:
+        item = catalog.get(item_id)
+    except Exception:
+        return False
+    if item.kind == "ore":
+        return _is_unlocked(engine, _get(engine, "content"), item_id)
+    if item.unlocked_by is None:
+        return True
+    view = _get(engine, "progression_view") or _get(engine, "progression")
+    checker = _get(view, "is_product_unlocked")
+    if callable(checker):
+        return bool(checker(item_id))
+    return False
+
+
+def _market_price(engine: Any, item_id: str) -> float | None:
+    market = _market(engine)
+    catalog = _catalog(engine)
+    if market is None or catalog is None:
+        return None
+    try:
+        return float(market.price(item_id))
+    except Exception:
+        return None
+
+
+def _round_price(value: float | None) -> float | None:
+    return None if value is None else round(float(value), 2)
 
 
 def _mine_failure(engine: Any, drone: Any = None) -> dict[str, Any] | None:
@@ -397,13 +465,22 @@ class Sell:
 
     def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
         miner = _drone(engine, drone)
-        tile = engine.world.tile_at(miner.x, miner.y, _tick(engine))
-        if not tile.is_base:
+        if not _on_base(engine, miner):
             return {"ok": False, "reason": "not_on_base"}
-        items = dict(miner.inventory)
+        items = {item_id: int(count) for item_id, count in miner.inventory.items() if count > 0}
+        market = _market(engine)
+        catalog = _catalog(engine)
         gained = 0
-        for ore_id, count in items.items():
-            gained += engine.content.get_ore(ore_id).base_value * count
+        units = 0
+        weighted_index = 0.0
+        for item_id, count in sorted(items.items()):
+            if market is not None:
+                weighted_index += float(market.index(item_id)) * count
+                gained += int(market.sell(item_id, count))
+            elif catalog is not None:
+                gained += int(catalog.base_value(item_id)) * count
+            units += count
+        avg_index = weighted_index / units if units else 1.0
         miner.money += gained
         miner.inventory.clear()
         if gained > 0:
@@ -411,7 +488,12 @@ class Sell:
             miner.stats.sales += 1
             _publish(
                 engine,
-                Sold(drone_id=_drone_id(miner), money=gained, items=dict(items)),
+                Sold(
+                    drone_id=_drone_id(miner),
+                    money=gained,
+                    items=dict(items),
+                    avg_index=avg_index,
+                ),
             )
         return {
             "ok": True,
@@ -420,8 +502,213 @@ class Sell:
             "money_earned": gained,
             "items": items,
             "sold": dict(items),
+            "avg_index": avg_index,
             "total_money": miner.money,
             "balance": miner.money,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class Unload:
+    """Move the drone inventory into the base warehouse."""
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        ctx = _resolve_context(*args, **kwargs)
+        miner = ctx["miner"]
+        if miner is not None and _on_base(ctx["engine"], miner):
+            return 1
+        return 0
+
+    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+        miner = _drone(engine, drone)
+        if not _on_base(engine, miner):
+            return {"ok": False, "reason": "not_on_base"}
+        warehouse = _warehouse(engine)
+        if warehouse is None:
+            return {"ok": False, "reason": "no_warehouse"}
+        moved: dict[str, int] = {}
+        for item_id, count in sorted(dict(miner.inventory).items()):
+            count = int(count)
+            if count <= 0:
+                continue
+            accepted = int(warehouse.add(item_id, count))
+            if accepted <= 0:
+                continue
+            moved[item_id] = accepted
+            remaining = count - accepted
+            if remaining > 0:
+                miner.inventory[item_id] = remaining
+            else:
+                miner.inventory.pop(item_id, None)
+        if moved:
+            _publish(engine, Unloaded(items=dict(moved)))
+        return {
+            "ok": True,
+            "moved": dict(moved),
+            "left": dict(miner.inventory),
+            "capacity": int(getattr(warehouse, "capacity", 0)),
+            "total": int(warehouse.total()),
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class SellStock:
+    """Sell items from the warehouse at market prices."""
+
+    item: str = ""
+    amount: int | None = None
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        ctx = _resolve_context(*args, **kwargs)
+        miner = ctx["miner"]
+        content = ctx["content"]
+        if miner is None or not _on_base(ctx["engine"], miner):
+            return 0
+        if content is not None:
+            return int(content.config.sell_ticks)
+        return 2
+
+    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+        miner = _drone(engine, drone)
+        if not _on_base(engine, miner):
+            return {"ok": False, "reason": "not_on_base"}
+        warehouse = _warehouse(engine)
+        if warehouse is None:
+            return {"ok": False, "reason": "no_warehouse"}
+        catalog = _catalog(engine)
+        if catalog is None:
+            return {"ok": False, "reason": "no_catalog"}
+        try:
+            catalog.get(self.item)
+        except Exception:
+            return {"ok": False, "reason": "unknown_item", "item": self.item}
+        stock = int(warehouse.count(self.item))
+        requested = stock if self.amount is None else max(0, int(self.amount))
+        quantity = min(requested, stock)
+        market = _market(engine)
+        index = float(market.index(self.item)) if market is not None else 1.0
+        if quantity <= 0:
+            return {
+                "ok": True,
+                "item": self.item,
+                "amount": 0,
+                "money": 0,
+                "avg_index": index,
+                "stock": stock,
+                "total_money": miner.money,
+                "balance": miner.money,
+            }
+        if market is not None:
+            money = int(market.sell(self.item, quantity))
+        else:
+            money = int(catalog.base_value(self.item)) * quantity
+        warehouse.remove(self.item, quantity)
+        miner.money += money
+        if money > 0:
+            miner.stats.total_earned += money
+            miner.stats.sales += 1
+            _publish(
+                engine,
+                StockSold(item=self.item, amount=quantity, money=money),
+            )
+        return {
+            "ok": True,
+            "item": self.item,
+            "amount": quantity,
+            "money": money,
+            "earned": money,
+            "avg_index": index,
+            "stock": int(warehouse.count(self.item)),
+            "total_money": miner.money,
+            "balance": miner.money,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class Stock:
+    """Return the contents and capacity of the warehouse."""
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        return 0
+
+    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+        warehouse = _warehouse(engine)
+        if warehouse is None:
+            return {"ok": False, "reason": "no_warehouse"}
+        items = {
+            str(item_id): int(count)
+            for item_id, count in sorted(dict(warehouse.items).items())
+            if int(count) > 0
+        }
+        return {
+            "ok": True,
+            "items": items,
+            "stock": dict(items),
+            "capacity": int(getattr(warehouse, "capacity", 0)),
+            "used": int(warehouse.total()),
+            "total": int(warehouse.total()),
+            "free": int(getattr(warehouse, "free", 0)),
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class Price:
+    """Return the current market price of ``item``."""
+
+    item: str = ""
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        return 0
+
+    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+        if not _item_unlocked(engine, self.item):
+            return {"ok": True, "item": self.item, "price": None}
+        price = _market_price(engine, self.item)
+        return {"ok": True, "item": self.item, "price": _round_price(price)}
+
+
+@dataclass(frozen=True, slots=True)
+class Prices:
+    """Return the current market prices of every unlocked item."""
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        return 0
+
+    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+        catalog = _catalog(engine)
+        prices: dict[str, float | None] = {}
+        if catalog is not None:
+            for item_id in catalog.ids:
+                if not _item_unlocked(engine, item_id):
+                    continue
+                prices[item_id] = _round_price(_market_price(engine, item_id))
+        return {"ok": True, "prices": prices}
+
+
+@dataclass(frozen=True, slots=True)
+class PriceHistory:
+    """Return the recent price samples of ``item``."""
+
+    item: str = ""
+    n: int = 50
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        return 0
+
+    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+        if not _item_unlocked(engine, self.item):
+            return {"ok": True, "item": self.item, "history": None}
+        market = _market(engine)
+        if market is None:
+            return {"ok": True, "item": self.item, "history": []}
+        try:
+            samples = market.history(self.item, self.n)
+        except Exception:
+            return {"ok": True, "item": self.item, "history": None}
+        return {
+            "ok": True,
+            "item": self.item,
+            "history": [_round_price(float(value)) for value in samples],
         }
 
 
@@ -492,6 +779,10 @@ class BuyUpgrade:
                 miner.tool_tier = max(0, int(miner.tool_tier) + int(delta))
             elif stat == "scan_radius":
                 miner.scan_radius = max(0, int(miner.scan_radius) + int(delta))
+            elif stat == "warehouse_capacity":
+                warehouse = _warehouse(engine)
+                if warehouse is not None:
+                    warehouse.capacity = max(0, int(warehouse.capacity) + int(delta))
             elif hasattr(miner, stat):
                 setattr(miner, stat, int(getattr(miner, stat)) + int(delta))
         _publish(

@@ -19,8 +19,10 @@ __all__ = [
     "ScriptFinished",
     "ScriptStarted",
     "Sold",
+    "StockSold",
     "TickAdvanced",
     "TileRegenerated",
+    "Unloaded",
     "UpgradeBought",
 ]
 
@@ -67,6 +69,23 @@ class Sold:
     drone_id: int = 0
     money: int = 0
     items: dict[str, int] | None = None
+    avg_index: float = 1.0
+
+
+@dataclass(frozen=True, slots=True)
+class Unloaded:
+    """A drone moved items into the base warehouse."""
+
+    items: dict[str, int] | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class StockSold:
+    """Items were sold from the warehouse at market prices."""
+
+    item: str = ""
+    amount: int = 0
+    money: int = 0
 
 
 @dataclass(frozen=True, slots=True)

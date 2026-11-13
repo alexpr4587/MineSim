@@ -334,10 +334,19 @@ def test_sell_only_on_base_and_money(content):
     miner2.inventory = {"stone": 3, "coal": 2}
     sold = _submit(engine2, Sell())
     assert sold["ok"]
-    expected = 3 * content.get_ore("stone").base_value + 2 * content.get_ore("coal").base_value
+    expected = 0
+    for ore_id, count in sorted({"stone": 3, "coal": 2}.items()):
+        base = content.get_ore(ore_id).base_value
+        impact = 0.0
+        total = 0.0
+        for _ in range(count):
+            total += base * (1.0 - impact)
+            impact = min(content.config.impact_cap, impact + content.config.impact_per_unit)
+        expected += math.floor(total)
     assert sold["money"] == expected
     assert miner2.money == expected
     assert miner2.stats.total_earned == expected
+    assert sold["avg_index"] == 1.0
     assert miner2.stats.sales == 1
     assert miner2.inventory == {}
 
@@ -348,7 +357,9 @@ def test_sold_event(content):
     bus.subscribe(Sold, seen.append)
     miner.inventory = {"stone": 2}
     _submit(engine, Sell())
-    assert seen and seen[0].money == 2 and seen[0].items == {"stone": 2}
+    assert seen and seen[0].items == {"stone": 2}
+    assert seen[0].avg_index == 1.0
+    assert seen[0].money == 1
 
 
 def test_upgrades_apply_and_respect_cost_and_max_level(content):
