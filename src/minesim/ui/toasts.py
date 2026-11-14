@@ -12,7 +12,7 @@ from typing import Any
 from PySide6.QtCore import QObject, Qt, QTimer
 from PySide6.QtWidgets import QLabel, QWidget
 
-from minesim.core.events import AchievementUnlocked
+from minesim.core.events import AchievementUnlocked, WorldEventStarted
 from minesim.ui.theme import BACKGROUND, BUTTON_BORDER, TEXT
 
 
@@ -94,6 +94,7 @@ class ToastManager(QObject):
             return
         try:
             bus.subscribe(AchievementUnlocked, self._on_achievement_unlocked)
+            bus.subscribe(WorldEventStarted, self._on_world_event_started)
         except Exception:
             return
 
@@ -112,6 +113,42 @@ class ToastManager(QObject):
                     achievement = None
         title = str(_get(achievement, "title", achievement_id))
         message = self._reward_message(achievement)
+        self._queue.append((title, message))
+        self._show_next()
+
+    def _on_world_event_started(self, event: Any) -> None:
+        kind = str(_get(event, "kind", "") or "")
+        if not kind:
+            return
+        event_id = _get(event, "id")
+        detail = None
+        engine = _get(self.game, "engine")
+        world_events = _get(engine, "world_events")
+        tick = _get(self.game, "tick")
+        if tick is None:
+            tick = _get(engine, "tick", 0)
+        if world_events is not None and hasattr(world_events, "active_at"):
+            try:
+                for candidate in world_events.active_at(int(tick)):
+                    if int(_get(candidate, "id", -1)) == int(event_id):
+                        detail = candidate
+                        break
+            except Exception:
+                detail = None
+        titles = {
+            "rich_vein": "Rich vein",
+            "slow_zone": "Slow zone",
+            "market_news": "Market news",
+        }
+        title = titles.get(kind, "World event")
+        if kind == "market_news":
+            item = str(_get(detail, "item", "") or "an item")
+            shortage = float(_get(detail, "factor", 1.0) or 1.0) > 1.0
+            message = f"A {'shortage' if shortage else 'glut'} is moving {item} prices."
+        elif detail is not None and _get(detail, "x") is not None:
+            message = f"Opened at ({int(_get(detail, 'x'))}, {int(_get(detail, 'y'))})."
+        else:
+            message = "A new world event is active."
         self._queue.append((title, message))
         self._show_next()
 

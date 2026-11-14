@@ -25,6 +25,7 @@ __all__ = [
     "Biome",
     "BuyUpgrade",
     "Distance",
+    "Events",
     "Inspect",
     "Inventory",
     "Mine",
@@ -56,6 +57,7 @@ __all__ = [
 _ZERO_COST_NAMES = {
     "Biome",
     "Distance",
+    "Events",
     "Inspect",
     "Inventory",
     "OreInfo",
@@ -196,6 +198,10 @@ def _market(engine: Any) -> Any:
     return _get(engine, "market")
 
 
+def _world_events(engine: Any) -> Any:
+    return _get(engine, "world_events")
+
+
 def _catalog(engine: Any) -> Any:
     return _get(engine, "catalog")
 
@@ -282,14 +288,42 @@ class Move:
         ctx = _resolve_context(*args, **kwargs)
         miner = ctx["miner"]
         if miner is not None:
-            return int(miner.move_ticks)
-        content = ctx["content"]
-        if content is not None:
-            return int(content.config.move_ticks)
-        return 4
+            base = int(miner.move_ticks)
+        else:
+            content = ctx["content"]
+            base = int(content.config.move_ticks) if content is not None else 4
+        events = _world_events(ctx["engine"])
+        if events is not None and miner is not None:
+            tick = _tick(ctx["engine"])
+            multiplier = int(
+                events.modifiers_at(miner.x, miner.y, tick).get("move_multiplier", 1) or 1
+            )
+            destination = events.modifiers_at(
+                miner.x + self.direction.dx,
+                miner.y + self.direction.dy,
+                tick,
+            )
+            multiplier = max(multiplier, int(destination.get("move_multiplier", 1) or 1))
+            if multiplier > 1:
+                return int(math.ceil(base * multiplier))
+        return base
 
     def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
         miner = _drone(engine, drone)
+        events = _world_events(engine)
+        in_slow_zone = False
+        if events is not None:
+            tick = _tick(engine)
+            current = events.modifiers_at(miner.x, miner.y, tick)
+            destination = events.modifiers_at(
+                miner.x + self.direction.dx,
+                miner.y + self.direction.dy,
+                tick,
+            )
+            in_slow_zone = (
+                int(current.get("move_multiplier", 1) or 1) > 1
+                or int(destination.get("move_multiplier", 1) or 1) > 1
+            )
         miner.x += self.direction.dx
         miner.y += self.direction.dy
         miner.facing = self.direction
@@ -301,6 +335,7 @@ class Move:
                 x=miner.x,
                 y=miner.y,
                 direction=self.direction.name.lower(),
+                in_slow_zone=in_slow_zone,
             ),
         )
         return {
@@ -387,15 +422,32 @@ class Mine:
                 "ore_id": ore_id,
                 "success": False,
             }
-        miner.add_item(ore_id, 1)
+        events = _world_events(engine)
+        yield_multiplier = 1
+        if events is not None:
+            modifiers = events.modifiers_at(miner.x, miner.y, _tick(engine))
+            yield_multiplier = max(1, int(modifiers.get("yield_multiplier", 1) or 1))
+        free = max(0, int(miner.capacity) - int(miner.inventory_size))
+        amount = max(1, min(yield_multiplier, free))
+        in_rich_vein = yield_multiplier > 1
+        miner.add_item(ore_id, amount)
         world.mine_tile(miner.x, miner.y, _tick(engine))
-        _publish(engine, OreMined(drone_id=drone_id, ore_id=ore_id, amount=1))
+        _publish(
+            engine,
+            OreMined(
+                drone_id=drone_id,
+                ore_id=ore_id,
+                amount=amount,
+                in_rich_vein=in_rich_vein,
+            ),
+        )
         return {
             "ok": True,
             "ore": ore_id,
             "ore_id": ore_id,
-            "amount": 1,
+            "amount": amount,
             "success": True,
+            "in_rich_vein": in_rich_vein,
         }
 
 
@@ -1139,6 +1191,39 @@ class Tick:
 
     def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
         return {"ok": True, "tick": _tick(engine)}
+
+
+@dataclass(frozen=True, slots=True)
+class Events:
+    """Return the random world events active right now."""
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        return 0
+
+    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+        events = _world_events(engine)
+        tick = _tick(engine)
+        active: list[dict[str, Any]] = []
+        if events is not None:
+            for event in events.active_at(tick):
+                if event.kind == "market_news":
+                    if event.item is None or not _item_unlocked(engine, str(event.item)):
+                        continue
+                    direction = "shortage" if float(event.factor) > 1.0 else "glut"
+                else:
+                    direction = None
+                active.append(
+                    {
+                        "kind": event.kind,
+                        "x": event.x,
+                        "y": event.y,
+                        "radius": event.radius,
+                        "ends_in": max(0, int(event.ends) - tick),
+                        "item": event.item,
+                        "direction": direction,
+                    }
+                )
+        return {"ok": True, "events": active, "active": list(active)}
 
 
 @dataclass(frozen=True, slots=True)

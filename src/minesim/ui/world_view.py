@@ -16,6 +16,7 @@ from typing import Any
 
 from PySide6.QtCore import QPointF, Qt, QTimer, Signal
 from PySide6.QtGui import (
+    QBrush,
     QColor,
     QFont,
     QMouseEvent,
@@ -35,11 +36,16 @@ from minesim.ui.theme import (
     BASE_BORDER,
     BASE_LABEL,
     DRONE_ID_COLORS,
+    EVENT_LABEL,
     FONT_FAMILY,
     GRID,
     LOCKED_MARK,
     MINER_BODY,
     MINER_DETAIL,
+    RICH_VEIN,
+    RICH_VEIN_BORDER,
+    SLOW_ZONE,
+    SLOW_ZONE_BORDER,
 )
 
 __all__ = ["CACHE_SIZE", "DEFAULT_TILE_PX", "MAX_TILE_PX", "MIN_TILE_PX", "WorldView"]
@@ -713,6 +719,69 @@ class WorldView(QWidget):
         super().resizeEvent(event)
         self._position_recenter_button()
 
+    def _world_events(self) -> Any:
+        for candidate in (self.engine, _get(self.game, "engine"), self.game):
+            events = _get(candidate, "world_events")
+            if events is not None:
+                return events
+        return None
+
+    def _event_seconds(self, event: Any) -> int:
+        tick = self._tick()
+        config = _get(self.content, "config")
+        tick_hz = max(1, int(_get(config, "tick_hz", 10) or 10))
+        remaining = max(0, int(_get(event, "ends", tick) or tick) - tick)
+        return int(round(remaining / tick_hz))
+
+    def _draw_world_events(self, painter: QPainter) -> None:
+        """Draw translucent circles for the active rich veins and slow zones."""
+        events = self._world_events()
+        if events is None or not hasattr(events, "active_at"):
+            return
+        painter.save()
+        try:
+            for event in events.active_at(self._tick()):
+                x = _get(event, "x")
+                y = _get(event, "y")
+                kind = str(_get(event, "kind", ""))
+                if x is None or y is None or kind not in ("rich_vein", "slow_zone"):
+                    continue
+                radius = int(_get(event, "radius", 0) or 0)
+                if radius <= 0:
+                    continue
+                cx, cy = self.world_to_screen(float(x) + 0.5, float(y) + 0.5)
+                pixel_radius = float(radius * self.tile_px)
+                if kind == "rich_vein":
+                    painter.setPen(QPen(QColor(RICH_VEIN_BORDER), 2))
+                    fill = QColor(RICH_VEIN)
+                    fill.setAlpha(58)
+                    painter.setBrush(QBrush(fill))
+                    painter.drawEllipse(QPointF(cx, cy), pixel_radius, pixel_radius)
+                    glow = QColor(RICH_VEIN)
+                    glow.setAlpha(28)
+                    painter.setPen(Qt.PenStyle.NoPen)
+                    painter.setBrush(QBrush(glow))
+                    painter.drawEllipse(QPointF(cx, cy), pixel_radius * 0.62, pixel_radius * 0.62)
+                else:
+                    painter.setPen(QPen(QColor(SLOW_ZONE_BORDER), 2))
+                    hatch = QColor(SLOW_ZONE)
+                    hatch.setAlpha(150)
+                    painter.setBrush(QBrush(hatch, Qt.BrushStyle.BDiagPattern))
+                    painter.drawEllipse(QPointF(cx, cy), pixel_radius, pixel_radius)
+                label = "Rich vein" if kind == "rich_vein" else "Slow zone"
+                label = f"{label} {self._event_seconds(event)}s"
+                font = QFont(FONT_FAMILY)
+                font.setBold(True)
+                font.setPointSize(max(7, self.tile_px // 3))
+                painter.setFont(font)
+                painter.setPen(QPen(QColor(EVENT_LABEL)))
+                painter.drawText(
+                    QPointF(cx, cy - pixel_radius - 4),
+                    label,
+                )
+        finally:
+            painter.restore()
+
     def _draw_base(self, painter: QPainter) -> None:
         config = _get(self.content, "config")
         half = int(_get(config, "base_half_size", 1) or 0)
@@ -860,6 +929,7 @@ class WorldView(QWidget):
                         pixmap = self.get_chunk_pixmap(cx, cy)
                         sx, sy = self.world_to_screen(cx * size, cy * size)
                         painter.drawPixmap(int(sx), int(sy), pixmap)
+                self._draw_world_events(painter)
                 if self.show_grid:
                     x0, y0, x1, y1 = self.visible_tiles()
                     painter.setPen(QPen(QColor(GRID), 1))

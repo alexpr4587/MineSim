@@ -1,0 +1,23 @@
+[
+  {
+    "kind": "rich_vein",
+    "radius": 6,
+    "duration": 3000,
+    "yield_multiplier": 2,
+    "min_distance": 10,
+    "max_distance": 60
+  },
+  {
+    "kind": "slow_zone",
+    "radius": 5,
+    "duration": 2000,
+    "move_cost_multiplier": 2,
+    "min_distance": 8,
+    "max_distance": 40
+  },
+  {
+    "kind": "market_news",
+    "duration": 2000,
+    "factor_choices": [0.6, 0.7, 1.4, 1.6]
+  }
+]

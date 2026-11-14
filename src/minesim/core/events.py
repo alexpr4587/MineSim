@@ -29,6 +29,8 @@ __all__ = [
     "TileRegenerated",
     "Unloaded",
     "UpgradeBought",
+    "WorldEventEnded",
+    "WorldEventStarted",
 ]
 
 
@@ -40,6 +42,7 @@ class Moved:
     x: int = 0
     y: int = 0
     direction: str | None = None
+    in_slow_zone: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,6 +68,7 @@ class OreMined:
     drone_id: int = 0
     ore_id: str | None = None
     amount: int = 1
+    in_rich_vein: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -206,6 +210,22 @@ class TickAdvanced:
     """The engine advanced to a new tick."""
 
     tick: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class WorldEventStarted:
+    """A random world event became active."""
+
+    kind: str = ""
+    id: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class WorldEventEnded:
+    """A random world event stopped being active."""
+
+    kind: str = ""
+    id: int = 0
 
 
 class EventBus:

@@ -26,6 +26,7 @@ __all__ = [
     "DISABLED_TEXT",
     "DRONE_ID_COLORS",
     "ERROR",
+    "EVENT_LABEL",
     "FONT_FAMILY",
     "FONT_SIZE",
     "GRID",
@@ -44,6 +45,10 @@ __all__ = [
     "MONOSPACE_FONT",
     "RECENTER_BACKGROUND",
     "RECENTER_TEXT",
+    "RICH_VEIN",
+    "RICH_VEIN_BORDER",
+    "SLOW_ZONE",
+    "SLOW_ZONE_BORDER",
     "STYLESHEET",
     "SYNTAX_API",
     "SYNTAX_BUILTIN",
@@ -94,6 +99,11 @@ COLORS: dict[str, str] = {
     "console_err": "#f7768e",
     "console_info": "#7dcfff",
     "error": "#f7768e",
+    "rich_vein": "#ffd166",
+    "rich_vein_border": "#f2a541",
+    "slow_zone": "#5b6b8c",
+    "slow_zone_border": "#7dcfff",
+    "event_label": "#e6e6e6",
 }
 
 BACKGROUND = COLORS["background"]
@@ -136,6 +146,11 @@ CONSOLE_OUT = COLORS["console_out"]
 CONSOLE_ERR = COLORS["console_err"]
 CONSOLE_INFO = COLORS["console_info"]
 ERROR = COLORS["error"]
+RICH_VEIN = COLORS["rich_vein"]
+RICH_VEIN_BORDER = COLORS["rich_vein_border"]
+SLOW_ZONE = COLORS["slow_zone"]
+SLOW_ZONE_BORDER = COLORS["slow_zone_border"]
+EVENT_LABEL = COLORS["event_label"]
 
 DRONE_ID_COLORS: tuple[str, ...] = (
     "#f2a541",

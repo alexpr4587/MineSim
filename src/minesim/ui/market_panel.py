@@ -518,6 +518,30 @@ class MarketPanel(FloatingPanel):
                 self.price_label.setText("Price: —")
         else:
             self.price_label.setText("Price: —")
+        self.news_label.setText(self._news_text())
+
+    def _news_text(self) -> str:
+        """Return the active market news lines without revealing factors."""
+        engine = _get(self.game, "engine")
+        events = _get(engine, "world_events")
+        if events is None or not hasattr(events, "active_at"):
+            return "No active market news."
+        content = _get(self.game, "content")
+        config = _get(content, "config")
+        tick_hz = max(1, int(_get(config, "tick_hz", 10) or 10))
+        tick = int(_get(_get(self.game, "engine"), "tick", 0) or 0)
+        lines: list[str] = []
+        for event in events.active_at(tick):
+            if _get(event, "kind") != "market_news":
+                continue
+            item = str(_get(event, "item", "") or "")
+            if not item:
+                continue
+            seconds = int(round(max(0, int(_get(event, "ends", tick) or tick) - tick) / tick_hz))
+            shortage = float(_get(event, "factor", 1.0) or 1.0) > 1.0
+            label = "Shortage" if shortage else "Glut"
+            lines.append(f"{label}: {self._item_name(item)} — {seconds}s left")
+        return "No active market news." if not lines else " | ".join(lines)
 
     # -- events --------------------------------------------------------------
 

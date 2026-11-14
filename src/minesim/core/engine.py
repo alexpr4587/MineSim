@@ -15,18 +15,22 @@ from minesim.core.events import (
     RefineFinished,
     TickAdvanced,
     TileRegenerated,
+    WorldEventEnded,
+    WorldEventStarted,
 )
 from minesim.core.items import ItemCatalog
 from minesim.core.market import Market
 from minesim.core.miner import Drone, PlayerStats
 from minesim.core.refinery import Refinery
 from minesim.core.warehouse import Warehouse
+from minesim.core.worldevents import WorldEvents
 
 __all__ = ["AllUnlocked", "GameEngine", "ProgressionView", "Ticket"]
 
 _ZERO_COST_NAMES = {
     "Biome",
     "Distance",
+    "Events",
     "Inspect",
     "Inventory",
     "OreInfo",
@@ -212,6 +216,46 @@ class GameEngine:
             recipes,
             self.progression_view,
         )
+        self.world_events: WorldEvents | None = kwargs.get("world_events")
+        if self.world_events is None and config is not None:
+            self.world_events = WorldEvents(self.seed, config, self.content)
+        self._active_world_events: dict[int, Any] = {}
+        self._prime_world_events()
+
+    # -- world events --------------------------------------------------------
+
+    def _apply_world_event_start(self, event: Any) -> None:
+        if self.market is not None and event.kind == "market_news" and event.item:
+            try:
+                self.market.apply_news(str(event.item), float(event.factor), int(event.ends))
+            except Exception:
+                pass
+
+    def _prime_world_events(self) -> None:
+        """Remember the events active at load time without publishing them."""
+        if self.world_events is None:
+            return
+        active = {event.id: event for event in self.world_events.active_at(self.tick)}
+        self._active_world_events = active
+        for event in active.values():
+            self._apply_world_event_start(event)
+
+    def _sync_world_events(self) -> None:
+        """Publish started/ended events and apply or expire news shocks."""
+        if self.world_events is None:
+            return
+        current = {event.id: event for event in self.world_events.active_at(self.tick)}
+        previous = self._active_world_events
+        for event_id in sorted(previous):
+            if event_id not in current:
+                event = previous[event_id]
+                self._events.publish(WorldEventEnded(kind=str(event.kind), id=int(event_id)))
+        for event_id in sorted(current):
+            if event_id not in previous:
+                event = current[event_id]
+                self._apply_world_event_start(event)
+                self._events.publish(WorldEventStarted(kind=str(event.kind), id=int(event_id)))
+        self._active_world_events = current
 
     # -- compatibility properties -------------------------------------------
 
@@ -450,6 +494,7 @@ class GameEngine:
             if regenerated:
                 for x, y in regenerated:
                     self._events.publish(TileRegenerated(x=x, y=y))
+        self._sync_world_events()
         if self.market is not None:
             self.market.advance(self.tick)
         if self.refinery is not None:

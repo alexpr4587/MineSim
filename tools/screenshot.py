@@ -103,6 +103,31 @@ def prepare_economy(game: Game, ticks: int = 3000) -> Game:
     return game
 
 
+def _find_rich_vein(game: Game) -> object | None:
+    """Return the first active rich vein for the screenshot."""
+    world_events = getattr(game.engine, "world_events", None)
+    if world_events is None:
+        return None
+    for slot in range(400):
+        event = world_events.event_for_slot(slot)
+        if event is not None and event.kind == "rich_vein" and event.x is not None:
+            return event
+    return None
+
+
+def _position_on_rich_vein(window: MainWindow, game: Game) -> None:
+    """Put the miner in a rich vein and show its event ticker."""
+    event = _find_rich_vein(game)
+    if event is None:
+        return
+    game.engine.tick = int(event.starts) + 100
+    game._engine.tick = int(event.starts) + 100
+    game.miner.x, game.miner.y = int(event.x), int(event.y)
+    window.world_view.snap_visual_to_miner()
+    window.world_view.center_on_miner()
+    window.hud.refresh()
+
+
 def build_window(
     ticks: int = 300,
     size: tuple[int, int] = (1024, 768),
@@ -111,6 +136,7 @@ def build_window(
     moving: bool = False,
     fleet: int = 0,
     panel: str | None = None,
+    events: bool = False,
 ) -> MainWindow:
     """Build the real main window and run ``ticks`` engine ticks."""
     app = QApplication.instance() or QApplication([])
@@ -179,6 +205,8 @@ def build_window(
                 window.achievements_panel.show_panel()
             except Exception:
                 pass
+    if events:
+        _position_on_rich_vein(window, game)
     app.processEvents()
     return window
 
@@ -216,6 +244,11 @@ def main() -> int:
         help="show the wardrobe panel and save artifacts/ui_wardrobe.png",
     )
     parser.add_argument(
+        "--events",
+        action="store_true",
+        help="center on an active rich vein and save artifacts/ui_events.png",
+    )
+    parser.add_argument(
         "--panel",
         choices=("base", "market", "refinery", "contracts"),
         default=None,
@@ -231,6 +264,7 @@ def main() -> int:
         moving=args.moving,
         fleet=args.fleet,
         panel=args.panel,
+        events=args.events,
     )
     for panel_name in (
         "achievements_panel",
@@ -286,6 +320,8 @@ def main() -> int:
         default_name = "ui_wardrobe.png"
     if args.panel:
         default_name = f"ui_{args.panel}.png"
+    if args.events:
+        default_name = "ui_events.png"
     out = args.output or (Path(__file__).resolve().parents[1] / "artifacts" / default_name)
     out.parent.mkdir(parents=True, exist_ok=True)
     window.grab().save(str(out))

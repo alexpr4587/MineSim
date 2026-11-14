@@ -25,6 +25,7 @@ Functions are called directly, e.g. `move(East)`, `mine()`, `sell()`. Locked fun
 | `buy_upgrade` | `buy_upgrade(upgrade_id)` | Buy the next level of the given upgrade and return the new level. | 0 ticks | `buy_upgrade('backpack')` | unlocks with the **First Sale** achievement |
 | `wait` | `wait(ticks)` | Wait for ticks (1 to 600) without doing anything else. | as many ticks as requested (1-600) | `wait(20)` | unlocks with the **Patience** achievement |
 | `tick` | `tick()` | Return the current game tick. | 0 ticks | `now = tick()` | unlocks with the **Clockwork** achievement |
+| `events` | `events()` | Return the active world events as dicts with kind, x, y, radius, ends_in, item and direction ('shortage' or 'glut' for market news). The exact price factor is never included. | 0 ticks | `for event in events(): print(event['kind'])` | available from the start |
 | `distance` | `distance()` | Return the Chebyshev distance from the base at (0, 0). | 0 ticks | `d = distance()` | unlocks with the **Far From Home** achievement |
 | `biome` | `biome()` | Return the id of the biome under the miner. | 0 ticks | `here = biome()` | unlocks with the **Deep Diver** achievement |
 | `ore_info` | `ore_info(ore_id)` | Return {id, name, tier, hardness, base_value, regen_ticks} for a known ore, or None when it is unknown or locked. The mining probability is never included. | 0 ticks | `info = ore_info('coal')` | unlocks with the **Appraiser** achievement |
@@ -341,6 +342,24 @@ now = tick()
 ```
 
 **Unlocked by:** unlocks with the **Clockwork** achievement
+
+### `events`
+
+**Signature:** `events()`
+
+**Category:** world
+
+**Description:** Return the active world events as dicts with kind, x, y, radius, ends_in, item and direction ('shortage' or 'glut' for market news). The exact price factor is never included.
+
+**Cost:** 0 ticks
+
+**Example:**
+
+```python
+for event in events(): print(event['kind'])
+```
+
+**Unlocked by:** available from the start
 
 ### `distance`
 

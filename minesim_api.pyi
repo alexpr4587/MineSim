@@ -57,6 +57,9 @@ def wait(ticks: int) -> None:
 def tick() -> int:
     'Return the current game tick.'
     ...
+def events() -> list[dict]:
+    "Return the active world events as dicts with kind, x, y, radius, ends_in, item and direction ('shortage' or 'glut' for market news). The exact price factor is never included."
+    ...
 def distance() -> int:
     'Return the Chebyshev distance from the base at (0, 0).'
     ...

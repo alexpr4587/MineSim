@@ -32,6 +32,7 @@ from minesim.core.schemas import (
     Skin,
     Sprites,
     Upgrade,
+    WorldEventDefinition,
 )
 
 __all__ = [
@@ -53,6 +54,7 @@ class Content:
     products: dict[str, Product] = field(default_factory=dict)
     recipes: dict[str, Recipe] = field(default_factory=dict)
     market: dict[str, MarketEntry] = field(default_factory=dict)
+    events: dict[str, WorldEventDefinition] = field(default_factory=dict)
     biomes: dict[str, Biome] = field(default_factory=dict)
     upgrades: dict[str, Upgrade] = field(default_factory=dict)
     functions: dict[str, FunctionSpec] = field(default_factory=dict)
@@ -182,6 +184,13 @@ class Content:
             return self.market[item_id]
         except KeyError:
             raise ContentError(f"market.json: $.item: unknown item id '{item_id}'") from None
+
+    def get_event(self, kind: str) -> WorldEventDefinition:
+        """Return the world event definition for ``kind`` or raise ContentError."""
+        try:
+            return self.events[kind]
+        except KeyError:
+            raise ContentError(f"events.json: $.kind: unknown event kind '{kind}'") from None
 
     def get_biome(self, biome_id: str) -> Biome:
         """Return the biome with ``biome_id`` or raise ContentError."""
@@ -644,6 +653,23 @@ def load_content(content_dir: str | Path | None = None) -> Content:
                 )
             market[entry.item] = entry
 
+    events: dict[str, WorldEventDefinition] = {}
+    try:
+        events_data = _read_json(base_path, "events.json")
+    except ContentError as exc:
+        if "file not found" not in str(exc):
+            raise
+    else:
+        if isinstance(events_data, dict):
+            events_data = events_data.get("events", events_data)
+        events_list = _validate(events_data, TypeAdapter(list[WorldEventDefinition]), "events.json")
+        for index, entry in enumerate(events_list):
+            if entry.kind in events:
+                raise ContentError(
+                    f"events.json: $.{index}.kind: duplicate event kind '{entry.kind}'"
+                )
+            events[entry.kind] = entry
+
     biomes_data = _read_json(base_path, "biomes.json")
     if isinstance(biomes_data, dict):
         biomes_data = biomes_data.get("biomes", biomes_data)
@@ -732,12 +758,14 @@ def load_content(content_dir: str | Path | None = None) -> Content:
         recipes,
     )
     logger.debug(
-        "Loaded content: %d ores, %d products, %d recipes, %d market entries, %d biomes, "
+        "Loaded content: %d ores, %d products, %d recipes, %d market entries, "
+        "%d world event kinds, %d biomes, "
         "%d upgrades, %d functions, %d modules, %d achievements, %d skins, %d examples",
         len(ores),
         len(products),
         len(recipes),
         len(market),
+        len(events),
         len(biomes),
         len(upgrades),
         len(functions),
@@ -752,6 +780,7 @@ def load_content(content_dir: str | Path | None = None) -> Content:
         products=products,
         recipes=recipes,
         market=market,
+        events=events,
         biomes=biomes,
         upgrades=upgrades,
         functions=functions,

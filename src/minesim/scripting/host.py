@@ -31,6 +31,7 @@ from minesim.core.commands import (
     Contracts,
     Deliver,
     Distance,
+    Events,
     Inspect,
     Inventory,
     Mine,
@@ -977,6 +978,10 @@ class ScriptHost:
             if args or kwargs:
                 raise TypeError("tick() takes no arguments")
             return Tick()
+        if name == "events":
+            if args or kwargs:
+                raise TypeError("events() takes no arguments")
+            return Events()
         if name == "distance":
             if args or kwargs:
                 raise TypeError("distance() takes no arguments")
@@ -1098,6 +1103,8 @@ class ScriptHost:
             return None
         if name == "tick":
             return int(result.get("tick", 0) or 0)
+        if name == "events":
+            return list(result.get("events") or [])
         if name == "distance":
             return int(result.get("distance", 0) or 0)
         if name == "biome":

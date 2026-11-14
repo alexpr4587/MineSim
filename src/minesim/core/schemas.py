@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class ContentError(Exception):
@@ -67,6 +67,8 @@ class Config(_ContentModel):
     contract_premium_max: float = Field(default=2.0, ge=1.0)
     contract_value_min: int = Field(default=500, ge=1)
     contract_value_max: int = Field(default=4000, ge=1)
+    world_event_interval_ticks: int = Field(default=2500, ge=1)
+    world_event_chance: float = Field(default=0.6, ge=0.0, le=1.0)
 
     @field_validator("contract_deadline_max")
     @classmethod
@@ -169,6 +171,41 @@ class MarketEntry(_ContentModel):
         if minimum is not None and value < float(minimum):
             raise ValueError("max_index must be >= min_index")
         return value
+
+
+class WorldEventDefinition(_ContentModel):
+    """One kind of random world event (events.json)."""
+
+    kind: Literal["rich_vein", "slow_zone", "market_news"]
+    radius: int = Field(default=0, ge=0)
+    duration: int = Field(gt=0)
+    yield_multiplier: int = Field(default=1, ge=1)
+    move_cost_multiplier: int = Field(default=1, ge=1)
+    min_distance: int = Field(default=0, ge=0)
+    max_distance: int = Field(default=0, ge=0)
+    factor_choices: list[float] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _check_kind_fields(self) -> WorldEventDefinition:
+        if self.kind in ("rich_vein", "slow_zone"):
+            if self.radius < 1:
+                raise ValueError(f"{self.kind} requires radius >= 1")
+            if self.max_distance < self.min_distance:
+                raise ValueError("max_distance must be >= min_distance")
+        if self.kind == "rich_vein" and self.yield_multiplier < 2:
+            raise ValueError("rich_vein requires yield_multiplier >= 2")
+        if self.kind == "slow_zone" and self.move_cost_multiplier < 2:
+            raise ValueError("slow_zone requires move_cost_multiplier >= 2")
+        if self.kind == "market_news":
+            if not self.factor_choices:
+                raise ValueError("market_news requires factor_choices")
+            if any(factor <= 0 for factor in self.factor_choices):
+                raise ValueError("factor_choices values must be > 0")
+            if not any(factor < 1 for factor in self.factor_choices):
+                raise ValueError("factor_choices needs at least one glut factor < 1")
+            if not any(factor > 1 for factor in self.factor_choices):
+                raise ValueError("factor_choices needs at least one shortage factor > 1")
+        return self
 
 
 class Biome(_ContentModel):

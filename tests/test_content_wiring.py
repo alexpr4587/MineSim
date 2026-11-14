@@ -109,6 +109,7 @@ def test_initial_unlock_sets(content):
         "refinery",
         "contracts",
         "deliver",
+        "events",
     }
     assert state.unlocked_modules == {"math"}
     assert state.unlocked_upgrades == {"drone_bay", "warehouse", "furnace", "contract_board"}

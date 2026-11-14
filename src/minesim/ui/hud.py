@@ -7,7 +7,7 @@ from typing import Any
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QWidget
 
-from minesim.ui.theme import FONT_FAMILY, HUD_BACKGROUND
+from minesim.ui.theme import FONT_FAMILY, HUD_BACKGROUND, TEXT_DIM
 
 __all__ = ["HUD", "SPEEDS", "SPEED_BUTTONS"]
 
@@ -58,6 +58,8 @@ class HUD(QWidget):
         self.drones_label = QLabel("Drones: 1", self)
         self.tick_label = QLabel("Tick: 0", self)
         self.position_label = QLabel("Pos: (0, 0)", self)
+        self.events_label = QLabel("", self)
+        self.events_label.setStyleSheet(f"color: {TEXT_DIM};")
         for label in (
             self.money_label,
             self.inventory_label,
@@ -65,6 +67,7 @@ class HUD(QWidget):
             self.drones_label,
             self.tick_label,
             self.position_label,
+            self.events_label,
         ):
             label.setFont(QFont(FONT_FAMILY))
             layout.addWidget(label)
@@ -159,9 +162,13 @@ class HUD(QWidget):
                 StockSold,
                 TickAdvanced,
                 Unloaded,
+                WorldEventEnded,
+                WorldEventStarted,
             )
 
             bus.subscribe(TickAdvanced, lambda _event: self.refresh())
+            bus.subscribe(WorldEventStarted, lambda _event: self.refresh())
+            bus.subscribe(WorldEventEnded, lambda _event: self.refresh())
             bus.subscribe(Moved, lambda _event: self.refresh())
             bus.subscribe(OreMined, lambda _event: self.refresh())
             bus.subscribe(MineAttempted, lambda _event: self.refresh())
@@ -210,12 +217,38 @@ class HUD(QWidget):
         self.drones_label.setText(f"Drones: {int(drone_count)}")
         self.tick_label.setText(f"Tick: {int(tick)}")
         self.position_label.setText(f"Pos: ({int(position[0])}, {int(position[1])})")
+        self.events_label.setText(self._event_ticker(int(tick)))
         if self.game_loop is not None:
             speed = _get(self.game_loop, "speed")
             if speed is not None and int(speed) != self.speed:
                 self.speed = int(speed)
                 self.paused = self.speed == 0
                 self._sync_buttons()
+
+    def _event_ticker(self, tick: int) -> str:
+        """Return a compact ticker of every active world event."""
+        engine = _get(self.game, "engine")
+        events = _get(engine, "world_events")
+        if events is None or not hasattr(events, "active_at"):
+            return "Events: none"
+        content = _get(self.game, "content")
+        config = _get(content, "config")
+        tick_hz = max(1, int(_get(config, "tick_hz", 10) or 10))
+        parts: list[str] = []
+        for event in events.active_at(tick):
+            kind = str(_get(event, "kind", ""))
+            seconds = int(round(max(0, int(_get(event, "ends", tick) or tick) - tick) / tick_hz))
+            if kind == "rich_vein":
+                parts.append(f"◆ rich vein {seconds}s")
+            elif kind == "slow_zone":
+                parts.append(f"▤ slow zone {seconds}s")
+            elif kind == "market_news":
+                item = str(_get(event, "item", "") or "item")
+                shortage = float(_get(event, "factor", 1.0) or 1.0) > 1.0
+                arrow = "▲" if shortage else "▼"
+                direction = "shortage" if shortage else "glut"
+                parts.append(f"{arrow} {item} {direction} {seconds}s")
+        return "Events: " + (" | ".join(parts) if parts else "none")
 
     def update_display(self) -> None:
         """Alias for :meth:`refresh`."""

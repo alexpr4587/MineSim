@@ -153,6 +153,15 @@
     "example": "now = tick()"
   },
   {
+    "name": "events",
+    "signature": "events()",
+    "doc": "Return the active world events as dicts with kind, x, y, radius, ends_in, item and direction ('shortage' or 'glut' for market news). The exact price factor is never included.",
+    "category": "world",
+    "unlocked_by": null,
+    "cost": "0 ticks",
+    "example": "for event in events(): print(event['kind'])"
+  },
+  {
     "name": "distance",
     "signature": "distance()",
     "doc": "Return the Chebyshev distance from the base at (0, 0).",
