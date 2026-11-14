@@ -96,5 +96,32 @@
       6000
     ],
     "unlocked_by": null
+  },
+  {
+    "id": "furnace",
+    "name": "Furnace",
+    "description": "Run one more refinery job at a time: furnace slots +1 per level.",
+    "stat": "furnace_slots",
+    "per_level": 1,
+    "max_level": 3,
+    "costs": [
+      300,
+      900,
+      2500
+    ],
+    "unlocked_by": null
+  },
+  {
+    "id": "contract_board",
+    "name": "Contract Board",
+    "description": "Accept one more delivery contract at a time: contract slots +1 per level.",
+    "stat": "contract_slots",
+    "per_level": 1,
+    "max_level": 2,
+    "costs": [
+      500,
+      1500
+    ],
+    "unlocked_by": null
   }
 ]

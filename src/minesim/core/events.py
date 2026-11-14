@@ -8,6 +8,9 @@ from typing import Any
 
 __all__ = [
     "AchievementUnlocked",
+    "ContractDelivered",
+    "ContractExpired",
+    "ContractGenerated",
     "DroneRemoved",
     "DroneSpawned",
     "EstimateSubmitted",
@@ -15,6 +18,8 @@ __all__ = [
     "MineAttempted",
     "Moved",
     "OreMined",
+    "RefineFinished",
+    "RefineStarted",
     "ScriptFailed",
     "ScriptFinished",
     "ScriptStarted",
@@ -86,6 +91,45 @@ class StockSold:
     item: str = ""
     amount: int = 0
     money: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class RefineStarted:
+    """A refinery job started."""
+
+    recipe: str = ""
+    times: int = 1
+
+
+@dataclass(frozen=True, slots=True)
+class RefineFinished:
+    """A refinery job finished and its outputs reached the warehouse."""
+
+    recipe: str = ""
+    times: int = 1
+    outputs: dict[str, int] | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ContractGenerated:
+    """A new delivery contract appeared on the board."""
+
+    id: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class ContractDelivered:
+    """A delivery contract was completed and paid."""
+
+    id: int = 0
+    reward: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class ContractExpired:
+    """A delivery contract expired without being delivered."""
+
+    id: int = 0
 
 
 @dataclass(frozen=True, slots=True)

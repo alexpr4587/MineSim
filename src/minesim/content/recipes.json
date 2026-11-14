@@ -1,0 +1,50 @@
+[
+  {
+    "id": "copper_bar",
+    "name": "Copper Bar",
+    "inputs": {"copper": 3},
+    "outputs": {"copper_bar": 1},
+    "ticks": 60,
+    "unlocked_by": null
+  },
+  {
+    "id": "iron_bar",
+    "name": "Iron Bar",
+    "inputs": {"iron": 3, "coal": 1},
+    "outputs": {"iron_bar": 1},
+    "ticks": 80,
+    "unlocked_by": null
+  },
+  {
+    "id": "steel_bar",
+    "name": "Steel Bar",
+    "inputs": {"iron_bar": 2, "coal": 2},
+    "outputs": {"steel_bar": 1},
+    "ticks": 120,
+    "unlocked_by": null
+  },
+  {
+    "id": "silver_bar",
+    "name": "Silver Bar",
+    "inputs": {"silver": 3},
+    "outputs": {"silver_bar": 1},
+    "ticks": 100,
+    "unlocked_by": null
+  },
+  {
+    "id": "gold_bar",
+    "name": "Gold Bar",
+    "inputs": {"gold": 3, "coal": 1},
+    "outputs": {"gold_bar": 1},
+    "ticks": 140,
+    "unlocked_by": null
+  },
+  {
+    "id": "cut_ruby",
+    "name": "Cut Ruby",
+    "inputs": {"ruby": 2},
+    "outputs": {"cut_ruby": 1},
+    "ticks": 200,
+    "unlocked_by": null
+  }
+]

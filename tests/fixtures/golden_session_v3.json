@@ -777,6 +777,8 @@
     ],
     "unlocked_functions": [
       "buy_upgrade",
+      "contracts",
+      "deliver",
       "mine",
       "move",
       "peek",
@@ -784,6 +786,9 @@
       "price",
       "price_history",
       "prices",
+      "recipes",
+      "refine",
+      "refinery",
       "sell",
       "sell_stock",
       "stock",
@@ -801,7 +806,9 @@
     ],
     "unlocked_upgrades": [
       "backpack",
+      "contract_board",
       "drone_bay",
+      "furnace",
       "motor",
       "pickaxe",
       "scanner",

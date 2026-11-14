@@ -196,5 +196,50 @@
     "unlocked_by": "sampler",
     "cost": "0 ticks",
     "example": "submit_estimate('coal', 0.9)"
+  },
+  {
+    "name": "recipes",
+    "signature": "recipes()",
+    "doc": "Return {recipe_id: {id, name, inputs, outputs, ticks, unlocked, unlocked_by}} for every refinery recipe.",
+    "category": "business",
+    "unlocked_by": null,
+    "cost": "0 ticks",
+    "example": "bars = recipes()"
+  },
+  {
+    "name": "refine",
+    "signature": "refine(recipe_id, times=1)",
+    "doc": "Start a refinery job at the base. The inputs are consumed immediately; returns {ok, recipe, times, duration, finish_tick}.",
+    "category": "business",
+    "unlocked_by": null,
+    "cost": "2 ticks",
+    "example": "refine('copper_bar', 2)"
+  },
+  {
+    "name": "refinery",
+    "signature": "refinery()",
+    "doc": "Return the running refinery jobs as a list of {recipe, times, ticks_left, progress, blocked, outputs}.",
+    "category": "business",
+    "unlocked_by": null,
+    "cost": "0 ticks",
+    "example": "jobs = refinery()"
+  },
+  {
+    "name": "contracts",
+    "signature": "contracts()",
+    "doc": "Return the open delivery contracts as a list of {id, item, quantity, reward, deadline, ticks_left}.",
+    "category": "business",
+    "unlocked_by": null,
+    "cost": "0 ticks",
+    "example": "board = contracts()"
+  },
+  {
+    "name": "deliver",
+    "signature": "deliver(contract_id)",
+    "doc": "Deliver a contract from the warehouse at the base and return the reward money.",
+    "category": "business",
+    "unlocked_by": null,
+    "cost": "2 ticks",
+    "example": "paid = deliver(cid)"
   }
 ]

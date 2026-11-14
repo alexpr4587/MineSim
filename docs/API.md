@@ -30,6 +30,11 @@ Functions are called directly, e.g. `move(East)`, `mine()`, `sell()`. Locked fun
 | `ore_info` | `ore_info(ore_id)` | Return {id, name, tier, hardness, base_value, regen_ticks} for a known ore, or None when it is unknown or locked. The mining probability is never included. | 0 ticks | `info = ore_info('coal')` | unlocks with the **Appraiser** achievement |
 | `inspect` | `inspect()` | Return {ore, mineable, reason, regrows_in} for the current tile. | 0 ticks | `seen = inspect()` | unlocks with the **Know Your Limits** achievement |
 | `submit_estimate` | `submit_estimate(ore_id, p)` | Submit an estimate p for the mining probability of an ore after at least 100 attempts. Allows three submissions per ore and returns {ok, close}. | 0 ticks | `submit_estimate('coal', 0.9)` | unlocks with the **Sampler** achievement |
+| `recipes` | `recipes()` | Return {recipe_id: {id, name, inputs, outputs, ticks, unlocked, unlocked_by}} for every refinery recipe. | 0 ticks | `bars = recipes()` | available from the start |
+| `refine` | `refine(recipe_id, times=1)` | Start a refinery job at the base. The inputs are consumed immediately; returns {ok, recipe, times, duration, finish_tick}. | 2 ticks | `refine('copper_bar', 2)` | available from the start |
+| `refinery` | `refinery()` | Return the running refinery jobs as a list of {recipe, times, ticks_left, progress, blocked, outputs}. | 0 ticks | `jobs = refinery()` | available from the start |
+| `contracts` | `contracts()` | Return the open delivery contracts as a list of {id, item, quantity, reward, deadline, ticks_left}. | 0 ticks | `board = contracts()` | available from the start |
+| `deliver` | `deliver(contract_id)` | Deliver a contract from the warehouse at the base and return the reward money. | 2 ticks | `paid = deliver(cid)` | available from the start |
 
 ### `move`
 
@@ -426,6 +431,96 @@ submit_estimate('coal', 0.9)
 ```
 
 **Unlocked by:** unlocks with the **Sampler** achievement
+
+### `recipes`
+
+**Signature:** `recipes()`
+
+**Category:** business
+
+**Description:** Return {recipe_id: {id, name, inputs, outputs, ticks, unlocked, unlocked_by}} for every refinery recipe.
+
+**Cost:** 0 ticks
+
+**Example:**
+
+```python
+bars = recipes()
+```
+
+**Unlocked by:** available from the start
+
+### `refine`
+
+**Signature:** `refine(recipe_id, times=1)`
+
+**Category:** business
+
+**Description:** Start a refinery job at the base. The inputs are consumed immediately; returns {ok, recipe, times, duration, finish_tick}.
+
+**Cost:** 2 ticks
+
+**Example:**
+
+```python
+refine('copper_bar', 2)
+```
+
+**Unlocked by:** available from the start
+
+### `refinery`
+
+**Signature:** `refinery()`
+
+**Category:** business
+
+**Description:** Return the running refinery jobs as a list of {recipe, times, ticks_left, progress, blocked, outputs}.
+
+**Cost:** 0 ticks
+
+**Example:**
+
+```python
+jobs = refinery()
+```
+
+**Unlocked by:** available from the start
+
+### `contracts`
+
+**Signature:** `contracts()`
+
+**Category:** business
+
+**Description:** Return the open delivery contracts as a list of {id, item, quantity, reward, deadline, ticks_left}.
+
+**Cost:** 0 ticks
+
+**Example:**
+
+```python
+board = contracts()
+```
+
+**Unlocked by:** available from the start
+
+### `deliver`
+
+**Signature:** `deliver(contract_id)`
+
+**Category:** business
+
+**Description:** Deliver a contract from the warehouse at the base and return the reward money.
+
+**Cost:** 2 ticks
+
+**Example:**
+
+```python
+paid = deliver(cid)
+```
+
+**Unlocked by:** available from the start
 
 ## minerlib helper module
 

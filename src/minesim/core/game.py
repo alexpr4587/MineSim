@@ -297,6 +297,8 @@ class Game:
             progression=self._progression_state.to_dict(),
             warehouse=self._engine.warehouse.to_dict(),
             market=self._engine.market.to_dict() if self._engine.market is not None else {},
+            refinery=self._engine.refinery.to_dict(),
+            contracts=self._engine.contracts.to_dict(),
         )
         return savegame.save(path)
 
@@ -325,6 +327,8 @@ class Game:
         engine.warehouse.from_dict(savegame.warehouse)
         if engine.market is not None:
             engine.market.from_dict(savegame.market)
+        engine.refinery.from_dict(savegame.refinery)
+        engine.contracts.from_dict(savegame.contracts)
         restored = ProgressionState.from_dict(savegame.progression, content=content)
         game._progression_state = restored
         game._progression_service.state = restored
@@ -333,6 +337,8 @@ class Game:
         except ValueError:
             game._selected_skin = DEFAULT_SKIN
         game._engine.tick = int(savegame.tick)
+        engine.refinery.tick = int(savegame.tick)
+        engine.contracts.tick = int(savegame.tick)
         attempts = player_stats.stats.attempts or {}
         try:
             game._engine.attempt_counter = int(sum(int(v) for v in attempts.values()))
@@ -365,6 +371,30 @@ class Game:
     def run(self, max_ticks: int = 10000) -> None:
         """Alias for :meth:`run_until_idle`."""
         self.run_until_idle(max_ticks)
+
+    def start_refine(self, recipe_id: str, times: int = 1) -> dict[str, Any]:
+        """Start a refinery job immediately (UI convenience)."""
+        return self._engine.start_refine(recipe_id, times)
+
+    def refine(self, recipe_id: str, times: int = 1) -> dict[str, Any]:
+        """Alias for :meth:`start_refine`."""
+        return self.start_refine(recipe_id, times)
+
+    def refinery_status(self) -> list[dict[str, Any]]:
+        """Return the running refinery jobs."""
+        return self._engine.refinery_status()
+
+    def contract_status(self) -> list[dict[str, Any]]:
+        """Return the open delivery contracts."""
+        return self._engine.contract_status()
+
+    def deliver_contract(self, contract_id: int) -> dict[str, Any]:
+        """Deliver a contract immediately (UI convenience)."""
+        return self._engine.deliver_contract(contract_id)
+
+    def sell_stock(self, item: str, amount: int | None = None) -> dict[str, Any]:
+        """Sell warehouse stock immediately (UI convenience)."""
+        return self._engine.sell_stock(item, amount)
 
     def default_save_path(self) -> Path:
         """Return the default save path."""

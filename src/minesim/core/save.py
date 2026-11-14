@@ -29,7 +29,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-CURRENT_VERSION = 5
+CURRENT_VERSION = 6
 SAVE_VERSION = CURRENT_VERSION
 DEFAULT_SKIN = "rusty_bot"
 
@@ -117,11 +117,21 @@ def _migrate_v4_to_v5(data: dict[str, Any]) -> dict[str, Any]:
     return migrated
 
 
+def _migrate_v5_to_v6(data: dict[str, Any]) -> dict[str, Any]:
+    """Add refinery jobs and delivery contracts introduced in version 6."""
+    migrated = dict(data)
+    migrated.setdefault("refinery", {})
+    migrated.setdefault("contracts", {})
+    migrated["version"] = 6
+    return migrated
+
+
 MIGRATIONS: dict[int, Callable[[dict[str, Any]], dict[str, Any]]] = {
     1: _migrate_v1_to_v2,
     2: _migrate_v2_to_v3,
     3: _migrate_v3_to_v4,
     4: _migrate_v4_to_v5,
+    5: _migrate_v5_to_v6,
 }
 
 
@@ -162,7 +172,7 @@ def migrate(data: Any) -> dict[str, Any]:
 
 
 class SaveGame(BaseModel):
-    """A serialised game state (save file schema, version 5)."""
+    """A serialised game state (save file schema, version 6)."""
 
     model_config = ConfigDict(extra="ignore")
 
@@ -176,6 +186,8 @@ class SaveGame(BaseModel):
     progression: dict[str, Any] = Field(default_factory=dict)
     warehouse: dict[str, Any] = Field(default_factory=dict)
     market: dict[str, Any] = Field(default_factory=dict)
+    refinery: dict[str, Any] = Field(default_factory=dict)
+    contracts: dict[str, Any] = Field(default_factory=dict)
 
     @classmethod
     def migrate(cls, data: Any) -> dict[str, Any]:

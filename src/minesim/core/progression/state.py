@@ -335,6 +335,10 @@ class ProgressionState:
         """Return True if the ore is unlocked."""
         return ore_id in self.unlocked_ores
 
+    def is_recipe_unlocked(self, recipe_id: str) -> bool:
+        """Return True until recipe unlocks are tracked (prompt 23)."""
+        return True
+
     def is_function_unlocked(self, name: str) -> bool:
         """Return True if the function is unlocked."""
         return name in self.unlocked_functions

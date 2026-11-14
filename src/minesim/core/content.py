@@ -28,6 +28,7 @@ from minesim.core.schemas import (
     ModuleSpec,
     Ore,
     Product,
+    Recipe,
     Skin,
     Sprites,
     Upgrade,
@@ -50,6 +51,7 @@ class Content:
     config: Config
     ores: dict[str, Ore] = field(default_factory=dict)
     products: dict[str, Product] = field(default_factory=dict)
+    recipes: dict[str, Recipe] = field(default_factory=dict)
     market: dict[str, MarketEntry] = field(default_factory=dict)
     biomes: dict[str, Biome] = field(default_factory=dict)
     upgrades: dict[str, Upgrade] = field(default_factory=dict)
@@ -152,6 +154,27 @@ class Content:
     def products_by_id(self) -> dict[str, Product]:
         """Alias for :attr:`products`."""
         return self.products
+
+    def get_recipe(self, recipe_id: str) -> Recipe:
+        """Return the recipe with ``recipe_id`` or raise ContentError."""
+        try:
+            return self.recipes[recipe_id]
+        except KeyError:
+            raise ContentError(f"recipes.json: $.id: unknown recipe id '{recipe_id}'") from None
+
+    def recipe(self, recipe_id: str) -> Recipe:
+        """Alias for :meth:`get_recipe`."""
+        return self.get_recipe(recipe_id)
+
+    @property
+    def recipe_list(self) -> list[Recipe]:
+        """All recipes in file order."""
+        return list(self.recipes.values())
+
+    @property
+    def recipes_by_id(self) -> dict[str, Recipe]:
+        """Alias for :attr:`recipes`."""
+        return self.recipes
 
     def get_market_entry(self, item_id: str) -> MarketEntry:
         """Return the market parameters for ``item_id`` or raise ContentError."""
@@ -379,9 +402,11 @@ def _cross_validate(
     examples: dict[str, Example] | None = None,
     products: dict[str, Product] | None = None,
     market: dict[str, MarketEntry] | None = None,
+    recipes: dict[str, Recipe] | None = None,
 ) -> None:
     products = products or {}
     market = market or {}
+    recipes = recipes or {}
     for product_id in products:
         if product_id in ores:
             raise ContentError(
@@ -393,6 +418,14 @@ def _cross_validate(
             raise ContentError(
                 f"market.json: $.item: unknown item id '{item_id}' (expected an ore or product)"
             )
+    for recipe_index, recipe in enumerate(recipes.values()):
+        for side in ("inputs", "outputs"):
+            for item_id in getattr(recipe, side):
+                if item_id not in known_items:
+                    raise ContentError(
+                        f"recipes.json: $.{recipe_index}.{side}.{item_id}: "
+                        f"unknown item id '{item_id}' in recipe '{recipe.id}'"
+                    )
     for biome_index, biome in enumerate(biomes.values()):
         for ore_id in biome.ore_weights:
             if ore_id not in ores:
@@ -544,6 +577,7 @@ def _cross_validate(
     _check_unlocked_by(functions, "functions.json", "name")
     _check_unlocked_by(modules, "modules.json", "name")
     _check_unlocked_by(skins, "skins.json", "id")
+    _check_unlocked_by(recipes, "recipes.json", "id")
     if examples_present:
         _check_unlocked_by(examples, "examples.json", "id")
 
@@ -580,6 +614,18 @@ def load_content(content_dir: str | Path | None = None) -> Content:
             products_data = products_data.get("products", products_data)
         products_list = _validate(products_data, TypeAdapter(list[Product]), "products.json")
         products = _index_by_id(products_list, "products.json", "product")
+
+    recipes: dict[str, Recipe] = {}
+    try:
+        recipes_data = _read_json(base_path, "recipes.json")
+    except ContentError as exc:
+        if "file not found" not in str(exc):
+            raise
+    else:
+        if isinstance(recipes_data, dict):
+            recipes_data = recipes_data.get("recipes", recipes_data)
+        recipes_list = _validate(recipes_data, TypeAdapter(list[Recipe]), "recipes.json")
+        recipes = _index_by_id(recipes_list, "recipes.json", "recipe")
 
     market: dict[str, MarketEntry] = {}
     try:
@@ -683,12 +729,14 @@ def load_content(content_dir: str | Path | None = None) -> Content:
         examples if examples_present else None,
         products,
         market,
+        recipes,
     )
     logger.debug(
-        "Loaded content: %d ores, %d products, %d market entries, %d biomes, "
+        "Loaded content: %d ores, %d products, %d recipes, %d market entries, %d biomes, "
         "%d upgrades, %d functions, %d modules, %d achievements, %d skins, %d examples",
         len(ores),
         len(products),
+        len(recipes),
         len(market),
         len(biomes),
         len(upgrades),
@@ -702,6 +750,7 @@ def load_content(content_dir: str | Path | None = None) -> Content:
         config=config,
         ores=ores,
         products=products,
+        recipes=recipes,
         market=market,
         biomes=biomes,
         upgrades=upgrades,

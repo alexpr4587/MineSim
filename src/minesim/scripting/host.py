@@ -28,6 +28,8 @@ from typing import Any
 from minesim.core.commands import (
     Biome,
     BuyUpgrade,
+    Contracts,
+    Deliver,
     Distance,
     Inspect,
     Inventory,
@@ -39,6 +41,9 @@ from minesim.core.commands import (
     Price,
     PriceHistory,
     Prices,
+    Recipes,
+    Refine,
+    RefineryStatus,
     Scan,
     Sell,
     SellStock,
@@ -254,6 +259,41 @@ _DEFAULT_FUNCTIONS: tuple[dict[str, Any], ...] = (
         "unlocked_by": None,
     },
     {
+        "name": "recipes",
+        "signature": "recipes()",
+        "doc": "Return all refinery recipes and their unlock state.",
+        "category": "business",
+        "unlocked_by": None,
+    },
+    {
+        "name": "refine",
+        "signature": "refine(recipe_id, times=1)",
+        "doc": "Start a refinery job at the base.",
+        "category": "business",
+        "unlocked_by": None,
+    },
+    {
+        "name": "refinery",
+        "signature": "refinery()",
+        "doc": "Return the running refinery jobs.",
+        "category": "business",
+        "unlocked_by": None,
+    },
+    {
+        "name": "contracts",
+        "signature": "contracts()",
+        "doc": "Return the open delivery contracts.",
+        "category": "business",
+        "unlocked_by": None,
+    },
+    {
+        "name": "deliver",
+        "signature": "deliver(contract_id)",
+        "doc": "Deliver a contract at the base and collect its reward.",
+        "category": "business",
+        "unlocked_by": None,
+    },
+    {
         "name": "price",
         "signature": "price(item)",
         "doc": "Return the current market price.",
@@ -349,6 +389,41 @@ _DEFAULT_FUNCTIONS: tuple[dict[str, Any], ...] = (
         "signature": "submit_estimate(ore_id, p)",
         "doc": "Submit a mining probability estimate.",
         "category": "data",
+        "unlocked_by": None,
+    },
+    {
+        "name": "recipes",
+        "signature": "recipes()",
+        "doc": "Return all refinery recipes.",
+        "category": "business",
+        "unlocked_by": None,
+    },
+    {
+        "name": "refine",
+        "signature": "refine(recipe_id, times=1)",
+        "doc": "Start a refinery job at the base.",
+        "category": "business",
+        "unlocked_by": None,
+    },
+    {
+        "name": "refinery",
+        "signature": "refinery()",
+        "doc": "Return the running refinery jobs.",
+        "category": "business",
+        "unlocked_by": None,
+    },
+    {
+        "name": "contracts",
+        "signature": "contracts()",
+        "doc": "Return the open delivery contracts.",
+        "category": "business",
+        "unlocked_by": None,
+    },
+    {
+        "name": "deliver",
+        "signature": "deliver(contract_id)",
+        "doc": "Deliver a contract at the base.",
+        "category": "business",
         "unlocked_by": None,
     },
 )
@@ -839,6 +914,29 @@ class ScriptHost:
             else:
                 amount = kwargs.get("amount")
             return SellStock(str(item), None if amount is None else int(amount))
+        if name == "recipes":
+            if args or kwargs:
+                raise TypeError("recipes() takes no arguments")
+            return Recipes()
+        if name == "refine":
+            recipe_id = args[0] if args else (kwargs.get("recipe_id") or kwargs.get("id"))
+            if recipe_id is None:
+                raise TypeError("refine() missing required argument 'recipe_id'")
+            times = args[1] if len(args) > 1 else kwargs.get("times", 1)
+            return Refine(str(recipe_id), int(times))
+        if name == "refinery":
+            if args or kwargs:
+                raise TypeError("refinery() takes no arguments")
+            return RefineryStatus()
+        if name == "contracts":
+            if args or kwargs:
+                raise TypeError("contracts() takes no arguments")
+            return Contracts()
+        if name == "deliver":
+            contract_id = args[0] if args else (kwargs.get("contract_id") or kwargs.get("id"))
+            if contract_id is None:
+                raise TypeError("deliver() missing required argument 'contract_id'")
+            return Deliver(int(contract_id))
         if name == "price":
             item = args[0] if args else (kwargs.get("item") or kwargs.get("id"))
             if item is None:
@@ -970,6 +1068,16 @@ class ScriptHost:
             }
         if name == "sell_stock":
             return int(result.get("money", result.get("earned", 0)) or 0) if result.get("ok") else 0
+        if name == "recipes":
+            return dict(result.get("recipes") or {})
+        if name == "refine":
+            return dict(result)
+        if name == "refinery":
+            return list(result.get("jobs") or [])
+        if name == "contracts":
+            return list(result.get("contracts") or [])
+        if name == "deliver":
+            return int(result.get("reward", 0) or 0) if result.get("ok") else 0
         if name == "price":
             return result.get("price")
         if name == "prices":

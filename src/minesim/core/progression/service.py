@@ -616,6 +616,18 @@ class ProgressionService:
         """Return True if the ore is unlocked."""
         return self._state.is_ore_unlocked(ore_id)
 
+    def is_recipe_unlocked(self, recipe_id: str) -> bool:
+        """Return True if the recipe is unlocked."""
+        raw = _get(self._content, "recipes") if self._content is not None else None
+        if raw is None and isinstance(self._content, dict):
+            raw = self._content.get("recipes")
+        if not isinstance(raw, dict):
+            return False
+        recipe = raw.get(str(recipe_id))
+        if recipe is None:
+            return False
+        return _get(recipe, "unlocked_by") is None
+
     def is_function_unlocked(self, name: str) -> bool:
         """Return True if the function is unlocked."""
         return self._state.is_function_unlocked(name)

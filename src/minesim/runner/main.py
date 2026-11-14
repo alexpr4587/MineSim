@@ -80,6 +80,36 @@ _DEFAULT_FUNCTIONS: tuple[dict[str, Any], ...] = (
         "doc": "Sell warehouse items.",
         "category": "",
     },
+    {
+        "name": "recipes",
+        "signature": "recipes()",
+        "doc": "Return refinery recipes.",
+        "category": "",
+    },
+    {
+        "name": "refine",
+        "signature": "refine(recipe_id, times=1)",
+        "doc": "Start a refinery job.",
+        "category": "",
+    },
+    {
+        "name": "refinery",
+        "signature": "refinery()",
+        "doc": "Return running refinery jobs.",
+        "category": "",
+    },
+    {
+        "name": "contracts",
+        "signature": "contracts()",
+        "doc": "Return open delivery contracts.",
+        "category": "",
+    },
+    {
+        "name": "deliver",
+        "signature": "deliver(contract_id)",
+        "doc": "Deliver a contract.",
+        "category": "",
+    },
     {"name": "price", "signature": "price(item)", "doc": "Return an item price.", "category": ""},
     {"name": "prices", "signature": "prices()", "doc": "Return all item prices.", "category": ""},
     {

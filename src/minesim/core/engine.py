@@ -5,16 +5,21 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from minesim.core.contracts import ContractBoard
 from minesim.core.events import (
+    ContractExpired,
+    ContractGenerated,
     DroneRemoved,
     DroneSpawned,
     EventBus,
+    RefineFinished,
     TickAdvanced,
     TileRegenerated,
 )
 from minesim.core.items import ItemCatalog
 from minesim.core.market import Market
 from minesim.core.miner import Drone, PlayerStats
+from minesim.core.refinery import Refinery
 from minesim.core.warehouse import Warehouse
 
 __all__ = ["AllUnlocked", "GameEngine", "ProgressionView", "Ticket"]
@@ -30,10 +35,13 @@ _ZERO_COST_NAMES = {
     "Price",
     "PriceHistory",
     "Prices",
+    "Recipes",
     "RemoveDrone",
     "SpawnDrone",
     "Stats",
     "Stock",
+    "RefineryStatus",
+    "Contracts",
     "SubmitEstimate",
     "Tick",
 }
@@ -44,6 +52,10 @@ class ProgressionView(Protocol):
 
     def is_ore_unlocked(self, ore_id: str) -> bool:
         """Return True if the ore is unlocked."""
+        ...
+
+    def is_recipe_unlocked(self, recipe_id: str) -> bool:
+        """Return True if the recipe is unlocked."""
         ...
 
     def is_function_unlocked(self, name: str) -> bool:
@@ -72,6 +84,10 @@ class AllUnlocked:
 
     def is_ore_unlocked(self, ore_id: str) -> bool:
         """Return True for every ore."""
+        return True
+
+    def is_recipe_unlocked(self, recipe_id: str) -> bool:
+        """Return True for every recipe."""
         return True
 
     def is_function_unlocked(self, name: str) -> bool:
@@ -179,6 +195,23 @@ class GameEngine:
                 config,
                 getattr(self.content, "market", None),
             )
+        recipes = getattr(self.content, "recipes", None)
+        start_slots = int(getattr(config, "furnace_start_slots", 1) or 1)
+        self.refinery: Refinery = kwargs.get("refinery") or Refinery(
+            recipes,
+            start_slots,
+            self.progression_view,
+            self.warehouse,
+        )
+        if getattr(self.refinery, "warehouse", None) is None:
+            self.refinery.set_warehouse(self.warehouse)
+        self.contracts: ContractBoard = kwargs.get("contracts") or ContractBoard(
+            self.seed,
+            self.catalog,
+            config,
+            recipes,
+            self.progression_view,
+        )
 
     # -- compatibility properties -------------------------------------------
 
@@ -419,6 +452,21 @@ class GameEngine:
                     self._events.publish(TileRegenerated(x=x, y=y))
         if self.market is not None:
             self.market.advance(self.tick)
+        if self.refinery is not None:
+            for finished in self.refinery.advance(self.tick):
+                self._events.publish(
+                    RefineFinished(
+                        recipe=str(finished.get("recipe", "")),
+                        times=int(finished.get("times", 1)),
+                        outputs=dict(finished.get("outputs", {})),
+                    )
+                )
+        if self.contracts is not None:
+            generated, expired = self.contracts.advance(self.tick)
+            for contract in generated:
+                self._events.publish(ContractGenerated(id=int(contract.id)))
+            for contract in expired:
+                self._events.publish(ContractExpired(id=int(contract.id)))
         for drone_id in sorted(self._drones):
             drone = self._drones[drone_id]
             if drone.active is None:
@@ -444,3 +492,102 @@ class GameEngine:
     def run(self, max_ticks: int = 10000) -> None:
         """Alias for :meth:`run_until_idle`."""
         self.run_until_idle(max_ticks)
+
+    # -- refinery and contracts ----------------------------------------------
+
+    def start_refine(self, recipe_id: str, times: int = 1) -> dict[str, Any]:
+        """Start a refinery job immediately, as the UI does."""
+        try:
+            job = self.refinery.start(recipe_id, times, self.warehouse, self.tick)
+        except KeyError:
+            return {"ok": False, "reason": "unknown_recipe", "recipe": str(recipe_id)}
+        except ValueError as exc:
+            return {"ok": False, "reason": str(exc), "recipe": str(recipe_id)}
+        from minesim.core.events import RefineStarted
+
+        self._events.publish(RefineStarted(recipe=str(recipe_id), times=int(times)))
+        return {
+            "ok": True,
+            "recipe": str(recipe_id),
+            "times": int(job.times),
+            "duration": int(job.duration),
+            "finish_tick": int(job.finish_tick),
+        }
+
+    def refine(self, recipe_id: str, times: int = 1) -> dict[str, Any]:
+        """Alias for :meth:`start_refine`."""
+        return self.start_refine(recipe_id, times)
+
+    def refinery_status(self) -> list[dict[str, Any]]:
+        """Return the running refinery jobs."""
+        return self.refinery.status()
+
+    def contract_status(self) -> list[dict[str, Any]]:
+        """Return the open delivery contracts."""
+        return self.contracts.status()
+
+    def deliver_contract(self, contract_id: int) -> dict[str, Any]:
+        """Deliver a contract immediately, as the UI does."""
+        try:
+            reward = self.contracts.deliver(int(contract_id), self.warehouse)
+        except KeyError:
+            return {"ok": False, "reason": "unknown_contract", "id": int(contract_id)}
+        except ValueError as exc:
+            return {"ok": False, "reason": str(exc), "id": int(contract_id)}
+        self.miner.money += int(reward)
+        self.miner.stats.total_earned += int(reward)
+        from minesim.core.events import ContractDelivered
+
+        self._events.publish(ContractDelivered(id=int(contract_id), reward=int(reward)))
+        return {
+            "ok": True,
+            "id": int(contract_id),
+            "reward": int(reward),
+            "money": int(self.miner.money),
+            "total_money": int(self.miner.money),
+            "balance": int(self.miner.money),
+        }
+
+    def sell_stock(self, item: str, amount: int | None = None) -> dict[str, Any]:
+        """Sell warehouse stock immediately, as the UI does."""
+        try:
+            self.catalog.get(item)
+        except Exception:
+            return {"ok": False, "reason": "unknown_item", "item": item}
+        stock = int(self.warehouse.count(item))
+        quantity = stock if amount is None else max(0, min(int(amount), stock))
+        index = float(self.market.index(item)) if self.market is not None else 1.0
+        if quantity <= 0:
+            return {
+                "ok": True,
+                "item": item,
+                "amount": 0,
+                "money": 0,
+                "avg_index": index,
+                "stock": stock,
+                "total_money": int(self.miner.money),
+                "balance": int(self.miner.money),
+            }
+        if self.market is not None:
+            money = int(self.market.sell(item, quantity))
+        else:
+            money = int(self.catalog.base_value(item)) * quantity
+        self.warehouse.remove(item, quantity)
+        self.miner.money += money
+        if money > 0:
+            self.miner.stats.total_earned += money
+            self.miner.stats.sales += 1
+            from minesim.core.events import StockSold
+
+            self._events.publish(StockSold(item=item, amount=quantity, money=money))
+        return {
+            "ok": True,
+            "item": item,
+            "amount": quantity,
+            "money": money,
+            "earned": money,
+            "avg_index": index,
+            "stock": int(self.warehouse.count(item)),
+            "total_money": int(self.miner.money),
+            "balance": int(self.miner.money),
+        }

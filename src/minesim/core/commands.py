@@ -8,10 +8,12 @@ from typing import Any
 
 from minesim.core.direction import Direction
 from minesim.core.events import (
+    ContractDelivered,
     EstimateSubmitted,
     MineAttempted,
     Moved,
     OreMined,
+    RefineStarted,
     Sold,
     StockSold,
     Unloaded,
@@ -33,6 +35,11 @@ __all__ = [
     "Price",
     "PriceHistory",
     "Prices",
+    "Recipes",
+    "Refine",
+    "RefineryStatus",
+    "Contracts",
+    "Deliver",
     "RemoveDrone",
     "Scan",
     "Sell",
@@ -57,6 +64,11 @@ _ZERO_COST_NAMES = {
     "Price",
     "PriceHistory",
     "Prices",
+    "Recipes",
+    "Refine",
+    "RefineryStatus",
+    "Contracts",
+    "Deliver",
     "Stats",
     "Stock",
     "SubmitEstimate",
@@ -625,6 +637,172 @@ class SellStock:
 
 
 @dataclass(frozen=True, slots=True)
+class Recipes:
+    """Return every refinery recipe and its unlock state."""
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        return 0
+
+    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+        content = _get(engine, "content")
+        recipes = getattr(content, "recipes", {}) if content is not None else {}
+        view = _get(engine, "progression_view") or _get(engine, "progression")
+        checker = _get(view, "is_recipe_unlocked")
+        result: dict[str, Any] = {}
+        for recipe_id, recipe in recipes.items():
+            unlocked = recipe.unlocked_by is None
+            if callable(checker):
+                try:
+                    unlocked = bool(checker(str(recipe_id)))
+                except Exception:
+                    pass
+            result[str(recipe_id)] = {
+                "id": str(recipe_id),
+                "name": str(getattr(recipe, "name", recipe_id)),
+                "inputs": dict(getattr(recipe, "inputs", {}) or {}),
+                "outputs": dict(getattr(recipe, "outputs", {}) or {}),
+                "ticks": int(getattr(recipe, "ticks", 0)),
+                "unlocked": bool(unlocked),
+                "unlocked_by": getattr(recipe, "unlocked_by", None),
+            }
+        return {"ok": True, "recipes": result}
+
+
+@dataclass(frozen=True, slots=True)
+class Refine:
+    """Start ``times`` runs of refinery recipe ``recipe_id`` at the base."""
+
+    recipe_id: str = ""
+    times: int = 1
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        ctx = _resolve_context(*args, **kwargs)
+        miner = ctx["miner"]
+        content = ctx["content"]
+        if miner is None or not _on_base(ctx["engine"], miner):
+            return 0
+        if content is not None:
+            return int(getattr(content.config, "refine_ticks", 2))
+        return 2
+
+    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+        miner = _drone(engine, drone)
+        if not _on_base(engine, miner):
+            return {"ok": False, "reason": "not_on_base"}
+        refinery = _get(engine, "refinery")
+        if refinery is None:
+            return {"ok": False, "reason": "no_refinery"}
+        warehouse = _warehouse(engine)
+        if warehouse is None:
+            return {"ok": False, "reason": "no_warehouse"}
+        try:
+            job = refinery.start(self.recipe_id, self.times, warehouse, _tick(engine))
+        except KeyError:
+            return {"ok": False, "reason": "unknown_recipe", "recipe": self.recipe_id}
+        except ValueError as exc:
+            return {"ok": False, "reason": str(exc), "recipe": self.recipe_id}
+        _publish(
+            engine,
+            RefineStarted(recipe=str(self.recipe_id), times=int(job.times)),
+        )
+        return {
+            "ok": True,
+            "recipe": str(self.recipe_id),
+            "times": int(job.times),
+            "duration": int(job.duration),
+            "finish_tick": int(job.finish_tick),
+            "inputs": dict(job.inputs),
+            "outputs": dict(job.outputs),
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class RefineryStatus:
+    """Return every running refinery job."""
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        return 0
+
+    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+        refinery = _get(engine, "refinery")
+        if refinery is None:
+            return {"ok": True, "jobs": [], "slots": 0}
+        return {
+            "ok": True,
+            "jobs": refinery.status(),
+            "slots": int(getattr(refinery, "slots", 0)),
+            "job_count": len(getattr(refinery, "jobs", [])),
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class Contracts:
+    """Return every open delivery contract."""
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        return 0
+
+    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+        board = _get(engine, "contracts")
+        if board is None:
+            return {"ok": True, "contracts": [], "slots": 0}
+        return {
+            "ok": True,
+            "contracts": board.status(),
+            "slots": int(getattr(board, "slots", 0)),
+            "count": len(getattr(board, "contracts", [])),
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class Deliver:
+    """Deliver contract ``contract_id`` at the base and collect the reward."""
+
+    contract_id: int = 0
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        ctx = _resolve_context(*args, **kwargs)
+        miner = ctx["miner"]
+        content = ctx["content"]
+        if miner is None or not _on_base(ctx["engine"], miner):
+            return 0
+        if content is not None:
+            return int(getattr(content.config, "deliver_ticks", 2))
+        return 2
+
+    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+        miner = _drone(engine, drone)
+        if not _on_base(engine, miner):
+            return {"ok": False, "reason": "not_on_base"}
+        board = _get(engine, "contracts")
+        if board is None:
+            return {"ok": False, "reason": "no_contracts"}
+        warehouse = _warehouse(engine)
+        if warehouse is None:
+            return {"ok": False, "reason": "no_warehouse"}
+        try:
+            reward = board.deliver(self.contract_id, warehouse)
+        except KeyError:
+            return {"ok": False, "reason": "unknown_contract", "id": int(self.contract_id)}
+        except ValueError as exc:
+            return {"ok": False, "reason": str(exc), "id": int(self.contract_id)}
+        miner.money += int(reward)
+        miner.stats.total_earned += int(reward)
+        _publish(
+            engine,
+            ContractDelivered(id=int(self.contract_id), reward=int(reward)),
+        )
+        return {
+            "ok": True,
+            "id": int(self.contract_id),
+            "reward": int(reward),
+            "money": int(miner.money),
+            "total_money": int(miner.money),
+            "balance": int(miner.money),
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class Stock:
     """Return the contents and capacity of the warehouse."""
 
@@ -783,6 +961,14 @@ class BuyUpgrade:
                 warehouse = _warehouse(engine)
                 if warehouse is not None:
                     warehouse.capacity = max(0, int(warehouse.capacity) + int(delta))
+            elif stat == "furnace_slots":
+                refinery = _get(engine, "refinery")
+                if refinery is not None:
+                    refinery.slots = max(1, int(refinery.slots) + int(delta))
+            elif stat == "contract_slots":
+                board = _get(engine, "contracts")
+                if board is not None:
+                    board.slots = max(1, int(board.slots) + int(delta))
             elif hasattr(miner, stat):
                 setattr(miner, stat, int(getattr(miner, stat)) + int(delta))
         _publish(

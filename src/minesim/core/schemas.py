@@ -56,6 +56,44 @@ class Config(_ContentModel):
     impact_per_unit: float = Field(default=0.01, ge=0.0)
     impact_recovery: float = Field(default=0.15, ge=0.0, le=1.0)
     impact_cap: float = Field(default=0.5, ge=0.0, le=1.0)
+    furnace_start_slots: int = Field(default=1, ge=1)
+    refine_ticks: int = Field(default=2, ge=0)
+    deliver_ticks: int = Field(default=2, ge=0)
+    contract_interval_ticks: int = Field(default=3000, ge=1)
+    contract_start_slots: int = Field(default=3, ge=1)
+    contract_deadline_min: int = Field(default=4000, ge=1)
+    contract_deadline_max: int = Field(default=12000, ge=1)
+    contract_premium_min: float = Field(default=1.3, ge=1.0)
+    contract_premium_max: float = Field(default=2.0, ge=1.0)
+    contract_value_min: int = Field(default=500, ge=1)
+    contract_value_max: int = Field(default=4000, ge=1)
+
+    @field_validator("contract_deadline_max")
+    @classmethod
+    def _check_deadline_bounds(cls, value: int, info: object) -> int:
+        data = getattr(info, "data", {})
+        minimum = data.get("contract_deadline_min")
+        if minimum is not None and value < int(minimum):
+            raise ValueError("contract_deadline_max must be >= contract_deadline_min")
+        return value
+
+    @field_validator("contract_premium_max")
+    @classmethod
+    def _check_premium_bounds(cls, value: float, info: object) -> float:
+        data = getattr(info, "data", {})
+        minimum = data.get("contract_premium_min")
+        if minimum is not None and value < float(minimum):
+            raise ValueError("contract_premium_max must be >= contract_premium_min")
+        return value
+
+    @field_validator("contract_value_max")
+    @classmethod
+    def _check_value_bounds(cls, value: int, info: object) -> int:
+        data = getattr(info, "data", {})
+        minimum = data.get("contract_value_min")
+        if minimum is not None and value < int(minimum):
+            raise ValueError("contract_value_max must be >= contract_value_min")
+        return value
 
     @field_validator("sun_dir")
     @classmethod
@@ -89,6 +127,29 @@ class Product(_ContentModel):
     base_value: int = Field(ge=0)
     color: str = Field(min_length=1)
     unlocked_by: str | None = None
+
+
+class Recipe(_ContentModel):
+    """A refinery recipe (recipes.json)."""
+
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    inputs: dict[str, int]
+    outputs: dict[str, int]
+    ticks: int = Field(gt=0)
+    unlocked_by: str | None = None
+
+    @field_validator("inputs", "outputs")
+    @classmethod
+    def _check_items(cls, value: dict[str, int]) -> dict[str, int]:
+        if not value:
+            raise ValueError("recipe item maps must not be empty")
+        for item_id, count in value.items():
+            if not item_id:
+                raise ValueError("recipe item ids must not be empty")
+            if count <= 0:
+                raise ValueError("recipe item counts must be > 0")
+        return value
 
 
 class MarketEntry(_ContentModel):
@@ -336,6 +397,7 @@ __all__ = [
     "ModuleSpec",
     "Ore",
     "Product",
+    "Recipe",
     "Reward",
     "ScriptDefinesFunctionCriteria",
     "ScriptFeatureCriteria",
