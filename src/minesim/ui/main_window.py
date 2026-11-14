@@ -23,10 +23,12 @@ from minesim.core.game import Game
 from minesim.core.save import default_save_path
 from minesim.ui.achievements_panel import AchievementsPanel
 from minesim.ui.api_panel import ApiPanel
+from minesim.ui.base_panel import BasePanel
 from minesim.ui.editor_panel import EditorPanel, default_scripts_dir
 from minesim.ui.floating_panel import ensure_settings_names
 from minesim.ui.game_loop import GameLoop
 from minesim.ui.hud import HUD
+from minesim.ui.market_panel import MarketPanel
 from minesim.ui.toasts import ToastManager
 from minesim.ui.upgrades_panel import UpgradesPanel
 from minesim.ui.wardrobe_panel import WardrobePanel
@@ -40,6 +42,8 @@ _SINGLE_KEYS = {
     Qt.Key.Key_L,
     Qt.Key.Key_U,
     Qt.Key.Key_K,
+    Qt.Key.Key_B,
+    Qt.Key.Key_M,
     Qt.Key.Key_C,
     Qt.Key.Key_G,
     Qt.Key.Key_H,
@@ -177,12 +181,24 @@ class MainWindow(QMainWindow):
             game=game,
             parent=self,
         )
+        self.base_panel = BasePanel(
+            game=game,
+            parent=self,
+        )
+        self.market_panel = MarketPanel(
+            game=game,
+            parent=self,
+        )
         self.floating_panels["achievements"] = self.achievements_panel
         self.floating_panels["upgrades"] = self.upgrades_panel
         self.floating_panels["wardrobe"] = self.wardrobe_panel
+        self.floating_panels["base"] = self.base_panel
+        self.floating_panels["market"] = self.market_panel
         self.achievements_panel.hide()
         self.upgrades_panel.hide()
         self.wardrobe_panel.hide()
+        self.base_panel.hide()
+        self.market_panel.hide()
         self.wardrobe_panel.skin_selected.connect(lambda _skin: self.world_view.update())
 
         # Toasts for achievement unlocks.
@@ -229,6 +245,8 @@ class MainWindow(QMainWindow):
             ),
             (getattr(self, "_upgrades_action", None), getattr(self, "upgrades_panel", None)),
             (getattr(self, "_wardrobe_action", None), getattr(self, "wardrobe_panel", None)),
+            (getattr(self, "_base_action", None), getattr(self, "base_panel", None)),
+            (getattr(self, "_market_action", None), getattr(self, "market_panel", None)),
         ):
             if action is not None and panel is not None:
                 try:
@@ -325,6 +343,36 @@ class MainWindow(QMainWindow):
         self.wardrobe_panel.hide_panel()
         self._sync_view_actions()
 
+    def toggle_base(self) -> None:
+        """Toggle the base panel (B)."""
+        self.base_panel.toggle()
+        self._sync_view_actions()
+
+    def show_base(self) -> None:
+        """Show the base panel."""
+        self.base_panel.show_panel()
+        self._sync_view_actions()
+
+    def hide_base(self) -> None:
+        """Hide the base panel."""
+        self.base_panel.hide_panel()
+        self._sync_view_actions()
+
+    def toggle_market(self) -> None:
+        """Toggle the market panel (M)."""
+        self.market_panel.toggle()
+        self._sync_view_actions()
+
+    def show_market(self) -> None:
+        """Show the market panel."""
+        self.market_panel.show_panel()
+        self._sync_view_actions()
+
+    def hide_market(self) -> None:
+        """Hide the market panel."""
+        self.market_panel.hide_panel()
+        self._sync_view_actions()
+
     def _on_view_action(self, panel: Any, checked: bool) -> None:
         if panel is None:
             return
@@ -407,6 +455,20 @@ class MainWindow(QMainWindow):
         self._wardrobe_action.triggered.connect(
             lambda checked=False: self._on_view_action(self.wardrobe_panel, checked)
         )
+        self._base_action = view_menu.addAction("&Base")
+        self._base_action.setCheckable(True)
+        self._base_action.setShortcut(QKeySequence("Ctrl+B"))
+        self._base_action.setToolTip("Toggle base panel (B when world focused)")
+        self._base_action.triggered.connect(
+            lambda checked=False: self._on_view_action(self.base_panel, checked)
+        )
+        self._market_action = view_menu.addAction("&Market")
+        self._market_action.setCheckable(True)
+        self._market_action.setShortcut(QKeySequence("Ctrl+M"))
+        self._market_action.setToolTip("Toggle market panel (M when world focused)")
+        self._market_action.triggered.connect(
+            lambda checked=False: self._on_view_action(self.market_panel, checked)
+        )
         view_menu.addSeparator()
         self._terrain_action = view_menu.addAction("Terrain &lighting")
         self._terrain_action.setCheckable(True)
@@ -475,6 +537,8 @@ class MainWindow(QMainWindow):
         self.achievements_panel.set_game(game)
         self.upgrades_panel.set_game(game)
         self.wardrobe_panel.set_game(game)
+        self.base_panel.set_game(game)
+        self.market_panel.set_game(game)
         self.toast_manager.set_game(game)
         self.api_panel.set_game(game)
         self.editor_panel.set_game(game)
@@ -507,6 +571,8 @@ class MainWindow(QMainWindow):
             getattr(self, "achievements_panel", None),
             getattr(self, "upgrades_panel", None),
             getattr(self, "wardrobe_panel", None),
+            getattr(self, "base_panel", None),
+            getattr(self, "market_panel", None),
         ):
             if panel is not None:
                 try:
@@ -560,6 +626,8 @@ class MainWindow(QMainWindow):
             getattr(self, "achievements_panel", None),
             getattr(self, "upgrades_panel", None),
             getattr(self, "wardrobe_panel", None),
+            getattr(self, "base_panel", None),
+            getattr(self, "market_panel", None),
         ):
             if panel is not None:
                 try:
@@ -580,7 +648,7 @@ class MainWindow(QMainWindow):
         super().closeEvent(event)
 
     def keyPressEvent(self, event: Any) -> None:  # noqa: N802 - Qt override name
-        """Hotkeys: E editor, F functions, Space/1-5 speed, C/G world."""
+        """Hotkeys: E editor, F functions, B base, M market, Space/1-5 speed, C/G world."""
         key = event.key()
         modifiers = event.modifiers()
         try:
@@ -628,6 +696,14 @@ class MainWindow(QMainWindow):
             return
         if key == Qt.Key.Key_K:
             self.toggle_wardrobe()
+            event.accept()
+            return
+        if key == Qt.Key.Key_B:
+            self.toggle_base()
+            event.accept()
+            return
+        if key == Qt.Key.Key_M:
+            self.toggle_market()
             event.accept()
             return
         if key == Qt.Key.Key_F10:

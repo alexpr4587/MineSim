@@ -12,7 +12,9 @@ default 1024x768), ``--flat``, ``--skin`` (select a miner skin, saved as
 ``artifacts/ui_skin_<id>.png``), ``--moving`` (leave a Move command
 active so the walk animation is captured), ``--achievements`` (keep the
 achievements panel visible), ``--wardrobe`` (show the wardrobe panel,
-saved as ``artifacts/ui_wardrobe.png``) and ``--output``.
+saved as ``artifacts/ui_wardrobe.png``), ``--panel base|market|refinery|contracts``
+(a scripted economy session, saved as ``artifacts/ui_<panel>.png``) and
+``--output``.
 """
 
 from __future__ import annotations
@@ -31,7 +33,7 @@ from minesim.core.game import Game  # noqa: E402
 from minesim.ui.main_window import MainWindow  # noqa: E402
 from minesim.ui.theme import apply_theme  # noqa: E402
 
-__all__ = ["COMMAND_SEQUENCE", "build_window", "main", "parse_size"]
+__all__ = ["COMMAND_SEQUENCE", "build_window", "main", "parse_size", "prepare_economy"]
 
 COMMAND_SEQUENCE = [
     Move(Direction.EAST),
@@ -70,6 +72,37 @@ def parse_size(value: str) -> tuple[int, int]:
     return (int(parts[0]), int(parts[1]))
 
 
+def prepare_economy(game: Game, ticks: int = 3000) -> Game:
+    """Fill the warehouse, run the market and start a refinery job.
+
+    Used by the ``--panel`` screenshots so the base and market panels show
+    real stock, live prices, a running job and generated contracts.
+    """
+    game.engine.warehouse.capacity = max(200, int(game.engine.warehouse.capacity))
+    for _ in range(max(0, int(ticks))):
+        game.step()
+    warehouse = game.engine.warehouse
+    for item, count in (
+        ("stone", 30),
+        ("coal", 20),
+        ("copper", 20),
+        ("iron", 10),
+        ("silver", 6),
+        ("gold", 3),
+        ("ruby", 1),
+        ("copper_bar", 4),
+        ("iron_bar", 3),
+    ):
+        warehouse.add(item, count)
+    game.miner.money = 2500
+    game.miner.x, game.miner.y = 0, 0
+    game.miner.inventory = {"copper": 4, "stone": 3, "coal": 2}
+    game.start_refine("copper_bar", 5)
+    for _ in range(120):
+        game.step()
+    return game
+
+
 def build_window(
     ticks: int = 300,
     size: tuple[int, int] = (1024, 768),
@@ -77,11 +110,14 @@ def build_window(
     skin: str | None = None,
     moving: bool = False,
     fleet: int = 0,
+    panel: str | None = None,
 ) -> MainWindow:
     """Build the real main window and run ``ticks`` engine ticks."""
     app = QApplication.instance() or QApplication([])
     apply_theme(app)
     game = Game.new()
+    if panel:
+        prepare_economy(game)
     if skin:
         game.select_skin(skin)
     for _ in range(max(0, int(fleet))):
@@ -97,19 +133,20 @@ def build_window(
     window.world_view.set_terrain_lighting(not flat, persist=False)
     window.resize(size[0], size[1])
     window.show()
-    for command in COMMAND_SEQUENCE:
-        game.submit(command)
-    for _ in range(int(ticks)):
-        game.engine.step()
-    if moving:
-        game.submit(Move(Direction.EAST))
-        game.engine.step()
+    if panel is None:
+        for command in COMMAND_SEQUENCE:
+            game.submit(command)
+        for _ in range(int(ticks)):
+            game.engine.step()
+        if moving:
+            game.submit(Move(Direction.EAST))
+            game.engine.step()
     window.game_loop.stop()
     window.world_view.snap_visual_to_miner()
     window.world_view.center_on_miner()
     window.hud.refresh()
     editor_panel = getattr(window, "editor_panel", None)
-    if editor_panel is not None:
+    if editor_panel is not None and panel is None:
         from minesim.ui.editor_panel import STARTER_SCRIPT
 
         editor = getattr(editor_panel, "editor", None) or getattr(editor_panel, "code_editor", None)
@@ -178,6 +215,12 @@ def main() -> int:
         action="store_true",
         help="show the wardrobe panel and save artifacts/ui_wardrobe.png",
     )
+    parser.add_argument(
+        "--panel",
+        choices=("base", "market", "refinery", "contracts"),
+        default=None,
+        help="screenshot a base/market panel after a scripted economy session",
+    )
     parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args()
     window = build_window(
@@ -187,6 +230,7 @@ def main() -> int:
         skin=args.skin,
         moving=args.moving,
         fleet=args.fleet,
+        panel=args.panel,
     )
     for panel_name in (
         "achievements_panel",
@@ -194,6 +238,8 @@ def main() -> int:
         "wardrobe_panel",
         "editor_panel",
         "api_panel",
+        "base_panel",
+        "market_panel",
     ):
         if args.achievements and panel_name == "achievements_panel":
             continue
@@ -210,6 +256,17 @@ def main() -> int:
             window.show_wardrobe()
         except Exception:
             window.wardrobe_panel.show_panel()
+    if args.panel == "market":
+        try:
+            window.show_market()
+        except Exception:
+            window.market_panel.show_panel()
+    elif args.panel:
+        try:
+            window.show_base()
+        except Exception:
+            window.base_panel.show_panel()
+        window.base_panel.select_tab(args.panel)
     toast_manager = getattr(window, "toast_manager", None)
     current_toast = getattr(toast_manager, "_current", None)
     if current_toast is not None:
@@ -227,6 +284,8 @@ def main() -> int:
         default_name = "ui_fleet.png"
     if args.wardrobe:
         default_name = "ui_wardrobe.png"
+    if args.panel:
+        default_name = f"ui_{args.panel}.png"
     out = args.output or (Path(__file__).resolve().parents[1] / "artifacts" / default_name)
     out.parent.mkdir(parents=True, exist_ok=True)
     window.grab().save(str(out))

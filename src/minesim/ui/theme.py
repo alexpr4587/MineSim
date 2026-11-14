@@ -180,10 +180,47 @@ QPushButton:pressed {{
 }}
 QPushButton:checked {{
     background-color: {ACCENT};
-    color: {MINER_DETAIL};
+    color: {BACKGROUND};
+    border: 2px solid {TEXT};
+    font-weight: bold;
 }}
 QPushButton:disabled {{
     color: {DISABLED_TEXT};
+}}
+QProgressBar {{
+    background-color: {BUTTON_BACKGROUND};
+    border: 1px solid {BUTTON_BORDER};
+    border-radius: 3px;
+    color: {TEXT};
+    text-align: center;
+}}
+QProgressBar::chunk {{
+    background-color: {ACCENT};
+}}
+QTableWidget {{
+    background-color: {HUD_BACKGROUND};
+    alternate-background-color: {BACKGROUND};
+    gridline-color: {BUTTON_BORDER};
+}}
+QHeaderView::section {{
+    background-color: {BUTTON_BACKGROUND};
+    color: {TEXT};
+    border: 1px solid {BUTTON_BORDER};
+    padding: 3px;
+}}
+QTabWidget::pane {{
+    border: 1px solid {BUTTON_BORDER};
+}}
+QTabBar::tab {{
+    background-color: {BUTTON_BACKGROUND};
+    color: {TEXT};
+    border: 1px solid {BUTTON_BORDER};
+    padding: 4px 10px;
+}}
+QTabBar::tab:selected {{
+    background-color: {ACCENT};
+    color: {BACKGROUND};
+    font-weight: bold;
 }}
 """
 

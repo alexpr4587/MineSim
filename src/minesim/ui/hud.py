@@ -54,12 +54,14 @@ class HUD(QWidget):
         layout.setContentsMargins(6, 4, 6, 4)
         self.money_label = QLabel("Money: 0", self)
         self.inventory_label = QLabel("Inventory: 0/10", self)
+        self.warehouse_label = QLabel("Warehouse: 0/100", self)
         self.drones_label = QLabel("Drones: 1", self)
         self.tick_label = QLabel("Tick: 0", self)
         self.position_label = QLabel("Pos: (0, 0)", self)
         for label in (
             self.money_label,
             self.inventory_label,
+            self.warehouse_label,
             self.drones_label,
             self.tick_label,
             self.position_label,
@@ -147,13 +149,27 @@ class HUD(QWidget):
         if bus is None or not hasattr(bus, "subscribe"):
             return
         try:
-            from minesim.core.events import MineAttempted, Moved, OreMined, Sold, TickAdvanced
+            from minesim.core.events import (
+                ContractDelivered,
+                MineAttempted,
+                Moved,
+                OreMined,
+                RefineFinished,
+                Sold,
+                StockSold,
+                TickAdvanced,
+                Unloaded,
+            )
 
             bus.subscribe(TickAdvanced, lambda _event: self.refresh())
             bus.subscribe(Moved, lambda _event: self.refresh())
             bus.subscribe(OreMined, lambda _event: self.refresh())
             bus.subscribe(MineAttempted, lambda _event: self.refresh())
             bus.subscribe(Sold, lambda _event: self.refresh())
+            bus.subscribe(StockSold, lambda _event: self.refresh())
+            bus.subscribe(Unloaded, lambda _event: self.refresh())
+            bus.subscribe(RefineFinished, lambda _event: self.refresh())
+            bus.subscribe(ContractDelivered, lambda _event: self.refresh())
         except Exception:
             pass
 
@@ -181,8 +197,16 @@ class HUD(QWidget):
         if not isinstance(drones, dict):
             drones = _get(engine, "drones")
         drone_count = len(drones) if isinstance(drones, dict) else 1
+        warehouse = _get(engine, "warehouse") or _get(game, "warehouse")
+        warehouse_used = _get(warehouse, "used", None)
+        if warehouse_used is None:
+            warehouse_used = _get(warehouse, "total", None)
+        if warehouse_used is None:
+            warehouse_used = 0
+        warehouse_capacity = _get(warehouse, "capacity", 0) or 0
         self.money_label.setText(f"Money: {int(money)}")
         self.inventory_label.setText(f"Inventory: {int(used)}/{int(capacity)}")
+        self.warehouse_label.setText(f"Warehouse: {int(warehouse_used)}/{int(warehouse_capacity)}")
         self.drones_label.setText(f"Drones: {int(drone_count)}")
         self.tick_label.setText(f"Tick: {int(tick)}")
         self.position_label.setText(f"Pos: ({int(position[0])}, {int(position[1])})")

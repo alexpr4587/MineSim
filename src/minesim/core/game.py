@@ -396,6 +396,20 @@ class Game:
         """Sell warehouse stock immediately (UI convenience)."""
         return self._engine.sell_stock(item, amount)
 
+    def unload(self, drone_id: int = 0) -> dict[str, Any]:
+        """Unload a drone's inventory into the warehouse immediately (UI convenience).
+
+        Only works while the drone stands on the base; otherwise the
+        returned mapping has ``ok`` false and ``reason`` ``'not_on_base'``.
+        """
+        from minesim.core.commands import Unload
+
+        try:
+            drone = self._engine.drone(drone_id)
+        except KeyError:
+            return {"ok": False, "reason": "unknown_drone", "drone_id": int(drone_id)}
+        return Unload().execute(self._engine, drone)
+
     def default_save_path(self) -> Path:
         """Return the default save path."""
         return default_save_path()
