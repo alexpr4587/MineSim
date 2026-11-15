@@ -110,6 +110,13 @@ def test_initial_unlock_sets(content):
         "contracts",
         "deliver",
         "events",
+        "drone_id",
+        "drones",
+        "spawn_drone",
+        "kill_drone",
+        "assign",
+        "shared_get",
+        "shared_set",
     }
     assert state.unlocked_modules == {"math"}
     assert state.unlocked_upgrades == {"drone_bay", "warehouse", "furnace", "contract_board"}

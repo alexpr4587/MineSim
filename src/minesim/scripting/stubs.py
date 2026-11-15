@@ -34,6 +34,11 @@ _PARAM_TYPES: dict[str, str] = {
     "y": "int",
     "width": "int",
     "height": "int",
+    "script_name": "str",
+    "drone_id": "int",
+    "key": "str",
+    "value": "Any",
+    "default": "Any",
 }
 
 _RETURN_TYPES: dict[str, str] = {
@@ -65,6 +70,13 @@ _RETURN_TYPES: dict[str, str] = {
     "ore_info": "dict | None",
     "inspect": "dict",
     "submit_estimate": "dict",
+    "drone_id": "int",
+    "drones": "list[dict]",
+    "spawn_drone": "int | dict",
+    "kill_drone": "bool",
+    "assign": "None",
+    "shared_get": "Any",
+    "shared_set": "None",
     "goto": "None",
     "go_home": "None",
     "sweep": "Any",

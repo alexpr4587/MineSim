@@ -159,6 +159,43 @@ _DEFAULT_FUNCTIONS: tuple[dict[str, Any], ...] = (
         "doc": "Submit a mining probability estimate.",
         "category": "",
     },
+    {
+        "name": "drone_id",
+        "signature": "drone_id()",
+        "doc": "Return the own drone id.",
+        "category": "",
+    },
+    {"name": "drones", "signature": "drones()", "doc": "Return the fleet.", "category": ""},
+    {
+        "name": "spawn_drone",
+        "signature": "spawn_drone(script_name)",
+        "doc": "Buy a drone and start its script.",
+        "category": "",
+    },
+    {
+        "name": "kill_drone",
+        "signature": "kill_drone(drone_id)",
+        "doc": "Remove a drone.",
+        "category": "",
+    },
+    {
+        "name": "assign",
+        "signature": "assign(drone_id, script_name)",
+        "doc": "Assign a script to a drone.",
+        "category": "",
+    },
+    {
+        "name": "shared_get",
+        "signature": "shared_get(key, default=None)",
+        "doc": "Read shared memory.",
+        "category": "",
+    },
+    {
+        "name": "shared_set",
+        "signature": "shared_set(key, value)",
+        "doc": "Write shared memory.",
+        "category": "",
+    },
 )
 
 _CONSTANTS: dict[str, str] = {

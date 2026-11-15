@@ -41,11 +41,12 @@ _ZERO_COST_NAMES = {
     "Prices",
     "Recipes",
     "RemoveDrone",
-    "SpawnDrone",
     "Stats",
     "Stock",
     "RefineryStatus",
     "Contracts",
+    "DroneId",
+    "Drones",
     "SubmitEstimate",
     "Tick",
 }
@@ -165,6 +166,10 @@ class GameEngine:
         self.progression = self.progression_view
         self.tick: int = 0
         self.attempt_counter: int = 0
+        shared_memory = kwargs.get("shared_memory")
+        self.shared_memory: dict[str, Any] = (
+            dict(shared_memory) if isinstance(shared_memory, dict) else {}
+        )
         self._upgrade_levels: dict[str, int] = {}
         if miner is None:
             drone = Drone.from_config(self.content) if self.content is not None else Drone()

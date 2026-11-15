@@ -209,11 +209,11 @@ def test_save_v5_fixture_migrates_to_refinery_and_contracts():
     fixture = Path(__file__).parent / "fixtures" / "save_v5.json"
     data = json.loads(fixture.read_text(encoding="utf-8"))
     migrated = migrate(data)
-    assert migrated["version"] == 6
+    assert migrated["version"] == 7
     assert migrated["refinery"] == {}
     assert migrated["contracts"] == {}
     savegame = SaveGame.load(fixture)
-    assert savegame.version == 6
+    assert savegame.version == 7
     game = Game.load(fixture)
     assert game.engine.warehouse.count("stone") == 2
     assert game.engine.refinery.jobs == []

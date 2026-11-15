@@ -41,6 +41,8 @@ __all__ = [
     "RefineryStatus",
     "Contracts",
     "Deliver",
+    "DroneId",
+    "Drones",
     "RemoveDrone",
     "Scan",
     "Sell",
@@ -71,6 +73,8 @@ _ZERO_COST_NAMES = {
     "RefineryStatus",
     "Contracts",
     "Deliver",
+    "DroneId",
+    "Drones",
     "Stats",
     "Stock",
     "SubmitEstimate",
@@ -1061,7 +1065,10 @@ class SpawnDrone:
     """Buy a new drone; costs ``drone_costs`` for the next extra drone."""
 
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
-        return 0
+        ctx = _resolve_context(*args, **kwargs)
+        content = ctx["content"]
+        config = _get(content, "config")
+        return int(_get(config, "spawn_ticks", 5) or 5)
 
     def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
         drones = _get(engine, "drones") or {}
@@ -1109,6 +1116,44 @@ class RemoveDrone:
         if not removed:
             return {"ok": False, "reason": "unknown_drone", "drone_id": target}
         return {"ok": True, "drone_id": target}
+
+
+@dataclass(frozen=True, slots=True)
+class DroneId:
+    """Return the id of the acting drone."""
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        return 0
+
+    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+        return {"ok": True, "id": _drone_id(_drone(engine, drone))}
+
+
+@dataclass(frozen=True, slots=True)
+class Drones:
+    """Return the fleet as a list of drone summaries."""
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        return 0
+
+    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+        drones = _get(engine, "drones") or {}
+        entries: list[dict[str, Any]] = []
+        for drone_id in sorted(int(key) for key in drones):
+            item = drones[drone_id]
+            entries.append(
+                {
+                    "id": drone_id,
+                    "x": int(_get(item, "x", 0) or 0),
+                    "y": int(_get(item, "y", 0) or 0),
+                    "state": "idle",
+                    "script": str(_get(item, "script", "") or ""),
+                    "inventory_used": int(
+                        _get(item, "inventory_size", sum(_get(item, "inventory", {}).values())) or 0
+                    ),
+                }
+            )
+        return {"ok": True, "drones": entries}
 
 
 @dataclass(frozen=True, slots=True)

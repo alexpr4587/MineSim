@@ -152,6 +152,7 @@ class Drone:
     queue: deque[Any] = field(default_factory=deque, repr=False)
     active: Any = field(default=None, repr=False)
     busy_timer: int = 0
+    script: str = ""
 
     def __post_init__(self) -> None:
         self.id = int(self.id)
@@ -288,6 +289,7 @@ class Drone:
             facing=facing,
             inventory={str(k): int(v) for k, v in dict(data.get("inventory", {})).items()},
             player_stats=player_stats if player_stats is not None else PlayerStats(),
+            script=str(data.get("script", "") or ""),
         )
 
     # -- inventory -----------------------------------------------------------
@@ -370,6 +372,7 @@ class Drone:
             if isinstance(self.facing, Direction)
             else self.facing,
             "inventory": dict(self.inventory),
+            "script": str(self.script),
         }
 
 

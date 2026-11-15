@@ -37,6 +37,7 @@ class GameLoop(QObject):
         hud = kwargs.pop("hud", None)
         world_view = kwargs.pop("world_view", None)
         host = kwargs.pop("host", None) or kwargs.pop("script_host", None)
+        manager = kwargs.pop("manager", None) or kwargs.pop("script_manager", None)
         editor_panel = kwargs.pop("editor_panel", None) or kwargs.pop("editor", None)
         console_panel = kwargs.pop("console_panel", None) or kwargs.pop("console", None)
         tick_hz = kwargs.pop("tick_hz", None)
@@ -80,6 +81,12 @@ class GameLoop(QObject):
                 host = _get(editor_panel, "host") or _get(editor_panel, "script_host")
             if console_panel is None:
                 console_panel = _get(editor_panel, "console_panel") or _get(editor_panel, "console")
+        if manager is None and editor_panel is not None:
+            manager = _get(editor_panel, "manager") or _get(editor_panel, "script_manager")
+        if manager is not None and host is None:
+            host = _get(manager, "host")(0) if callable(_get(manager, "host")) else None
+        self.manager = manager
+        self.script_manager = manager
         self.host = host
         self.script_host = host
         self.editor_panel = editor_panel
@@ -118,6 +125,15 @@ class GameLoop(QObject):
         self.host = host
         self.script_host = host
 
+    def set_manager(self, manager: Any) -> None:
+        """Attach a ScriptManager that is pumped every frame."""
+        self.manager = manager
+        self.script_manager = manager
+        if manager is not None:
+            host = _get(manager, "host")(0) if callable(_get(manager, "host")) else None
+            if host is not None:
+                self.set_host(host)
+
     def attach_host(self, host: Any) -> None:
         """Alias for :meth:`set_host`."""
         self.set_host(host)
@@ -137,8 +153,30 @@ class GameLoop(QObject):
         self.console_panel = console_panel
 
     def pump_host(self) -> list[Any]:
-        """Pump the script host once, feeding console/editor state."""
+        """Pump the scripts once, feeding console/editor state."""
         editor_panel = self.editor_panel
+        manager = self.manager or _get(editor_panel, "manager")
+        if manager is not None:
+            try:
+                events = list(manager.pump() or [])
+            except Exception:
+                return []
+            console = self.console_panel
+            if console is not None:
+                append = _get(console, "append_events")
+                if callable(append):
+                    append(events)
+                refresh = _get(console, "refresh_drones")
+                if callable(refresh):
+                    refresh()
+            if editor_panel is not None:
+                handle = _get(editor_panel, "handle_host_events")
+                if callable(handle):
+                    try:
+                        handle(events, append=False)
+                    except TypeError:
+                        handle(events)
+            return events
         if editor_panel is not None:
             pump = _get(editor_panel, "pump")
             if callable(pump):

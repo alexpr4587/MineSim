@@ -143,6 +143,11 @@ class Game:
         return self._player_stats
 
     @property
+    def shared_memory(self) -> dict[str, Any]:
+        """The JSON key-value store shared by all drone scripts."""
+        return self._engine.shared_memory
+
+    @property
     def drones(self) -> dict[int, Any]:
         """The fleet, keyed by drone id."""
         return self._engine.drones
@@ -299,6 +304,7 @@ class Game:
             market=self._engine.market.to_dict() if self._engine.market is not None else {},
             refinery=self._engine.refinery.to_dict(),
             contracts=self._engine.contracts.to_dict(),
+            shared_memory=dict(getattr(self._engine, "shared_memory", {}) or {}),
         )
         return savegame.save(path)
 
@@ -329,6 +335,7 @@ class Game:
             engine.market.from_dict(savegame.market)
         engine.refinery.from_dict(savegame.refinery)
         engine.contracts.from_dict(savegame.contracts)
+        engine.shared_memory = dict(savegame.shared_memory)
         restored = ProgressionState.from_dict(savegame.progression, content=content)
         game._progression_state = restored
         game._progression_service.state = restored

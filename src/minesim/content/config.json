@@ -33,6 +33,11 @@
     2000,
     5000
   ],
+  "spawn_ticks": 5,
+  "max_script_processes": 8,
+  "shared_max_keys": 64,
+  "shared_key_max_chars": 40,
+  "shared_value_max_bytes": 4096,
   "market_interval_ticks": 100,
   "market_history_len": 240,
   "warehouse_start_capacity": 100,

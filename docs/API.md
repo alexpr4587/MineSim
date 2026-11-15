@@ -36,6 +36,13 @@ Functions are called directly, e.g. `move(East)`, `mine()`, `sell()`. Locked fun
 | `refinery` | `refinery()` | Return the running refinery jobs as a list of {recipe, times, ticks_left, progress, blocked, outputs}. | 0 ticks | `jobs = refinery()` | available from the start |
 | `contracts` | `contracts()` | Return the open delivery contracts as a list of {id, item, quantity, reward, deadline, ticks_left}. | 0 ticks | `board = contracts()` | available from the start |
 | `deliver` | `deliver(contract_id)` | Deliver a contract from the warehouse at the base and return the reward money. | 2 ticks | `paid = deliver(cid)` | available from the start |
+| `drone_id` | `drone_id()` | Return the id of the drone running this script. | 0 ticks | `me = drone_id()` | available from the start |
+| `drones` | `drones()` | Return the fleet as a list of {id, x, y, state, script, inventory_used} dicts. | 0 ticks | `for drone in drones(): print(drone['id'], drone['state'])` | available from the start |
+| `spawn_drone` | `spawn_drone(script_name)` | Buy a drone on the base and start script_name (a .py file in the scripts folder). Returns the new drone id or {ok: False, reason}. | 5 ticks plus the next drone cost | `worker = spawn_drone('worker.py')` | available from the start |
+| `kill_drone` | `kill_drone(drone_id)` | Stop the script of drone_id and remove that drone. Never removes drone 0. Returns True on success. | 0 ticks | `kill_drone(worker)` | available from the start |
+| `assign` | `assign(drone_id, script_name)` | Stop the current script of drone_id and start script_name instead. | 0 ticks | `assign(1, 'hauler.py')` | available from the start |
+| `shared_get` | `shared_get(key, default=None)` | Return the JSON value stored under key in the fleet-wide shared store, or default. | 0 ticks | `goal = shared_get('goal', 0)` | available from the start |
+| `shared_set` | `shared_set(key, value)` | Store a JSON value under key in the fleet-wide shared store (max 64 keys, 40-character keys, 4 KB values). | 0 ticks | `shared_set('goal', 20)` | available from the start |
 
 ### `move`
 
@@ -537,6 +544,132 @@ board = contracts()
 
 ```python
 paid = deliver(cid)
+```
+
+**Unlocked by:** available from the start
+
+### `drone_id`
+
+**Signature:** `drone_id()`
+
+**Category:** fleet
+
+**Description:** Return the id of the drone running this script.
+
+**Cost:** 0 ticks
+
+**Example:**
+
+```python
+me = drone_id()
+```
+
+**Unlocked by:** available from the start
+
+### `drones`
+
+**Signature:** `drones()`
+
+**Category:** fleet
+
+**Description:** Return the fleet as a list of {id, x, y, state, script, inventory_used} dicts.
+
+**Cost:** 0 ticks
+
+**Example:**
+
+```python
+for drone in drones(): print(drone['id'], drone['state'])
+```
+
+**Unlocked by:** available from the start
+
+### `spawn_drone`
+
+**Signature:** `spawn_drone(script_name)`
+
+**Category:** fleet
+
+**Description:** Buy a drone on the base and start script_name (a .py file in the scripts folder). Returns the new drone id or {ok: False, reason}.
+
+**Cost:** 5 ticks plus the next drone cost
+
+**Example:**
+
+```python
+worker = spawn_drone('worker.py')
+```
+
+**Unlocked by:** available from the start
+
+### `kill_drone`
+
+**Signature:** `kill_drone(drone_id)`
+
+**Category:** fleet
+
+**Description:** Stop the script of drone_id and remove that drone. Never removes drone 0. Returns True on success.
+
+**Cost:** 0 ticks
+
+**Example:**
+
+```python
+kill_drone(worker)
+```
+
+**Unlocked by:** available from the start
+
+### `assign`
+
+**Signature:** `assign(drone_id, script_name)`
+
+**Category:** fleet
+
+**Description:** Stop the current script of drone_id and start script_name instead.
+
+**Cost:** 0 ticks
+
+**Example:**
+
+```python
+assign(1, 'hauler.py')
+```
+
+**Unlocked by:** available from the start
+
+### `shared_get`
+
+**Signature:** `shared_get(key, default=None)`
+
+**Category:** fleet
+
+**Description:** Return the JSON value stored under key in the fleet-wide shared store, or default.
+
+**Cost:** 0 ticks
+
+**Example:**
+
+```python
+goal = shared_get('goal', 0)
+```
+
+**Unlocked by:** available from the start
+
+### `shared_set`
+
+**Signature:** `shared_set(key, value)`
+
+**Category:** fleet
+
+**Description:** Store a JSON value under key in the fleet-wide shared store (max 64 keys, 40-character keys, 4 KB values).
+
+**Cost:** 0 ticks
+
+**Example:**
+
+```python
+shared_set('goal', 20)
 ```
 
 **Unlocked by:** available from the start

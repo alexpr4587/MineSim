@@ -801,10 +801,14 @@
       "02_sweep_and_sell"
     ],
     "unlocked_functions": [
+      "assign",
       "buy_upgrade",
       "contracts",
       "deliver",
+      "drone_id",
+      "drones",
       "events",
+      "kill_drone",
       "mine",
       "move",
       "peek",
@@ -817,6 +821,9 @@
       "refinery",
       "sell",
       "sell_stock",
+      "shared_get",
+      "shared_set",
+      "spawn_drone",
       "stock",
       "unload"
     ],

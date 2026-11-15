@@ -10,15 +10,39 @@ import tempfile
 import time
 from pathlib import Path
 
+_SELFTEST_MAIN = """\
+worker = spawn_drone("selftest_worker.py")
+if not isinstance(worker, int):
+    raise RuntimeError(f"spawn failed: {worker}")
+shared_set("main_ready", True)
+while not shared_get("worker_ready", False):
+    wait(1)
+shared_set("main_go", True)
+while not shared_get("worker_done", False):
+    wait(1)
+move(East)
+move(East)
+shared_set("main_done", True)
+"""
+
+_SELFTEST_WORKER = """\
+shared_set("worker_ready", True)
+while not shared_get("main_go", False):
+    wait(1)
+move(South)
+shared_set("worker_done", True)
+"""
+
 
 def _run_selftest() -> int:
-    """Run a headless game with a tiny script through the real runner."""
+    """Run two cooperating drone scripts through the real runner."""
     from minesim.core.content import load_content
     from minesim.core.engine import AllUnlocked, GameEngine
     from minesim.core.events import EventBus
     from minesim.core.miner import Miner
     from minesim.core.world import World, WorldGenerator
-    from minesim.scripting.host import ScriptHost, ScriptState
+    from minesim.scripting.host import ScriptState
+    from minesim.scripting.manager import ScriptManager
 
     content = load_content()
     generator = WorldGenerator(content.config.seed_default, content)
@@ -26,26 +50,45 @@ def _run_selftest() -> int:
     miner = Miner.from_config(content)
     bus = EventBus()
     engine = GameEngine(world, miner, content, bus, AllUnlocked())
-    source = "move(East)\nmove(East)\nmine()\nprint(position())\n"
+    engine.player_stats.money = 1000
+    engine.player_stats.upgrades["drone_bay"] = 1
     with tempfile.TemporaryDirectory(prefix="minesim-selftest-") as tmp:
-        host = ScriptHost(engine, content, AllUnlocked(), Path(tmp))
+        scripts_dir = Path(tmp)
+        (scripts_dir / "selftest_worker.py").write_text(_SELFTEST_WORKER, encoding="utf-8")
+        manager = ScriptManager(engine, scripts_dir)
         try:
-            host.start("selftest.py", source)
-            deadline = time.monotonic() + 15
-            while host.state is ScriptState.RUNNING:
-                if time.monotonic() > deadline:
-                    host.stop()
-                    raise RuntimeError("selftest timed out")
-                host.pump()
-                engine.run_until_idle()
-                time.sleep(0.001)
-            if host.state is not ScriptState.FINISHED:
-                error = host.last_error or {}
-                raise RuntimeError(f"selftest script failed: {error.get('message', host.state)}")
-            if (miner.x, miner.y) != (2, 0):
-                raise RuntimeError(f"selftest: miner at {(miner.x, miner.y)}, expected (2, 0)")
+            manager.start(0, "selftest.py", _SELFTEST_MAIN)
+            deadline = time.monotonic() + 20
+            while time.monotonic() < deadline:
+                manager.run_lockstep(200)
+                states = manager.states()
+                if all(state is not ScriptState.RUNNING for state in states.values()):
+                    break
+            else:
+                raise RuntimeError("selftest timed out")
+            states = manager.states()
+            for drone_id in (0, 1):
+                state = states.get(drone_id)
+                if state is not ScriptState.FINISHED:
+                    error = getattr(manager.host(drone_id), "last_error", None) or {}
+                    raise RuntimeError(
+                        f"selftest drone {drone_id} failed: {error.get('message', state)}"
+                    )
+            if (engine.drone(0).x, engine.drone(0).y) != (2, 0):
+                raise RuntimeError(
+                    f"selftest: drone 0 at {(engine.drone(0).x, engine.drone(0).y)}, "
+                    "expected (2, 0)"
+                )
+            if (engine.drone(1).x, engine.drone(1).y) != (0, 1):
+                raise RuntimeError(
+                    f"selftest: drone 1 at {(engine.drone(1).x, engine.drone(1).y)}, "
+                    "expected (0, 1)"
+                )
+            shared = engine.shared_memory
+            if not shared.get("main_done") or not shared.get("worker_done"):
+                raise RuntimeError(f"selftest: shared memory not coordinated: {shared}")
         finally:
-            host.stop()
+            manager.stop_all()
     print("OK")
     return 0
 

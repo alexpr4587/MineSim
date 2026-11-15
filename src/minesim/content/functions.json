@@ -250,5 +250,68 @@
     "unlocked_by": null,
     "cost": "2 ticks",
     "example": "paid = deliver(cid)"
+  },
+  {
+    "name": "drone_id",
+    "signature": "drone_id()",
+    "doc": "Return the id of the drone running this script.",
+    "category": "fleet",
+    "unlocked_by": null,
+    "cost": "0 ticks",
+    "example": "me = drone_id()"
+  },
+  {
+    "name": "drones",
+    "signature": "drones()",
+    "doc": "Return the fleet as a list of {id, x, y, state, script, inventory_used} dicts.",
+    "category": "fleet",
+    "unlocked_by": null,
+    "cost": "0 ticks",
+    "example": "for drone in drones(): print(drone['id'], drone['state'])"
+  },
+  {
+    "name": "spawn_drone",
+    "signature": "spawn_drone(script_name)",
+    "doc": "Buy a drone on the base and start script_name (a .py file in the scripts folder). Returns the new drone id or {ok: False, reason}.",
+    "category": "fleet",
+    "unlocked_by": null,
+    "cost": "5 ticks plus the next drone cost",
+    "example": "worker = spawn_drone('worker.py')"
+  },
+  {
+    "name": "kill_drone",
+    "signature": "kill_drone(drone_id)",
+    "doc": "Stop the script of drone_id and remove that drone. Never removes drone 0. Returns True on success.",
+    "category": "fleet",
+    "unlocked_by": null,
+    "cost": "0 ticks",
+    "example": "kill_drone(worker)"
+  },
+  {
+    "name": "assign",
+    "signature": "assign(drone_id, script_name)",
+    "doc": "Stop the current script of drone_id and start script_name instead.",
+    "category": "fleet",
+    "unlocked_by": null,
+    "cost": "0 ticks",
+    "example": "assign(1, 'hauler.py')"
+  },
+  {
+    "name": "shared_get",
+    "signature": "shared_get(key, default=None)",
+    "doc": "Return the JSON value stored under key in the fleet-wide shared store, or default.",
+    "category": "fleet",
+    "unlocked_by": null,
+    "cost": "0 ticks",
+    "example": "goal = shared_get('goal', 0)"
+  },
+  {
+    "name": "shared_set",
+    "signature": "shared_set(key, value)",
+    "doc": "Store a JSON value under key in the fleet-wide shared store (max 64 keys, 40-character keys, 4 KB values).",
+    "category": "fleet",
+    "unlocked_by": null,
+    "cost": "0 ticks",
+    "example": "shared_set('goal', 20)"
   }
 ]

@@ -31,6 +31,8 @@ from minesim.core.commands import (
     Contracts,
     Deliver,
     Distance,
+    DroneId,
+    Drones,
     Events,
     Inspect,
     Inventory,
@@ -45,9 +47,11 @@ from minesim.core.commands import (
     Recipes,
     Refine,
     RefineryStatus,
+    RemoveDrone,
     Scan,
     Sell,
     SellStock,
+    SpawnDrone,
     Stats,
     Stock,
     SubmitEstimate,
@@ -146,6 +150,7 @@ class HostEvent:
     message: str = ""
     error_type: str = ""
     line_number: int | None = None
+    drone_id: int = 0
 
     def __post_init__(self) -> None:
         if self.message and not self.text:
@@ -427,6 +432,55 @@ _DEFAULT_FUNCTIONS: tuple[dict[str, Any], ...] = (
         "category": "business",
         "unlocked_by": None,
     },
+    {
+        "name": "drone_id",
+        "signature": "drone_id()",
+        "doc": "Return the own drone id.",
+        "category": "fleet",
+        "unlocked_by": None,
+    },
+    {
+        "name": "drones",
+        "signature": "drones()",
+        "doc": "Return the fleet.",
+        "category": "fleet",
+        "unlocked_by": None,
+    },
+    {
+        "name": "spawn_drone",
+        "signature": "spawn_drone(script_name)",
+        "doc": "Buy a drone and start its script.",
+        "category": "fleet",
+        "unlocked_by": None,
+    },
+    {
+        "name": "kill_drone",
+        "signature": "kill_drone(drone_id)",
+        "doc": "Remove a drone.",
+        "category": "fleet",
+        "unlocked_by": None,
+    },
+    {
+        "name": "assign",
+        "signature": "assign(drone_id, script_name)",
+        "doc": "Assign a script to a drone.",
+        "category": "fleet",
+        "unlocked_by": None,
+    },
+    {
+        "name": "shared_get",
+        "signature": "shared_get(key, default=None)",
+        "doc": "Read shared memory.",
+        "category": "fleet",
+        "unlocked_by": None,
+    },
+    {
+        "name": "shared_set",
+        "signature": "shared_set(key, value)",
+        "doc": "Write shared memory.",
+        "category": "fleet",
+        "unlocked_by": None,
+    },
 )
 
 _DEFAULT_MODULES: tuple[dict[str, Any], ...] = (
@@ -485,6 +539,15 @@ def _event_bus(engine: Any, override: Any = None) -> Any:
         return None
 
 
+_MANAGER_FUNCTIONS = {
+    "assign",
+    "kill_drone",
+    "shared_get",
+    "shared_set",
+    "spawn_drone",
+}
+
+
 @dataclass(slots=True)
 class _Pending:
     """A player API request waiting for its engine ticket."""
@@ -494,6 +557,7 @@ class _Pending:
     command: Any
     ticket: Any
     wait_ticket: Any = None
+    extra: Any = None
 
 
 class ScriptHost:
@@ -534,6 +598,7 @@ class ScriptHost:
         if drone_id is None:
             drone_id = kwargs.get("drone_id", 0)
         self.drone_id: int = int(drone_id or 0)
+        self.manager = kwargs.get("manager")
         self._bus = _event_bus(
             engine, kwargs.get("events") or kwargs.get("event_bus") or kwargs.get("bus")
         )
@@ -580,6 +645,11 @@ class ScriptHost:
     def is_running(self) -> bool:
         """Return True while a script is running."""
         return self._state is ScriptState.RUNNING
+
+    @property
+    def is_blocked(self) -> bool:
+        """Return True while the script waits for an engine reply."""
+        return self._pending is not None
 
     @property
     def process(self) -> Any:
@@ -886,6 +956,14 @@ class ScriptHost:
             if args or kwargs:
                 raise TypeError("position() takes no arguments")
             return Position()
+        if name == "drone_id":
+            if args or kwargs:
+                raise TypeError("drone_id() takes no arguments")
+            return DroneId()
+        if name == "drones":
+            if args or kwargs:
+                raise TypeError("drones() takes no arguments")
+            return Drones()
         if name == "inventory":
             if args or kwargs:
                 raise TypeError("inventory() takes no arguments")
@@ -1029,6 +1107,16 @@ class ScriptHost:
         if name == "position":
             pos = result.get("position") or [result.get("x", 0), result.get("y", 0)]
             return list(pos)
+        if name == "drone_id":
+            return int(result.get("id", self.drone_id) or 0)
+        if name == "drones":
+            entries = [dict(entry) for entry in (result.get("drones") or [])]
+            if self.manager is not None:
+                try:
+                    entries = self.manager.decorate_drones(entries)
+                except Exception:
+                    pass
+            return entries
         if name == "inventory":
             return dict(result.get("inventory") or result.get("items") or {})
         if name == "scan":
@@ -1150,6 +1238,9 @@ class ScriptHost:
         if self.engine is None:
             self._reply_error(request_id, "RuntimeError", "no engine attached to host")
             return
+        if name in _MANAGER_FUNCTIONS:
+            self._handle_manager_api(request_id, name, args, kwargs)
+            return
         try:
             command = self._build_command(name, args, kwargs)
         except (TypeError, ValueError, NameError) as exc:
@@ -1187,12 +1278,205 @@ class ScriptHost:
                 request_id=request_id, name=name, command=command, ticket=ticket
             )
 
+    # -- manager-backed API ------------------------------------------------
+
+    def _manager_api_cost(self, name: str) -> int:
+        if name != "spawn_drone":
+            return 0
+        config = getattr(self.content, "config", None)
+        return int(getattr(config, "spawn_ticks", 5) or 5)
+
+    def _handle_manager_api(
+        self,
+        request_id: Any,
+        name: str,
+        args: list[Any],
+        kwargs: dict[str, Any],
+    ) -> None:
+        manager = self.manager
+        if manager is None:
+            self._reply_error(
+                request_id, "RuntimeError", f"{name}() needs an attached ScriptManager"
+            )
+            return
+        cost = self._manager_api_cost(name)
+        if cost > 0:
+            self._zero_streak = 0
+        else:
+            self._zero_streak += 1
+            limit = self._free_limit()
+            if limit > 0 and self._zero_streak >= limit:
+                self._zero_streak = 0
+                wait_ticket = self._submit(Wait(1))
+                if not wait_ticket.done:
+                    self._pending = _Pending(
+                        request_id=request_id,
+                        name=name,
+                        command=None,
+                        ticket=None,
+                        wait_ticket=wait_ticket,
+                        extra=("manager", name, args, kwargs),
+                    )
+                    return
+        try:
+            if name == "spawn_drone":
+                self._manager_spawn(request_id, args, kwargs)
+            elif name == "kill_drone":
+                self._manager_kill(request_id, args, kwargs)
+            elif name == "assign":
+                self._manager_assign(request_id, args, kwargs)
+            elif name == "shared_get":
+                key, default = self._manager_shared_args(name, args, kwargs)
+                self._reply(request_id, result=manager.shared_get(key, default))
+            elif name == "shared_set":
+                key, value = self._manager_shared_args(name, args, kwargs)
+                manager.shared_set(key, value)
+                self._reply(request_id, result=None)
+            else:
+                self._reply_error(request_id, "NameError", f"unknown function '{name}'")
+        except Exception as exc:  # noqa: BLE001 - reported to the player script
+            self._reply_error(request_id, type(exc).__name__, str(exc))
+
+    def _manager_spawn(self, request_id: Any, args: list[Any], kwargs: dict[str, Any]) -> None:
+        script_name = args[0] if args else kwargs.get("script_name", kwargs.get("name"))
+        if script_name is None:
+            self._reply_error(
+                request_id, "TypeError", "spawn_drone() missing required argument 'script_name'"
+            )
+            return
+        manager = self.manager
+        error = manager.spawn_error(script_name)
+        if error is not None:
+            self._reply(request_id, result=error)
+            return
+        command = SpawnDrone()
+        ticket = self._submit(command)
+        if ticket.done:
+            self._reply(request_id, result=self._finish_spawn(ticket.result, script_name))
+        else:
+            self._pending = _Pending(
+                request_id=request_id,
+                name="spawn_drone",
+                command=command,
+                ticket=ticket,
+                extra=("spawn", str(script_name)),
+            )
+
+    def _manager_kill(self, request_id: Any, args: list[Any], kwargs: dict[str, Any]) -> None:
+        target = args[0] if args else kwargs.get("drone_id", kwargs.get("id"))
+        if target is None:
+            self._reply_error(
+                request_id, "TypeError", "kill_drone() missing required argument 'drone_id'"
+            )
+            return
+        target = int(target)
+        if target == self.drone_id:
+            self._reply_error(
+                request_id,
+                "ValueError",
+                "cannot kill the drone that is running this script",
+            )
+            return
+        if target == 0 or not bool(self.engine.has_drone(target)):
+            self._reply(request_id, result=False)
+            return
+        command = RemoveDrone(target)
+        ticket = self._submit(command)
+        if ticket.done:
+            self._reply(request_id, result=self._finish_kill(ticket.result, target))
+        else:
+            self._pending = _Pending(
+                request_id=request_id,
+                name="kill_drone",
+                command=command,
+                ticket=ticket,
+                extra=("kill", target),
+            )
+
+    def _manager_assign(self, request_id: Any, args: list[Any], kwargs: dict[str, Any]) -> None:
+        target = args[0] if args else kwargs.get("drone_id", kwargs.get("id"))
+        script_name = args[1] if len(args) > 1 else kwargs.get("script_name", kwargs.get("name"))
+        if target is None:
+            self._reply_error(
+                request_id, "TypeError", "assign() missing required argument 'drone_id'"
+            )
+            return
+        if script_name is None:
+            self._reply_error(
+                request_id, "TypeError", "assign() missing required argument 'script_name'"
+            )
+            return
+        target = int(target)
+        if target == self.drone_id:
+            self._reply_error(
+                request_id,
+                "ValueError",
+                "cannot reassign the drone that is running this script",
+            )
+            return
+        self.manager.assign(target, script_name)
+        self._reply(request_id, result=None)
+
+    def _manager_shared_args(
+        self, name: str, args: list[Any], kwargs: dict[str, Any]
+    ) -> tuple[Any, Any]:
+        key = args[0] if args else kwargs.get("key")
+        if key is None:
+            raise TypeError(f"{name}() missing required argument 'key'")
+        if name == "shared_get":
+            default = args[1] if len(args) > 1 else kwargs.get("default")
+            return key, default
+        if len(args) > 1:
+            return key, args[1]
+        if "value" not in kwargs:
+            raise TypeError("shared_set() missing required argument 'value'")
+        return key, kwargs["value"]
+
+    def _finish_spawn(self, result: Any, script_name: Any) -> Any:
+        if not isinstance(result, dict) or not result.get("ok"):
+            cleaned: dict[str, Any] = {"ok": False}
+            if isinstance(result, dict) and result.get("reason"):
+                cleaned["reason"] = result["reason"]
+            else:
+                cleaned["reason"] = "spawn_failed"
+            return cleaned
+        drone_id = int(result.get("drone_id", -1))
+        try:
+            self.manager.start_spawned(drone_id, str(script_name))
+        except Exception as exc:  # noqa: BLE001 - reported to the player script
+            try:
+                self.engine.remove_drone(drone_id)
+            except Exception:
+                pass
+            try:
+                self.manager.discard_host(drone_id)
+            except Exception:
+                pass
+            reason = "process_limit" if "process limit" in str(exc) else "script_failed"
+            return {"ok": False, "reason": reason}
+        return drone_id
+
+    def _finish_kill(self, result: Any, target: int) -> bool:
+        if not isinstance(result, dict) or not result.get("ok"):
+            return False
+        self.manager.discard_host(int(target))
+        return True
+
     def _finish_pending(self) -> None:
         pending = self._pending
         if pending is None or self.engine is None:
             return
         if pending.wait_ticket is not None:
             if not pending.wait_ticket.done:
+                return
+            extra = pending.extra
+            if extra and extra[0] == "manager":
+                self._pending = None
+                _kind, name, args, kwargs = extra
+                self._handle_manager_api(pending.request_id, name, args, kwargs)
+                return
+            if pending.command is None:
+                self._pending = None
                 return
             ticket = self._submit(pending.command)
             if ticket.done:
@@ -1207,6 +1491,19 @@ class ScriptHost:
         ticket = pending.ticket
         if ticket is not None and ticket.done:
             self._pending = None
+            extra = pending.extra
+            if extra and extra[0] == "spawn":
+                self._reply(
+                    pending.request_id,
+                    result=self._finish_spawn(ticket.result, extra[1]),
+                )
+                return
+            if extra and extra[0] == "kill":
+                self._reply(
+                    pending.request_id,
+                    result=self._finish_kill(ticket.result, int(extra[1])),
+                )
+                return
             self._reply(
                 pending.request_id, result=self._extract_result(pending.name, ticket.result)
             )

@@ -299,7 +299,9 @@ def test_remove_drone_never_removes_zero_and_reuses_free_id() -> None:
     game.player_stats.upgrades["drone_bay"] = 2
     game.player_stats.money = 5000
     for _ in range(2):
-        assert game.submit(SpawnDrone()).done
+        ticket = game.submit(SpawnDrone())
+        game.run_until_idle()
+        assert ticket.done and ticket.result["ok"]
     assert sorted(engine.drones) == [0, 1, 2]
     engine.drone(1).inventory = {"stone": 5}
     removed: list[DroneRemoved] = []
@@ -326,14 +328,16 @@ def test_save_v3_fixture_migrates_to_fleet() -> None:
     path = FIXTURES / "save_v3.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     migrated = migrate(data)
-    assert migrated["version"] == 6
+    assert migrated["version"] == 7
     assert migrated["player_stats"]["money"] == 43
-    assert migrated["fleet"] == [{"id": 0, "x": 0, "y": 0, "facing": "west", "inventory": {}}]
+    assert migrated["fleet"] == [
+        {"id": 0, "x": 0, "y": 0, "facing": "west", "inventory": {}, "script": ""}
+    ]
     assert migrated["warehouse"] == {}
     assert migrated["market"] == {}
 
     savegame = SaveGame.load(path)
-    assert savegame.version == 6
+    assert savegame.version == 7
     game = Game.load(path)
     assert len(game.drones) == 1
     assert game.player_stats.money == 43
@@ -346,12 +350,12 @@ def test_save_v4_fixture_migrates_to_warehouse_and_market() -> None:
     path = FIXTURES / "save_v4.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     migrated = migrate(data)
-    assert migrated["version"] == 6
+    assert migrated["version"] == 7
     assert migrated["warehouse"] == {}
     assert migrated["market"] == {}
 
     savegame = SaveGame.load(path)
-    assert savegame.version == 6
+    assert savegame.version == 7
     game = Game.load(path)
     assert game.engine.warehouse.total() == 0
     assert game.engine.warehouse.capacity == game.content.config.warehouse_start_capacity
@@ -367,6 +371,8 @@ def test_fleet_save_round_trip(tmp_path) -> None:
     game.engine.drone(1).x, game.engine.drone(1).y = 4, -2
     game.engine.drone(1).inventory = {"coal": 3}
     game.engine.drone(2).facing = Direction.SOUTH
+    game.engine.drone(1).script = "worker.py"
+    game.engine.shared_memory = {"goal": 5, "ready": True}
     path = game.save(tmp_path / "slot.json")
     loaded = Game.load(path)
     assert sorted(loaded.drones) == [0, 1, 2]
@@ -377,6 +383,22 @@ def test_fleet_save_round_trip(tmp_path) -> None:
     assert loaded.player_stats.to_dict() == game.player_stats.to_dict()
     assert loaded.world.to_dict() == game.world.to_dict()
     assert loaded.tick == game.tick
+    assert loaded.engine.shared_memory == {"goal": 5, "ready": True}
+    assert loaded.engine.drone(1).script == "worker.py"
+
+
+def test_save_v6_migrates_shared_memory_and_scripts(tmp_path) -> None:
+    game = Game.new(seed=6)
+    path = game.save(tmp_path / "v6.json")
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    raw["version"] = 6
+    raw.pop("shared_memory")
+    for entry in raw["fleet"]:
+        entry.pop("script", None)
+    migrated = migrate(raw)
+    assert migrated["version"] == 7
+    assert migrated["shared_memory"] == {}
+    assert migrated["fleet"][0]["script"] == ""
 
 
 def test_world_view_draws_every_drone() -> None:

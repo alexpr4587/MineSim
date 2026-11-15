@@ -29,7 +29,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-CURRENT_VERSION = 6
+CURRENT_VERSION = 7
 SAVE_VERSION = CURRENT_VERSION
 DEFAULT_SKIN = "rusty_bot"
 
@@ -126,12 +126,27 @@ def _migrate_v5_to_v6(data: dict[str, Any]) -> dict[str, Any]:
     return migrated
 
 
+def _migrate_v6_to_v7(data: dict[str, Any]) -> dict[str, Any]:
+    """Add shared memory and per-drone script names introduced in version 7."""
+    migrated = dict(data)
+    migrated.setdefault("shared_memory", {})
+    fleet = migrated.get("fleet")
+    if isinstance(fleet, list):
+        migrated["fleet"] = [
+            {**entry, "script": entry.get("script", "")} if isinstance(entry, dict) else entry
+            for entry in fleet
+        ]
+    migrated["version"] = 7
+    return migrated
+
+
 MIGRATIONS: dict[int, Callable[[dict[str, Any]], dict[str, Any]]] = {
     1: _migrate_v1_to_v2,
     2: _migrate_v2_to_v3,
     3: _migrate_v3_to_v4,
     4: _migrate_v4_to_v5,
     5: _migrate_v5_to_v6,
+    6: _migrate_v6_to_v7,
 }
 
 
@@ -172,7 +187,7 @@ def migrate(data: Any) -> dict[str, Any]:
 
 
 class SaveGame(BaseModel):
-    """A serialised game state (save file schema, version 6)."""
+    """A serialised game state (save file schema, version 7)."""
 
     model_config = ConfigDict(extra="ignore")
 
@@ -188,6 +203,7 @@ class SaveGame(BaseModel):
     market: dict[str, Any] = Field(default_factory=dict)
     refinery: dict[str, Any] = Field(default_factory=dict)
     contracts: dict[str, Any] = Field(default_factory=dict)
+    shared_memory: dict[str, Any] = Field(default_factory=dict)
 
     @classmethod
     def migrate(cls, data: Any) -> dict[str, Any]:

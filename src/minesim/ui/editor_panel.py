@@ -71,6 +71,7 @@ class EditorPanel(FloatingPanel):
         parent = kwargs.pop("parent", None)
         game = kwargs.pop("game", None)
         host = kwargs.pop("host", None) or kwargs.pop("script_host", None)
+        manager = kwargs.pop("manager", None) or kwargs.pop("script_manager", None)
         engine = kwargs.pop("engine", None)
         content = kwargs.pop("content", None)
         progression = kwargs.pop("progression", None) or kwargs.pop("progression_view", None)
@@ -90,6 +91,9 @@ class EditorPanel(FloatingPanel):
             elif isinstance(arg, QWidget):
                 if parent is None:
                     parent = arg
+            elif hasattr(arg, "ensure_host") and hasattr(arg, "pump"):
+                if manager is None:
+                    manager = arg
             elif hasattr(arg, "start") and hasattr(arg, "pump"):
                 if host is None:
                     host = arg
@@ -148,13 +152,28 @@ class EditorPanel(FloatingPanel):
                     main_py.write_text(STARTER_SCRIPT, encoding="utf-8")
                 except Exception:
                     pass
-        if host is None:
+        if manager is None and host is None and game is not None:
+            try:
+                from minesim.scripting.manager import ScriptManager
+
+                manager = ScriptManager(game, self.scripts_dir)
+            except Exception:
+                manager = None
+        if manager is not None:
+            if host is None:
+                try:
+                    host = manager.host(0) or manager.ensure_host(0)
+                except Exception:
+                    host = None
+        elif host is None:
             try:
                 from minesim.scripting.host import ScriptHost
 
                 host = ScriptHost(engine, content, progression, self.scripts_dir)
             except Exception:
                 host = None
+        self.manager = manager
+        self.script_manager = manager
         self.host = host
         self.script_host = host
         self.engine = engine
@@ -230,6 +249,11 @@ class EditorPanel(FloatingPanel):
             console_panel = ConsolePanel(self.content_widget)
         self.console_panel = console_panel
         self.console = console_panel
+        if self.manager is not None:
+            try:
+                console_panel.set_manager(self.manager)
+            except Exception:
+                pass
         body.addWidget(console_panel, 0)
         console_panel.setFixedHeight(140)
         self.content_layout.addLayout(body)
@@ -270,13 +294,34 @@ class EditorPanel(FloatingPanel):
         """Alias for :meth:`set_host`."""
         self.set_host(host)
 
+    def set_manager(self, manager: Any) -> None:
+        """Attach a ScriptManager and use its host for drone 0."""
+        self.manager = manager
+        self.script_manager = manager
+        host = None
+        if manager is not None:
+            try:
+                host = manager.host(0) or manager.ensure_host(0)
+            except Exception:
+                host = None
+        if host is not None:
+            self.set_host(host)
+        try:
+            self.console_panel.set_manager(manager)
+        except Exception:
+            pass
+        self._sync_state()
+
     def set_game(self, game: Any) -> None:
-        """Attach a game, creating a host if needed."""
+        """Attach a game, rebinding the manager or creating a host."""
         self.game = game
         self.engine = _get(game, "engine")
         self.content = _get(game, "content")
         self.progression = _get(game, "progression_service") or _get(game, "progression")
-        if self.host is None or _get(self.host, "engine") is None:
+        if self.manager is not None:
+            self.manager.set_game(game)
+            self.set_manager(self.manager)
+        elif self.host is None or _get(self.host, "engine") is None:
             try:
                 from minesim.scripting.host import ScriptHost
 
@@ -760,7 +805,10 @@ class EditorPanel(FloatingPanel):
         filename = self.current_filename()
         source = editor.toPlainText()
         try:
-            host.start(filename, source)
+            if self.manager is not None:
+                self.manager.start(0, filename, source)
+            else:
+                host.start(filename, source)
         except Exception:
             self.state_label.setText("Error")
             return
@@ -780,12 +828,18 @@ class EditorPanel(FloatingPanel):
 
     def stop(self) -> None:
         """Stop the running script."""
-        host = self.host
-        if host is not None:
+        if self.manager is not None:
             try:
-                host.stop()
+                self.manager.stop(0)
             except Exception:
                 pass
+        else:
+            host = self.host
+            if host is not None:
+                try:
+                    host.stop()
+                except Exception:
+                    pass
         self._sync_state()
 
     def stop_script(self) -> None:
@@ -795,7 +849,14 @@ class EditorPanel(FloatingPanel):
     # -- pump / console ---------------------------------------------------------------------------
 
     def pump(self) -> list[Any]:
-        """Pump the host once, feeding console/state/error highlight."""
+        """Pump the scripts once, feeding console/state/error highlight."""
+        if self.manager is not None:
+            try:
+                events = self.manager.pump()
+            except Exception:
+                return []
+            self.handle_host_events(events)
+            return list(events or [])
         host = self.host
         if host is None:
             return []
@@ -806,9 +867,9 @@ class EditorPanel(FloatingPanel):
         self.handle_host_events(events)
         return list(events or [])
 
-    def handle_host_events(self, events: Any) -> None:
+    def handle_host_events(self, events: Any, append: bool = True) -> None:
         """Feed host ``events`` to the console and update state."""
-        if events:
+        if events and append:
             try:
                 self.console_panel.append_events(events)
             except Exception:

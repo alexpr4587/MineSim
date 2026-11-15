@@ -76,6 +76,7 @@ class MainWindow(QMainWindow):
             or kwargs.pop("scripts_directory", None)
         )
         host = kwargs.pop("host", None) or kwargs.pop("script_host", None)
+        manager = kwargs.pop("manager", None) or kwargs.pop("script_manager", None)
         editor_panel_arg = kwargs.pop("editor_panel", None) or kwargs.pop("editor", None)
         api_panel_arg = kwargs.pop("api_panel", None) or kwargs.pop("functions_panel", None)
         console_panel_arg = kwargs.pop("console_panel", None) or kwargs.pop("console", None)
@@ -108,7 +109,25 @@ class MainWindow(QMainWindow):
         self.scripts_dir: Path = (
             Path(scripts_dir) if scripts_dir is not None else default_scripts_dir()
         )
-        if host is None:
+        if manager is None:
+            try:
+                from minesim.scripting.manager import ScriptManager
+
+                manager = ScriptManager(game, self.scripts_dir)
+            except Exception:
+                manager = None
+        if manager is not None:
+            if host is not None:
+                try:
+                    manager.adopt_host(host)
+                except Exception:
+                    pass
+            else:
+                try:
+                    host = manager.host(0) or manager.ensure_host(0)
+                except Exception:
+                    host = None
+        elif host is None:
             try:
                 from minesim.scripting.host import ScriptHost
 
@@ -120,6 +139,8 @@ class MainWindow(QMainWindow):
                 )
             except Exception:
                 host = None
+        self.manager = manager
+        self.script_manager = manager
         self.host = host
         self.script_host = host
 
@@ -135,7 +156,12 @@ class MainWindow(QMainWindow):
 
         if editor_panel_arg is not None:
             self.editor_panel = editor_panel_arg
-            if _get(self.editor_panel, "host") is None and host is not None:
+            if manager is not None:
+                try:
+                    self.editor_panel.set_manager(manager)
+                except Exception:
+                    pass
+            elif _get(self.editor_panel, "host") is None and host is not None:
                 try:
                     self.editor_panel.set_host(host)
                 except Exception:
@@ -144,6 +170,7 @@ class MainWindow(QMainWindow):
             self.editor_panel = EditorPanel(
                 game=game,
                 host=host,
+                manager=manager,
                 scripts_dir=self.scripts_dir,
                 parent=self,
                 console_panel=console_panel_arg,
@@ -154,6 +181,11 @@ class MainWindow(QMainWindow):
         )
         self.console_panel = _get(self.editor_panel, "console_panel") or console_panel_arg
         self.console = self.console_panel
+        if self.console_panel is not None and manager is not None:
+            try:
+                self.console_panel.set_manager(manager)
+            except Exception:
+                pass
         if api_panel_arg is not None:
             self.api_panel = api_panel_arg
         else:
@@ -209,6 +241,7 @@ class MainWindow(QMainWindow):
             hud=self.hud,
             world_view=self.world_view,
             host=host,
+            manager=manager,
             editor_panel=self.editor_panel,
             console_panel=self.console_panel,
         )
@@ -541,7 +574,19 @@ class MainWindow(QMainWindow):
         self.market_panel.set_game(game)
         self.toast_manager.set_game(game)
         self.api_panel.set_game(game)
-        self.editor_panel.set_game(game)
+        if self.manager is not None:
+            self.manager.set_game(game)
+            try:
+                self.host = self.manager.host(0) or self.manager.ensure_host(0)
+            except Exception:
+                self.host = None
+            self.script_host = self.host
+            self.editor_panel.set_manager(self.manager)
+            if self.console_panel is not None:
+                self.console_panel.set_manager(self.manager)
+            self.game_loop.set_manager(self.manager)
+        else:
+            self.editor_panel.set_game(game)
         self.world_view.update()
         self.hud.refresh()
         self.game_loop.start()
@@ -638,12 +683,19 @@ class MainWindow(QMainWindow):
             self.game.save()
         except Exception:
             pass
-        host = getattr(self, "host", None) or getattr(self, "script_host", None)
-        if host is not None:
+        manager = getattr(self, "manager", None) or getattr(self, "script_manager", None)
+        if manager is not None:
             try:
-                host.stop()
+                manager.stop_all()
             except Exception:
                 pass
+        else:
+            host = getattr(self, "host", None) or getattr(self, "script_host", None)
+            if host is not None:
+                try:
+                    host.stop()
+                except Exception:
+                    pass
         self.game_loop.stop()
         super().closeEvent(event)
 
