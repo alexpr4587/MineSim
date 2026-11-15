@@ -287,7 +287,11 @@ class ConsolePanel(QWidget):
 
     def set_drone(self, drone_id: int) -> None:
         """Select ``drone_id`` in the console dropdown."""
-        index = self.drone_selector.findData(int(drone_id))
+        target = int(drone_id)
+        index = self.drone_selector.findData(target)
+        if index < 0:
+            self.refresh_drones()
+            index = self.drone_selector.findData(target)
         if index >= 0:
             self.drone_selector.setCurrentIndex(index)
 

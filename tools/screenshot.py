@@ -21,6 +21,8 @@ from __future__ import annotations
 
 import argparse
 import os
+import tempfile
+import time
 from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -33,7 +35,22 @@ from minesim.core.game import Game  # noqa: E402
 from minesim.ui.main_window import MainWindow  # noqa: E402
 from minesim.ui.theme import apply_theme  # noqa: E402
 
-__all__ = ["COMMAND_SEQUENCE", "build_window", "main", "parse_size", "prepare_economy"]
+__all__ = [
+    "COMMAND_SEQUENCE",
+    "DRONE_SCRIPT",
+    "build_window",
+    "main",
+    "parse_size",
+    "prepare_economy",
+]
+
+DRONE_SCRIPT = (
+    "# Trivial worker: report once, then patrol the base until stopped.\n"
+    "print('drone', drone_id(), 'online')\n"
+    "while True:\n"
+    "    move(East)\n"
+    "    move(West)\n"
+)
 
 COMMAND_SEQUENCE = [
     Move(Direction.EAST),
@@ -128,6 +145,71 @@ def _position_on_rich_vein(window: MainWindow, game: Game) -> None:
     window.hud.refresh()
 
 
+def _setup_drones(window: MainWindow, game: Game, count: int, app: QApplication) -> None:
+    """Spawn ``count`` extra drones, run the worker script and show the fleet UI."""
+    scripts_dir = getattr(window, "scripts_dir", None)
+    manager = getattr(window, "manager", None)
+    worker_source = DRONE_SCRIPT
+    upgrades = getattr(game.player_stats, "upgrades", None)
+    if upgrades is not None:
+        upgrades["drone_bay"] = max(int(upgrades.get("drone_bay", 0)), int(count) + 1)
+    game.player_stats.money = max(int(game.player_stats.money), 10000)
+    if scripts_dir is not None:
+        try:
+            (Path(scripts_dir) / "worker.py").write_text(worker_source, encoding="utf-8")
+        except OSError:
+            pass
+    for _ in range(max(0, int(count))):
+        game.engine.spawn_drone()
+    offsets = ((2, 0), (-2, 0), (0, 2), (0, -2), (3, 2), (-3, -2), (2, -3), (-2, 3))
+    extra_ids = [drone_id for drone_id in sorted(game.engine.drones) if drone_id != 0]
+    for index, drone_id in enumerate(extra_ids):
+        dx, dy = offsets[index % len(offsets)]
+        drone = game.engine.drone(drone_id)
+        drone.x, drone.y = dx, dy
+        if manager is not None:
+            try:
+                manager.start(drone_id, "worker.py", worker_source)
+            except Exception:
+                pass
+    for _ in range(500):
+        window.game_loop.advance(100)
+        app.processEvents()
+        if manager is None:
+            break
+        if all(manager.console(drone_id) for drone_id in extra_ids):
+            break
+        time.sleep(0.002)
+    window.game_loop.stop()
+    window.world_view.snap_visual_to_miner()
+    editor_panel = getattr(window, "editor_panel", None)
+    if editor_panel is not None:
+        try:
+            editor_panel.show_panel()
+        except Exception:
+            editor_panel.show()
+        try:
+            editor_panel.move(378, 44)
+            editor_panel.resize(636, 320)
+        except Exception:
+            pass
+    window.show_drones()
+    try:
+        window.drones_panel.move(8, 44)
+        window.drones_panel.resize(350, 440)
+    except Exception:
+        pass
+    selected = extra_ids[0] if extra_ids else 0
+    try:
+        window.drones_panel.select_drone(selected)
+        window.console_panel._reload_console()
+    except Exception:
+        pass
+    window.hud.refresh()
+    window.world_view.update()
+    app.processEvents()
+
+
 def build_window(
     ticks: int = 300,
     size: tuple[int, int] = (1024, 768),
@@ -135,6 +217,7 @@ def build_window(
     skin: str | None = None,
     moving: bool = False,
     fleet: int = 0,
+    drones: int = 0,
     panel: str | None = None,
     events: bool = False,
 ) -> MainWindow:
@@ -142,6 +225,10 @@ def build_window(
     app = QApplication.instance() or QApplication([])
     apply_theme(app)
     game = Game.new()
+    scripts_dir: Path | None = None
+    if drones:
+        scripts_dir = Path(tempfile.mkdtemp(prefix="minesim_drones_"))
+        (scripts_dir / "worker.py").write_text(DRONE_SCRIPT, encoding="utf-8")
     if panel:
         prepare_economy(game)
     if skin:
@@ -155,11 +242,13 @@ def build_window(
         dx, dy = offsets[(index - 1) % len(offsets)]
         game.engine.drone(drone_id).x = dx
         game.engine.drone(drone_id).y = dy
-    window = MainWindow(game)
+    window = MainWindow(game, scripts_dir=scripts_dir) if scripts_dir else MainWindow(game)
     window.world_view.set_terrain_lighting(not flat, persist=False)
     window.resize(size[0], size[1])
     window.show()
-    if panel is None:
+    if drones:
+        _setup_drones(window, game, int(drones), app)
+    if panel is None and not drones:
         for command in COMMAND_SEQUENCE:
             game.submit(command)
         for _ in range(int(ticks)):
@@ -167,12 +256,13 @@ def build_window(
         if moving:
             game.submit(Move(Direction.EAST))
             game.engine.step()
-    window.game_loop.stop()
-    window.world_view.snap_visual_to_miner()
-    window.world_view.center_on_miner()
+    if not drones:
+        window.game_loop.stop()
+        window.world_view.snap_visual_to_miner()
+        window.world_view.center_on_miner()
     window.hud.refresh()
     editor_panel = getattr(window, "editor_panel", None)
-    if editor_panel is not None and panel is None:
+    if editor_panel is not None and panel is None and not drones:
         from minesim.ui.editor_panel import STARTER_SCRIPT
 
         editor = getattr(editor_panel, "editor", None) or getattr(editor_panel, "code_editor", None)
@@ -231,7 +321,13 @@ def main() -> int:
         "--fleet",
         type=int,
         default=0,
-        help="spawn N extra drones and save artifacts/ui_fleet.png",
+        help="spawn N extra drones and save artifacts/ui_drones.png",
+    )
+    parser.add_argument(
+        "--drones",
+        type=int,
+        default=0,
+        help="spawn N worker drones and save artifacts/ui_drones.png",
     )
     parser.add_argument(
         "--achievements",
@@ -263,6 +359,7 @@ def main() -> int:
         skin=args.skin,
         moving=args.moving,
         fleet=args.fleet,
+        drones=args.drones,
         panel=args.panel,
         events=args.events,
     )
@@ -274,10 +371,13 @@ def main() -> int:
         "api_panel",
         "base_panel",
         "market_panel",
+        "drones_panel",
     ):
         if args.achievements and panel_name == "achievements_panel":
             continue
         if args.wardrobe and panel_name == "wardrobe_panel":
+            continue
+        if args.drones and panel_name in ("drones_panel", "editor_panel"):
             continue
         panel = getattr(window, panel_name, None)
         if panel is not None:
@@ -322,6 +422,8 @@ def main() -> int:
         default_name = f"ui_{args.panel}.png"
     if args.events:
         default_name = "ui_events.png"
+    if args.drones:
+        default_name = "ui_drones.png"
     out = args.output or (Path(__file__).resolve().parents[1] / "artifacts" / default_name)
     out.parent.mkdir(parents=True, exist_ok=True)
     window.grab().save(str(out))

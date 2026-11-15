@@ -24,6 +24,7 @@ from minesim.core.save import default_save_path
 from minesim.ui.achievements_panel import AchievementsPanel
 from minesim.ui.api_panel import ApiPanel
 from minesim.ui.base_panel import BasePanel
+from minesim.ui.drones_panel import DronesPanel
 from minesim.ui.editor_panel import EditorPanel, default_scripts_dir
 from minesim.ui.floating_panel import ensure_settings_names
 from minesim.ui.game_loop import GameLoop
@@ -37,6 +38,7 @@ from minesim.ui.world_view import WorldView
 __all__ = ["MainWindow"]
 
 _SINGLE_KEYS = {
+    Qt.Key.Key_D,
     Qt.Key.Key_E,
     Qt.Key.Key_F,
     Qt.Key.Key_L,
@@ -186,6 +188,15 @@ class MainWindow(QMainWindow):
                 self.console_panel.set_manager(manager)
             except Exception:
                 pass
+        self.drones_panel = DronesPanel(
+            game=game,
+            manager=manager,
+            scripts_dir=self.scripts_dir,
+            world_view=self.world_view,
+            console_panel=self.console_panel,
+            parent=self,
+        )
+        self._wire_drone_selection()
         if api_panel_arg is not None:
             self.api_panel = api_panel_arg
         else:
@@ -197,6 +208,7 @@ class MainWindow(QMainWindow):
             "editor": self.editor_panel,
             "api": self.api_panel,
             "functions": self.api_panel,
+            "drones": self.drones_panel,
         }
         self.panels = self.floating_panels
 
@@ -226,6 +238,7 @@ class MainWindow(QMainWindow):
         self.floating_panels["wardrobe"] = self.wardrobe_panel
         self.floating_panels["base"] = self.base_panel
         self.floating_panels["market"] = self.market_panel
+        self.drones_panel.hide()
         self.achievements_panel.hide()
         self.upgrades_panel.hide()
         self.wardrobe_panel.hide()
@@ -272,6 +285,7 @@ class MainWindow(QMainWindow):
         for action, panel in (
             (getattr(self, "_editor_action", None), getattr(self, "editor_panel", None)),
             (getattr(self, "_api_action", None), getattr(self, "api_panel", None)),
+            (getattr(self, "_drones_action", None), getattr(self, "drones_panel", None)),
             (
                 getattr(self, "_achievements_action", None),
                 getattr(self, "achievements_panel", None),
@@ -327,6 +341,72 @@ class MainWindow(QMainWindow):
     def hide_api_panel(self) -> None:
         """Hide the functions reference panel."""
         self.api_panel.hide_panel()
+        self._sync_view_actions()
+
+    # -- drones / selection ----------------------------------------------------
+
+    def _wire_drone_selection(self) -> None:
+        """Keep the drones panel, world view and console on one selection."""
+        try:
+            self.drones_panel.drone_selected.connect(
+                lambda drone_id: self._sync_drone_selection(drone_id, "panel")
+            )
+            self.world_view.selected_drone_changed.connect(
+                lambda drone_id: self._sync_drone_selection(drone_id, "world")
+            )
+        except Exception:
+            pass
+        selector = _get(self.console_panel, "drone_selector")
+        if selector is not None and hasattr(selector, "currentIndexChanged"):
+            try:
+                selector.currentIndexChanged.connect(self._on_console_drone_changed)
+            except Exception:
+                pass
+
+    def _sync_drone_selection(self, drone_id: int, source: str = "") -> None:
+        """Apply ``drone_id`` to every view except the one that emitted it."""
+        try:
+            drone_id = int(drone_id)
+        except (TypeError, ValueError):
+            return
+        if source != "panel" and _get(self.drones_panel, "selected_drone") != drone_id:
+            try:
+                self.drones_panel.select_drone(drone_id)
+            except Exception:
+                pass
+        if source != "world" and _get(self.world_view, "selected_drone_id") != drone_id:
+            try:
+                self.world_view.select_drone(drone_id)
+            except Exception:
+                pass
+        if (
+            self.console_panel is not None
+            and _get(self.console_panel, "selected_drone") != drone_id
+        ):
+            try:
+                self.console_panel.set_drone(drone_id)
+            except Exception:
+                pass
+
+    def _on_console_drone_changed(self, _index: int) -> None:
+        selected = _get(self.console_panel, "selected_drone")
+        if selected is not None:
+            self._sync_drone_selection(int(selected), "console")
+
+    def toggle_drones(self) -> None:
+        """Toggle the drones panel (D)."""
+        self.drones_panel.toggle()
+        self._sync_view_actions()
+
+    def show_drones(self) -> None:
+        """Show the drones panel."""
+        self.drones_panel.refresh()
+        self.drones_panel.show_panel()
+        self._sync_view_actions()
+
+    def hide_drones(self) -> None:
+        """Hide the drones panel."""
+        self.drones_panel.hide_panel()
         self._sync_view_actions()
 
     # -- achievements / upgrades toggles --------------------------------------
@@ -502,6 +582,13 @@ class MainWindow(QMainWindow):
         self._market_action.triggered.connect(
             lambda checked=False: self._on_view_action(self.market_panel, checked)
         )
+        self._drones_action = view_menu.addAction("&Drones")
+        self._drones_action.setCheckable(True)
+        self._drones_action.setShortcut(QKeySequence("Ctrl+D"))
+        self._drones_action.setToolTip("Toggle drones panel (D when world focused)")
+        self._drones_action.triggered.connect(
+            lambda checked=False: self._on_view_action(self.drones_panel, checked)
+        )
         view_menu.addSeparator()
         self._terrain_action = view_menu.addAction("Terrain &lighting")
         self._terrain_action.setCheckable(True)
@@ -567,6 +654,7 @@ class MainWindow(QMainWindow):
         self.game_loop.engine = game.engine
         self.hud.set_game(game)
         self.world_view.set_game(game)
+        self.drones_panel.set_game(game)
         self.achievements_panel.set_game(game)
         self.upgrades_panel.set_game(game)
         self.wardrobe_panel.set_game(game)
@@ -582,9 +670,11 @@ class MainWindow(QMainWindow):
                 self.host = None
             self.script_host = self.host
             self.editor_panel.set_manager(self.manager)
+            self.drones_panel.set_manager(self.manager)
             if self.console_panel is not None:
                 self.console_panel.set_manager(self.manager)
             self.game_loop.set_manager(self.manager)
+            self._wire_drone_selection()
         else:
             self.editor_panel.set_game(game)
         self.world_view.update()
@@ -618,6 +708,7 @@ class MainWindow(QMainWindow):
             getattr(self, "wardrobe_panel", None),
             getattr(self, "base_panel", None),
             getattr(self, "market_panel", None),
+            getattr(self, "drones_panel", None),
         ):
             if panel is not None:
                 try:
@@ -651,9 +742,13 @@ class MainWindow(QMainWindow):
             world_view.setFocus()
 
     def refresh(self) -> None:
-        """Refresh the HUD and world view."""
+        """Refresh the HUD, world view and fleet panel."""
         self.hud.refresh()
         self.world_view.update()
+        try:
+            self.drones_panel.refresh()
+        except Exception:
+            pass
         try:
             self.editor_panel._sync_state()
         except Exception:
@@ -673,6 +768,7 @@ class MainWindow(QMainWindow):
             getattr(self, "wardrobe_panel", None),
             getattr(self, "base_panel", None),
             getattr(self, "market_panel", None),
+            getattr(self, "drones_panel", None),
         ):
             if panel is not None:
                 try:
@@ -756,6 +852,10 @@ class MainWindow(QMainWindow):
             return
         if key == Qt.Key.Key_M:
             self.toggle_market()
+            event.accept()
+            return
+        if key == Qt.Key.Key_D:
+            self.toggle_drones()
             event.accept()
             return
         if key == Qt.Key.Key_F10:

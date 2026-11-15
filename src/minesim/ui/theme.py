@@ -62,6 +62,7 @@ __all__ = [
     "TEXT_DIM",
     "apply_theme",
     "dark_palette",
+    "drone_badge_color",
     "get_stylesheet",
 ]
 
@@ -162,6 +163,15 @@ DRONE_ID_COLORS: tuple[str, ...] = (
     "#82aaff",
     "#89ddff",
 )
+
+
+def drone_badge_color(drone_id: int) -> str:
+    """Return the badge colour for ``drone_id`` (drone 0 has no badge)."""
+    drone_id = int(drone_id)
+    if drone_id <= 0:
+        return MINER_BODY
+    return DRONE_ID_COLORS[(drone_id - 1) % len(DRONE_ID_COLORS)]
+
 
 MONOSPACE_FONT = "Consolas, 'DejaVu Sans Mono', 'Liberation Mono', monospace"
 FONT_FAMILY = MONOSPACE_FONT

@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 from minesim.ui.code_editor import CodeEditor
 from minesim.ui.console_panel import ConsolePanel
 from minesim.ui.floating_panel import FloatingPanel
+from minesim.ui.theme import TEXT_DIM
 
 __all__ = [
     "DEFAULT_SCRIPTS_DIR",
@@ -177,7 +178,7 @@ class EditorPanel(FloatingPanel):
         self.host = host
         self.script_host = host
         self.engine = engine
-        self.content = content
+        self.content_data = content
         self.progression = progression
         self.progression_view = progression
 
@@ -206,11 +207,13 @@ class EditorPanel(FloatingPanel):
         self.tabWidget = self.tabs
         body.addWidget(self.tabs, 1)
 
-        controls = QHBoxLayout()
+        controls = QVBoxLayout()
+        actions = QHBoxLayout()
         self.new_file_button = QPushButton("New file", self.content_widget)
         self.run_button = QPushButton("Run", self.content_widget)
+        self.run_on_new_button = QPushButton("Run on new drone", self.content_widget)
         self.stop_button = QPushButton("Stop", self.content_widget)
-        self.open_folder_button = QPushButton("Open scripts folder", self.content_widget)
+        self.open_folder_button = QPushButton("Folder", self.content_widget)
         self.examples_button = QPushButton("Examples", self.content_widget)
         self.examples_menu = QMenu(self.examples_button)
         self.examples_button.setMenu(self.examples_menu)
@@ -220,29 +223,40 @@ class EditorPanel(FloatingPanel):
         self.open_button = self.open_folder_button
         self.new_file_button.clicked.connect(lambda: self.new_file())
         self.run_button.clicked.connect(self.run)
+        self.run_on_new_button.clicked.connect(self.run_on_new_drone)
         self.stop_button.clicked.connect(self.stop)
         self.open_folder_button.clicked.connect(self.open_scripts_folder)
+        self.open_folder_button.setToolTip("Open scripts folder")
         self.examples_button.setToolTip("Open an example script in a new tab")
         for button in (
             self.new_file_button,
             self.run_button,
+            self.run_on_new_button,
             self.stop_button,
             self.open_folder_button,
             self.examples_button,
         ):
             button.setToolTip(button.toolTip() or button.text())
-            controls.addWidget(button)
+            actions.addWidget(button)
+        actions.addStretch(1)
+        controls.addLayout(actions)
+        status = QHBoxLayout()
         self.state_label = QLabel("Idle", self.content_widget)
         self.status_label = self.state_label
         self.stateLabel = self.state_label
-        controls.addWidget(self.state_label)
+        status.addWidget(self.state_label)
+        self.drone_name_label = QLabel("No drone running this file", self.content_widget)
+        self.drone_name_label.setObjectName("editor_drone_name")
+        self.drone_name_label.setStyleSheet(f"color: {TEXT_DIM};")
+        status.addWidget(self.drone_name_label)
         self.auto_reload_checkbox = QCheckBox("Auto-reload", self.content_widget)
         self.auto_reload_checkbox.setObjectName("auto_reload_checkbox")
         self.auto_reload_checkbox.setChecked(True)
         self.autoreload_checkbox = self.auto_reload_checkbox
         self.reload_checkbox = self.auto_reload_checkbox
-        controls.addWidget(self.auto_reload_checkbox)
-        controls.addStretch(1)
+        status.addWidget(self.auto_reload_checkbox)
+        status.addStretch(1)
+        controls.addLayout(status)
         body.addLayout(controls)
 
         if console_panel is None:
@@ -316,7 +330,9 @@ class EditorPanel(FloatingPanel):
         """Attach a game, rebinding the manager or creating a host."""
         self.game = game
         self.engine = _get(game, "engine")
-        self.content = _get(game, "content")
+        content = _get(game, "content")
+        if content is not None:
+            self.content_data = content
         self.progression = _get(game, "progression_service") or _get(game, "progression")
         if self.manager is not None:
             self.manager.set_game(game)
@@ -326,7 +342,7 @@ class EditorPanel(FloatingPanel):
                 from minesim.scripting.host import ScriptHost
 
                 self.set_host(
-                    ScriptHost(self.engine, self.content, self.progression, self.scripts_dir)
+                    ScriptHost(self.engine, self.content_data, self.progression, self.scripts_dir)
                 )
             except Exception:
                 pass
@@ -392,15 +408,41 @@ class EditorPanel(FloatingPanel):
     def _sync_state(self, label: str | None = None) -> None:
         if label is not None:
             self.state_label.setText(label)
+            self._update_drone_label()
             return
         host = self.host
         if host is None:
             self.state_label.setText("Idle")
+            self._update_drone_label()
             return
         state = getattr(host, "state", None)
         self.state_label.setText(self.state_label_text(state if state is not None else "IDLE"))
         if str(state).upper().endswith("FAILED") or str(state) == "FAILED":
             self._on_script_failed(None)
+        self._update_drone_label()
+
+    def _drone_running_file(self, filename: str) -> int | None:
+        """Return the id of a drone whose active script is ``filename``."""
+        engine = self.engine or _get(self.game, "engine")
+        drones = _get(engine, "drones") or {}
+        if not isinstance(drones, dict):
+            return None
+        for drone_id in sorted(int(key) for key in drones):
+            script = Path(str(_get(drones[drone_id], "script", "") or "")).name
+            if script == filename:
+                return drone_id
+        return None
+
+    def _update_drone_label(self) -> None:
+        label = getattr(self, "drone_name_label", None)
+        if label is None:
+            return
+        filename = self.current_filename()
+        drone_id = self._drone_running_file(filename)
+        if drone_id is None:
+            label.setText("No drone running this file")
+        else:
+            label.setText(f"Running on Drone {drone_id} · {filename}")
 
     # -- files / tabs -------------------------------------------------------------
 
@@ -415,7 +457,7 @@ class EditorPanel(FloatingPanel):
         return files
 
     def _create_editor(self, text: str, filename: str) -> CodeEditor:
-        editor = CodeEditor(self.tabs, content=self.content)
+        editor = CodeEditor(self.tabs, content=self.content_data)
         editor.setPlainText(text)
         editor.setWindowTitle(filename)
         editor.run_requested.connect(self.run)
@@ -488,6 +530,7 @@ class EditorPanel(FloatingPanel):
 
     def _on_tab_changed(self, _index: int) -> None:
         self._sync_current_editor()
+        self._update_drone_label()
 
     def current_filename(self) -> str:
         """Return the current tab file name (``main.py`` by default)."""
@@ -506,7 +549,7 @@ class EditorPanel(FloatingPanel):
         return self.current_file()
 
     def _content_examples(self) -> list[Any]:
-        content = _get(getattr(self, "game", None), "content") or self.content
+        content = _get(getattr(self, "game", None), "content") or self.content_data
         if content is None or not hasattr(content, "examples"):
             try:
                 from minesim.core.content import load_content
@@ -530,7 +573,7 @@ class EditorPanel(FloatingPanel):
         return False
 
     def _achievement_title(self, achievement_id: str) -> str:
-        content = _get(getattr(self, "game", None), "content") or self.content
+        content = _get(getattr(self, "game", None), "content") or self.content_data
         achievements = _get(content, "achievements", {}) or {}
         if isinstance(achievements, dict):
             achievement = achievements.get(achievement_id)
@@ -813,6 +856,70 @@ class EditorPanel(FloatingPanel):
             self.state_label.setText("Error")
             return
         self._sync_state("Running")
+
+    def _spawn_drone_with_file(self, filename: str) -> int | None:
+        """Spawn one drone and start ``filename`` on it; None on failure."""
+        engine = self.engine or _get(self.game, "engine")
+        if engine is None:
+            return None
+        manager = self.manager
+        if manager is None and getattr(self, "game", None) is not None:
+            try:
+                from minesim.scripting.manager import ScriptManager
+
+                manager = ScriptManager(self.game, self.scripts_dir)
+                self.set_manager(manager)
+            except Exception:
+                manager = None
+        if manager is not None:
+            try:
+                error = manager.spawn_error(filename)
+            except Exception:
+                error = {"reason": "process_limit"}
+            if error is not None:
+                return None
+        drones = _get(engine, "drones") or {}
+        max_drones = int(_get(engine, "max_drones", 1) or 1)
+        if len(drones) >= max_drones:
+            return None
+        config = _get(self.content_data, "config")
+        costs = list(_get(config, "drone_costs", []) or [])
+        extra = max(0, len(drones) - 1)
+        if extra >= len(costs):
+            return None
+        player = _get(self.game, "player_stats") or _get(engine, "player_stats")
+        if int(_get(player, "money", 0) or 0) < int(costs[extra]):
+            return None
+        from minesim.core.commands import SpawnDrone
+
+        result = SpawnDrone().execute(engine)
+        if not result.get("ok"):
+            return None
+        drone_id = int(result["drone_id"])
+        if manager is not None:
+            try:
+                manager.start_spawned(drone_id, filename)
+            except Exception:
+                engine.remove_drone(drone_id)
+                return None
+        else:
+            engine.drone(drone_id).script = filename
+        return drone_id
+
+    def run_on_new_drone(self) -> bool:
+        """Save the current file and spawn a drone that runs it."""
+        self.save()
+        editor = self.editor
+        if editor is None:
+            return False
+        filename = self.current_filename()
+        if self._spawn_drone_with_file(filename) is None:
+            self.state_label.setText("No free drone slot")
+            self._update_drone_label()
+            return False
+        self.state_label.setText("Running")
+        self._update_drone_label()
+        return True
 
     def run_current(self) -> None:
         """Alias for :meth:`run`."""
