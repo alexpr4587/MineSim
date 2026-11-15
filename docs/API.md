@@ -803,15 +803,264 @@ Example::
 mined = farm("coal", max_tiles=50)
     print("mined", mined)
 
+### `minerlib.route`
+
+Return an A* route from the miner to ``(x, y)`` as direction names.
+
+The search covers the rectangle between the miner and the target
+plus a safety margin. Tiles inside a slow zone reported by
+:func:`events` cost more, so the route goes around them when a
+detour is shorter. Returned values can be passed straight to
+:func:`move` (for example ``"east"``).
+
+Tick cost: one :func:`move` per returned step (4 ticks per tile by
+default, more inside slow zones).
+
+Example::
+
+for direction in route(4, 0):
+        move(direction)
+
+### `minerlib.goto_route`
+
+Walk to ``(x, y)`` using the slow-zone aware :func:`route`.
+
+Tick cost: one :func:`move` per route step.
+
+Example::
+
+goto_route(10, -4)
+
+### `minerlib.ore_map`
+
+Return ``{(dx, dy): ore}`` for every ore in scanner range.
+
+Offsets are relative to the miner. Locked ores appear as
+``"unknown"``. Tick cost: the cost of :func:`scan` (1 + radius
+ticks).
+
+Example::
+
+for offset, ore in ore_map(2).items():
+        print(offset, ore)
+
+### `minerlib.sma`
+
+Return the simple moving average of the last ``n`` prices of ``item``.
+
+Returns ``0.0`` when no price samples are available. Tick cost: 0
+ticks.
+
+Example::
+
+average = sma("stone", 10)
+
+### `minerlib.trend`
+
+Return the least-squares slope of the last ``n`` prices of ``item``.
+
+A positive value means prices are rising, a negative value means
+they are falling and ``0.0`` means flat or not enough samples.
+Tick cost: 0 ticks.
+
+Example::
+
+if trend("stone", 12) > 0:
+        print("prices are rising")
+
+### `minerlib.sell_if`
+
+Sell all warehouse stock of ``item`` when its price index is high.
+
+The price index is ``price(item) / base value``. When the base
+value is not exposed (for example for an unfamiliar product), the
+current price divided by its recent average is used instead. The
+sale only happens at the base. Returns the money gained (``0`` when
+the threshold is not met or there is no stock).
+
+Tick cost: 2 ticks when a sale happens.
+
+Example::
+
+earned = sell_if("stone", 1.2)
+
+### `minerlib.best_item_to_sell`
+
+Return the stocked item with the highest price / base value.
+
+Ties are broken by item id. Returns ``None`` when the warehouse is
+empty or no stocked item has a usable price. Tick cost: 0 ticks.
+
+Example::
+
+item = best_item_to_sell()
+    if item is not None:
+        sell_stock(item)
+
+### `minerlib.moving_average`
+
+Return the simple moving average for every full window of ``n``.
+
+Tick cost: 0 ticks (pure Python).
+
+Example::
+
+moving_average([1, 2, 3, 4], 2)  # [1.5, 2.5, 3.5]
+
+### `minerlib.linear_fit`
+
+Fit ``y = slope * x + intercept`` by least squares.
+
+Mismatched lengths are truncated to the shorter sequence. Returns
+``(0.0, 0.0)`` when there are fewer than two points or all ``x``
+values are equal. Tick cost: 0 ticks (pure Python).
+
+Example::
+
+slope, intercept = linear_fit([0, 1, 2], [1, 3, 5])  # (2.0, 1.0)
+
+### `minerlib.refine_all`
+
+Start as many runs of ``recipe_id`` as the warehouse inputs allow.
+
+At most one refinery job can be started per call, so the returned
+count is the number of runs packed into the free furnace slot.
+Returns ``0`` when there is no free slot or not enough input.
+
+Tick cost: 2 ticks at the base, plus the normal refinery duration.
+
+Example::
+
+runs = refine_all("copper_bar")
+
+### `minerlib.wait_for_refinery`
+
+Wait until every running refinery job has finished.
+
+Jobs that are blocked because the warehouse is full stop the wait,
+so the helper never spins forever. Tick cost: the remaining job
+time (through :func:`wait`).
+
+Example::
+
+refine_all("copper_bar")
+    wait_for_refinery()
+
+### `minerlib.best_contract`
+
+Return the contract with the best reward per base value in stock.
+
+Only contracts whose quantity is already in the warehouse are
+considered. The score is ``reward / (quantity * base_value)`` (the
+premium paid per unit of base value); ties are broken by contract
+id. Returns ``None`` when nothing can be delivered right now.
+
+Tick cost: 0 ticks.
+
+Example::
+
+contract = best_contract()
+    if contract is not None:
+        deliver(contract["id"])
+
+### `minerlib.fulfill`
+
+Fetch or refine what a contract is missing, then deliver it.
+
+The helper first unloads the current inventory at the base. Missing
+ore is mined; missing products are refined from the first recipe
+that outputs them. Refining and mining are skipped when the inputs
+or reachable ore are not available. Returns the reward money, or
+``0`` when the contract could not be completed.
+
+Tick cost: 2 ticks to deliver plus the mining, moving and refining
+work needed for the missing items.
+
+Example::
+
+contract = best_contract()
+    if contract is not None:
+        earned = fulfill(contract["id"])
+
+### `minerlib.Forecast`
+
+Simple exponential smoothing for one price series.
+
+``alpha`` controls how quickly the forecast follows new samples
+(0 < alpha <= 1). ``update(x)`` feeds one sample and ``predict()``
+returns the current smoothed level. Tick cost: 0 ticks.
+
+Example::
+
+forecast = Forecast(alpha=0.5)
+    for sample in price_history("stone", 10) or []:
+        forecast.update(sample)
+    print(forecast.predict())
+
+### `minerlib.Worker`
+
+Base class for fleet workers driven step by step.
+
+Subclasses override :meth:`step`; :meth:`run` calls it repeatedly
+until it returns ``False`` or the step budget is spent. Tick cost:
+whatever the overridden step uses.
+
+Example::
+
+class Counter(Worker):
+        def step(self):
+            print("at", position())
+            return True
+
+Counter("counter").run(3)
+
+### `minerlib.MinerWorker`
+
+A worker that mines one ore type until the bag is full, then hauls.
+
+Tick cost: scanning, moving and mining through the primitives.
+
+Example::
+
+digger = MinerWorker("digger", "stone")
+    digger.run(50)
+
+### `minerlib.HaulerWorker`
+
+A worker that waits for work published in shared memory.
+
+The work value is read from ``shared_get(key)``. When it is a dict
+with ``x`` and ``y`` the worker walks there, mines the optional
+``item`` when present and hauls when ``haul`` is true. With no work
+published it waits one tick. Tick cost: 1 wait tick when idle.
+
+Example::
+
+shared_set("work", {"x": 4, "y": 0, "item": "stone"})
+    HaulerWorker("hauler").run(20)
+
+### `minerlib.Fleet`
+
+Convenience wrapper around the fleet primitives.
+
+Tick cost: the normal cost of each underlying call.
+
+Example::
+
+fleet = Fleet()
+    fleet.broadcast("goal", 10)
+    fleet.gather("goal")
+
 ### `minerlib.Samples`
 
-A tiny tally for mining attempts. `add(ore, success)` records an attempt, `count(ore)` returns attempts, `rate(ore)` returns the observed success rate and `summary()` returns attempts, successes and rates per ore.
+A tiny pure-Python tally of mining attempts per ore.
 
-```python
-samples = minerlib.Samples()
-samples.add("stone", True)
-print(samples.rate("stone"))
-```
+Example::
+
+samples = Samples()
+    samples.add("stone", True)
+    samples.add("stone", False)
+    print(samples.rate("stone"))  # 0.5
 
 ## Standard library modules
 
@@ -828,6 +1077,10 @@ Player scripts may import the standard-library modules below once the required a
 | `functools` | unlocks with the **One-Liner** achievement |
 | `dataclasses` | unlocks with the **Object Oriented** achievement |
 | `typing` | unlocks with the **Safe Hands** achievement |
+| `abc` | available from the start |
+| `enum` | available from the start |
+| `bisect` | available from the start |
+| `operator` | available from the start |
 
 ## Safety
 

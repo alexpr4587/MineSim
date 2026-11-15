@@ -118,10 +118,20 @@ def test_initial_unlock_sets(content):
         "shared_get",
         "shared_set",
     }
-    assert state.unlocked_modules == {"math"}
+    assert state.unlocked_modules == {"abc", "bisect", "enum", "math", "operator"}
     assert state.unlocked_upgrades == {"drone_bay", "warehouse", "furnace", "contract_board"}
     assert state.unlocked_skins == {"rusty_bot"}
-    assert state.unlocked_examples == {"01_hello"}
+    assert state.unlocked_examples == {
+        "01_hello",
+        "09_market_watcher",
+        "10_refine_everything",
+        "11_contract_runner",
+        "12_two_drones",
+        "13_worker_classes",
+        "14_event_hunter",
+        "15_price_forecast",
+        "16_fleet_manager",
+    }
 
 
 def _find_biome(game: Game, biome_id: str) -> tuple[int, int]:

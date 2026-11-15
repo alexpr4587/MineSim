@@ -798,7 +798,15 @@
     "current_streak": 4,
     "unlocked_examples": [
       "01_hello",
-      "02_sweep_and_sell"
+      "02_sweep_and_sell",
+      "09_market_watcher",
+      "10_refine_everything",
+      "11_contract_runner",
+      "12_two_drones",
+      "13_worker_classes",
+      "14_event_hunter",
+      "15_price_forecast",
+      "16_fleet_manager"
     ],
     "unlocked_functions": [
       "assign",
@@ -828,7 +836,11 @@
       "unload"
     ],
     "unlocked_modules": [
-      "math"
+      "abc",
+      "bisect",
+      "enum",
+      "math",
+      "operator"
     ],
     "unlocked_ores": [
       "coal",

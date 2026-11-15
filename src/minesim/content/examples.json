@@ -46,5 +46,53 @@
     "title": "Dataclass Logbook",
     "file": "08_dataclass_logbook.py",
     "unlocked_by": "own_class"
+  },
+  {
+    "id": "09_market_watcher",
+    "title": "Market Watcher",
+    "file": "09_market_watcher.py",
+    "unlocked_by": null
+  },
+  {
+    "id": "10_refine_everything",
+    "title": "Refine Everything",
+    "file": "10_refine_everything.py",
+    "unlocked_by": null
+  },
+  {
+    "id": "11_contract_runner",
+    "title": "Contract Runner",
+    "file": "11_contract_runner.py",
+    "unlocked_by": null
+  },
+  {
+    "id": "12_two_drones",
+    "title": "Two Drones",
+    "file": "12_two_drones.py",
+    "unlocked_by": null
+  },
+  {
+    "id": "13_worker_classes",
+    "title": "Worker Classes",
+    "file": "13_worker_classes.py",
+    "unlocked_by": null
+  },
+  {
+    "id": "14_event_hunter",
+    "title": "Event Hunter",
+    "file": "14_event_hunter.py",
+    "unlocked_by": null
+  },
+  {
+    "id": "15_price_forecast",
+    "title": "Price Forecast",
+    "file": "15_price_forecast.py",
+    "unlocked_by": null
+  },
+  {
+    "id": "16_fleet_manager",
+    "title": "Fleet Manager",
+    "file": "16_fleet_manager.py",
+    "unlocked_by": null
   }
 ]

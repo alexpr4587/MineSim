@@ -12,8 +12,53 @@ __all__ = ["generate_stub_text", "generate_stubs", "write_stubs"]
 
 logger = logging.getLogger(__name__)
 
+_PRIMITIVE_NAMES: frozenset[str] = frozenset(
+    {
+        "move",
+        "mine",
+        "peek",
+        "position",
+        "sell",
+        "unload",
+        "stock",
+        "sell_stock",
+        "price",
+        "prices",
+        "price_history",
+        "inventory",
+        "scan",
+        "stats",
+        "buy_upgrade",
+        "wait",
+        "tick",
+        "events",
+        "distance",
+        "biome",
+        "ore_info",
+        "inspect",
+        "submit_estimate",
+        "recipes",
+        "refine",
+        "refinery",
+        "contracts",
+        "deliver",
+        "drone_id",
+        "drones",
+        "spawn_drone",
+        "kill_drone",
+        "assign",
+        "shared_get",
+        "shared_set",
+    }
+)
+
 _PARAM_TYPES: dict[str, str] = {
     "direction": "str",
+    "alpha": "float",
+    "min_index": "float",
+    "values": "list[float]",
+    "xs": "list[float]",
+    "ys": "list[float]",
     "radius": "int",
     "upgrade_id": "str",
     "id": "str",
@@ -85,6 +130,19 @@ _RETURN_TYPES: dict[str, str] = {
     "mine_here": "Any",
     "nearest": "tuple[int, int] | None",
     "goto_nearest": "bool",
+    "route": "list[str]",
+    "goto_route": "None",
+    "ore_map": "dict[tuple[int, int], str]",
+    "sma": "float",
+    "trend": "float",
+    "sell_if": "int",
+    "best_item_to_sell": "str | None",
+    "moving_average": "list[float]",
+    "linear_fit": "tuple[float, float]",
+    "refine_all": "int",
+    "wait_for_refinery": "None",
+    "best_contract": "dict | None",
+    "fulfill": "int",
     "mine_until": "int",
     "haul": "int",
     "farm": "int",
@@ -216,21 +274,11 @@ def _minerlib_entries() -> list[dict[str, Any]]:
     for node in tree.body:
         if not isinstance(node, ast.FunctionDef):
             continue
-        if node.name in {
-            "move",
-            "mine",
-            "peek",
-            "position",
-            "scan",
-            "inventory",
-            "sell",
-        }:
+        if node.name in _PRIMITIVE_NAMES or node.name.startswith("_"):
             continue
-        params = [arg.arg for arg in node.args.args]
+        params = ast.unparse(node.args)
         doc = ast.get_docstring(node) or ""
-        entries.append(
-            {"name": node.name, "signature": f"{node.name}({', '.join(params)})", "doc": doc}
-        )
+        entries.append({"name": node.name, "signature": f"{node.name}({params})", "doc": doc})
     return entries
 
 
@@ -281,6 +329,32 @@ def generate_stub_text(content: Any = None) -> str:
     lines.append("# --- minerlib ---")
     for entry in _minerlib_entries():
         lines.append(_format_entry(entry))
+    lines.append("")
+    lines.append("class Forecast:")
+    lines.append("    def __init__(self, alpha: float = 0.3) -> None: ...")
+    lines.append("    def update(self, x: float) -> float: ...")
+    lines.append("    def predict(self) -> float: ...")
+    lines.append("")
+    lines.append("class Worker:")
+    lines.append('    def __init__(self, name: str = "worker") -> None: ...')
+    lines.append("    def goto(self, x: int, y: int) -> None: ...")
+    lines.append("    def haul(self) -> int: ...")
+    lines.append("    def step(self) -> bool: ...")
+    lines.append("    def run(self, steps: int = 100) -> int: ...")
+    lines.append("")
+    lines.append("class MinerWorker(Worker):")
+    lines.append('    def __init__(self, name: str = "miner", ore: str = "stone") -> None: ...')
+    lines.append("    def step(self) -> bool: ...")
+    lines.append("")
+    lines.append("class HaulerWorker(Worker):")
+    lines.append('    def __init__(self, name: str = "hauler", key: str = "work") -> None: ...')
+    lines.append("    def step(self) -> bool: ...")
+    lines.append("")
+    lines.append("class Fleet:")
+    lines.append("    def spawn(self, script: str) -> Any: ...")
+    lines.append("    def kill_all(self) -> list[int]: ...")
+    lines.append("    def broadcast(self, key: str, value: Any) -> None: ...")
+    lines.append("    def gather(self, key: str) -> Any: ...")
     lines.append("")
     lines.append("class Samples:")
     lines.append("    def __init__(self) -> None: ...")

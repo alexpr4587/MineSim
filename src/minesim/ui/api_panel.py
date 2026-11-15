@@ -7,6 +7,7 @@ from typing import Any
 
 from PySide6.QtWidgets import QTextEdit, QVBoxLayout, QWidget
 
+from minesim.scripting.stubs import _PRIMITIVE_NAMES, _signature_params
 from minesim.ui.floating_panel import FloatingPanel
 from minesim.ui.theme import DISABLED_TEXT, SYNTAX_API, TEXT, TEXT_DIM
 
@@ -80,23 +81,18 @@ def _minerlib_entries() -> list[dict[str, Any]]:
     except SyntaxError:
         return entries
     for node in tree.body:
-        if not isinstance(node, ast.FunctionDef):
-            continue
-        if node.name in {
-            "move",
-            "mine",
-            "peek",
-            "position",
-            "scan",
-            "inventory",
-            "sell",
-        }:
-            continue
-        params = [arg.arg for arg in node.args.args]
-        doc = ast.get_docstring(node) or ""
-        entries.append(
-            {"name": node.name, "signature": f"{node.name}({', '.join(params)})", "doc": doc}
-        )
+        if isinstance(node, ast.FunctionDef):
+            if node.name in _PRIMITIVE_NAMES or node.name.startswith("_"):
+                continue
+            params = _signature_params(f"{node.name}({ast.unparse(node.args)})", node.name)
+            rendered = ", ".join(
+                name if default is None else f"{name}={default}" for name, default in params
+            )
+            doc = ast.get_docstring(node) or ""
+            entries.append({"name": node.name, "signature": f"{node.name}({rendered})", "doc": doc})
+        elif isinstance(node, ast.ClassDef):
+            doc = ast.get_docstring(node) or ""
+            entries.append({"name": node.name, "signature": f"class {node.name}", "doc": doc})
     return entries
 
 

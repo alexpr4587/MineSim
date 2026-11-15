@@ -151,6 +151,19 @@ def generate_api_md(output: str | Path | None = None) -> Path:
         "mine_until",
         "haul",
         "farm",
+        "route",
+        "goto_route",
+        "ore_map",
+        "sma",
+        "trend",
+        "sell_if",
+        "best_item_to_sell",
+        "moving_average",
+        "linear_fit",
+        "refine_all",
+        "wait_for_refinery",
+        "best_contract",
+        "fulfill",
     )
     for name in helper_names:
         doc = _minerlib_doc(name)
@@ -165,21 +178,18 @@ def generate_api_md(output: str | Path | None = None) -> Path:
             lines.append("*No documentation.*")
             lines.append("")
 
-    lines.append("### `minerlib.Samples`")
-    lines.append("")
-    lines.append(
-        "A tiny tally for mining attempts. `add(ore, success)` records an "
-        "attempt, `count(ore)` returns attempts, `rate(ore)` returns the "
-        "observed success rate and `summary()` returns attempts, successes "
-        "and rates per ore."
-    )
-    lines.append("")
-    lines.append("```python")
-    lines.append("samples = minerlib.Samples()")
-    lines.append('samples.add("stone", True)')
-    lines.append('print(samples.rate("stone"))')
-    lines.append("```")
-    lines.append("")
+    class_names = ("Forecast", "Worker", "MinerWorker", "HaulerWorker", "Fleet", "Samples")
+    for name in class_names:
+        doc = _minerlib_doc(name)
+        lines.append(f"### `minerlib.{name}`")
+        lines.append("")
+        if doc:
+            for paragraph in doc.split("\n\n"):
+                lines.append(paragraph.strip())
+                lines.append("")
+        else:
+            lines.append("*No documentation.*")
+            lines.append("")
 
     lines.append("## Standard library modules")
     lines.append("")

@@ -34,5 +34,21 @@
   {
     "name": "typing",
     "unlocked_by": "safe_hands"
+  },
+  {
+    "name": "abc",
+    "unlocked_by": null
+  },
+  {
+    "name": "enum",
+    "unlocked_by": null
+  },
+  {
+    "name": "bisect",
+    "unlocked_by": null
+  },
+  {
+    "name": "operator",
+    "unlocked_by": null
   }
 ]
