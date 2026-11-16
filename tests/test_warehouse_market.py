@@ -251,6 +251,7 @@ def test_save_load_gives_identical_future_prices(content, tmp_path):
 
 def test_headless_session_mines_unloads_waits_and_sells(content):
     game = Game.new(seed=77)
+    game.progression_state.unlocked_features.update({"warehouse", "market"})
     world = game.world
     for y in range(2, 40):
         for x in range(2, 40):

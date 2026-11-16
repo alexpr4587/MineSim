@@ -369,9 +369,15 @@ def test_v03_examples_are_listed_and_compile(content):
 
 
 def test_new_modules_are_available(content):
-    for name in ("abc", "enum", "bisect", "operator"):
+    expected = {
+        "abc": "inheritance",
+        "enum": "inheritance",
+        "bisect": "chartist",
+        "operator": "trend_follower",
+    }
+    for name, unlocked_by in expected.items():
         assert name in content.modules
-        assert content.modules[name].unlocked_by is None
+        assert content.modules[name].unlocked_by == unlocked_by
 
 
 @pytest.mark.integration

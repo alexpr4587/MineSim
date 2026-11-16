@@ -3,30 +3,30 @@
     "id": "warehouse",
     "name": "Warehouse",
     "description": "Store mined ore and refined goods at the base.",
-    "unlocked_by": null
+    "unlocked_by": "storage_unit"
   },
   {
     "id": "market",
     "name": "Market",
     "description": "Buy and sell goods at fluctuating prices.",
-    "unlocked_by": null
+    "unlocked_by": "market_watcher"
   },
   {
     "id": "refinery",
     "name": "Refinery",
     "description": "Smelt ore and craft refined products.",
-    "unlocked_by": null
+    "unlocked_by": "smelter"
   },
   {
     "id": "contracts",
     "name": "Contracts",
     "description": "Deliver goods to complete contracts for rewards.",
-    "unlocked_by": null
+    "unlocked_by": "first_order"
   },
   {
     "id": "drones",
     "name": "Drones",
     "description": "Build and manage a fleet of mining drones.",
-    "unlocked_by": null
+    "unlocked_by": "second_pair_of_hands"
   }
 ]

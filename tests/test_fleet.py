@@ -247,6 +247,7 @@ def test_step_processes_drones_in_increasing_id_order() -> None:
 
 def test_spawn_limits_costs_and_drone_bay() -> None:
     game = Game.new(seed=2)
+    game.progression_state.unlocked_features.add("drones")
     engine = game.engine
     assert engine.max_drones == 1
     first = game.submit(SpawnDrone())
@@ -293,6 +294,7 @@ def test_spawn_limits_costs_and_drone_bay() -> None:
 
 def test_remove_drone_never_removes_zero_and_reuses_free_id() -> None:
     game = Game.new(seed=3)
+    game.progression_state.unlocked_features.add("drones")
     engine = game.engine
     game.progression_state.unlock_upgrade("drone_bay")
     game.progression_state.unlock_upgrade("drone_bay")

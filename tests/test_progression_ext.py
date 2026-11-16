@@ -422,9 +422,12 @@ def _documented_counters() -> list[str]:
     return counters
 
 
-def test_headless_scripted_session_moves_every_documented_counter():
+def test_headless_scripted_session_moves_every_documented_counter(content):
     game = Game.new(seed=12345)
     state = game.progression_state
+    state.unlocked_features.update({"warehouse", "market", "refinery", "contracts", "drones"})
+    state.unlocked_recipes.update(content.recipes)
+    state.unlocked_upgrades.update(content.upgrades)
 
     # Rule failures for all reasons.
     _submit(game, Mine())  # nothing_to_mine on the base

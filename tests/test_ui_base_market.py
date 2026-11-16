@@ -27,6 +27,13 @@ def qapp():
     return QApplication.instance() or QApplication([])
 
 
+def _unlocked_game(*features: str, recipes: tuple[str, ...] = ("copper_bar",)) -> Game:
+    game = Game.new()
+    game.progression_state.unlocked_features.update(features)
+    game.progression_state.unlocked_recipes.update(recipes)
+    return game
+
+
 @pytest.fixture(autouse=True)
 def _clean_settings(qapp):
     QSettings("MineSim", "MineSim").clear()
@@ -105,7 +112,7 @@ def test_market_panel_selector_chart_and_table(qapp):
 
 
 def test_warehouse_buttons_call_sell_stock(qapp):
-    game = Game.new()
+    game = _unlocked_game("warehouse", "market")
     game.engine.warehouse.add("stone", 5)
     calls: list[tuple[str, int | None]] = []
     original = game.sell_stock
@@ -133,7 +140,7 @@ def test_warehouse_buttons_call_sell_stock(qapp):
 
 
 def test_unload_button_enabled_only_on_base(qapp):
-    game = Game.new()
+    game = _unlocked_game("warehouse")
     game.miner.inventory = {"stone": 2}
     game.miner.x, game.miner.y = 5, 5
     panel = BasePanel(game=game)
@@ -161,7 +168,7 @@ def test_unload_button_enabled_only_on_base(qapp):
 
 
 def test_refinery_buttons_start_jobs_and_slots_show_state(qapp):
-    game = Game.new()
+    game = _unlocked_game("refinery")
     game.engine.warehouse.add("copper", 20)
     calls: list[tuple[str, int]] = []
     original = game.start_refine
@@ -184,7 +191,7 @@ def test_refinery_buttons_start_jobs_and_slots_show_state(qapp):
     assert not panel.recipe_rows["copper_bar"].start1.isEnabled()
     panel.close()
 
-    other = Game.new()
+    other = _unlocked_game("refinery")
     other.engine.warehouse.add("copper", 15)
     second = BasePanel(game=other)
     second.show()
@@ -195,7 +202,7 @@ def test_refinery_buttons_start_jobs_and_slots_show_state(qapp):
 
 
 def test_refinery_slot_shows_blocked_state(qapp):
-    game = Game.new()
+    game = _unlocked_game("refinery")
     game.engine.warehouse.add("copper", 3)
     panel = BasePanel(game=game)
     panel.show()
@@ -230,7 +237,7 @@ def test_locked_recipe_is_dimmed_and_disabled(qapp):
 
 
 def test_contract_card_deliver_disabled_until_stock(qapp):
-    game = Game.new()
+    game = _unlocked_game("contracts")
     game.engine.warehouse.capacity = 1_000_000
     while not game.engine.contracts.contracts:
         game.step()
@@ -262,7 +269,7 @@ def test_contract_card_deliver_disabled_until_stock(qapp):
 
 
 def test_panels_fit_1024x768_without_overlaps(qapp, tmp_path):
-    game = Game.new()
+    game = _unlocked_game("warehouse", "market", "refinery", "contracts")
     window = MainWindow(game, scripts_dir=tmp_path)
     window.resize(1024, 768)
     window.show()

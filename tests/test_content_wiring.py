@@ -22,7 +22,16 @@ from minesim.core.game import Game
 from minesim.core.progression.state import ProgressionState
 
 ROOT = Path(__file__).resolve().parents[1]
-TABS = {"code", "mining", "business", "explorer", "data"}
+TABS = {
+    "code",
+    "mining",
+    "business",
+    "trading",
+    "industry",
+    "fleet",
+    "explorer",
+    "data",
+}
 
 
 @pytest.fixture(scope="module")
@@ -30,8 +39,8 @@ def content():
     return load_content()
 
 
-def test_content_validation_passes_and_has_five_tabs(content):
-    assert len(content.achievements) == 41
+def test_content_validation_passes_and_has_eight_tabs(content):
+    assert len(content.achievements) == 69
     assert {achievement.tab for achievement in content.achievements.values()} == TABS
 
 
@@ -97,45 +106,13 @@ def test_every_unlockable_thing_has_exactly_one_unlocking_achievement(content):
 def test_initial_unlock_sets(content):
     state = ProgressionState(content)
     assert state.unlocked_ores == {"stone"}
-    assert state.unlocked_functions == {
-        "move",
-        "mine",
-        "peek",
-        "position",
-        "unload",
-        "stock",
-        "sell_stock",
-        "price",
-        "prices",
-        "price_history",
-        "recipes",
-        "refine",
-        "refinery",
-        "contracts",
-        "deliver",
-        "events",
-        "drone_id",
-        "drones",
-        "spawn_drone",
-        "kill_drone",
-        "assign",
-        "shared_get",
-        "shared_set",
-    }
-    assert state.unlocked_modules == {"abc", "bisect", "enum", "math", "operator"}
-    assert state.unlocked_upgrades == {"drone_bay", "warehouse", "furnace", "contract_board"}
+    assert state.unlocked_functions == {"move", "mine", "peek", "position"}
+    assert state.unlocked_modules == {"math"}
+    assert state.unlocked_upgrades == set()
+    assert state.unlocked_recipes == set()
+    assert state.unlocked_features == set()
     assert state.unlocked_skins == {"rusty_bot"}
-    assert state.unlocked_examples == {
-        "01_hello",
-        "09_market_watcher",
-        "10_refine_everything",
-        "11_contract_runner",
-        "12_two_drones",
-        "13_worker_classes",
-        "14_event_hunter",
-        "15_price_forecast",
-        "16_fleet_manager",
-    }
+    assert state.unlocked_examples == {"01_hello"}
 
 
 def _find_biome(game: Game, biome_id: str) -> tuple[int, int]:

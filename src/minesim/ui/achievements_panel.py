@@ -43,11 +43,23 @@ _TAB_LABELS = {
     "code": "Code",
     "mining": "Mining",
     "business": "Business",
+    "trading": "Trading",
+    "industry": "Industry",
+    "fleet": "Fleet",
     "explorer": "Explorer",
     "data": "Data",
 }
 
-_TAB_ORDER = ("code", "mining", "business", "explorer", "data")
+_TAB_ORDER = (
+    "code",
+    "mining",
+    "business",
+    "trading",
+    "industry",
+    "fleet",
+    "explorer",
+    "data",
+)
 
 
 def _get(obj: Any, name: str, default: Any = None) -> Any:
@@ -275,6 +287,9 @@ class AchievementsPanel(FloatingPanel):
         self.content = content
 
         self.tabs = QTabWidget(self.content_widget)
+        self.tabs.setUsesScrollButtons(True)
+        self.tabs.tabBar().setExpanding(False)
+        self.tabs.tabBar().setUsesScrollButtons(True)
         self.content_layout.addWidget(self.tabs)
 
         self._views: dict[str, _AchievementsView] = {}

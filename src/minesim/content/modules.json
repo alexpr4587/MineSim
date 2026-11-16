@@ -37,18 +37,18 @@
   },
   {
     "name": "abc",
-    "unlocked_by": null
+    "unlocked_by": "inheritance"
   },
   {
     "name": "enum",
-    "unlocked_by": null
+    "unlocked_by": "inheritance"
   },
   {
     "name": "bisect",
-    "unlocked_by": null
+    "unlocked_by": "chartist"
   },
   {
     "name": "operator",
-    "unlocked_by": null
+    "unlocked_by": "trend_follower"
   }
 ]

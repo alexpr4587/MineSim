@@ -13,36 +13,36 @@ Functions are called directly, e.g. `move(East)`, `mine()`, `sell()`. Locked fun
 | `peek` | `peek()` | Return the ore on the current tile, None if empty, or 'unknown' if the ore is locked. | 0 ticks | `ore = peek()` | available from the start |
 | `position` | `position()` | Return the miner position as (x, y). | 0 ticks | `x, y = position()` | available from the start |
 | `sell` | `sell()` | Sell the whole inventory at the base and return the money gained. | 2 ticks at the base | `earned = sell()` | unlocks with the **First Dig** achievement |
-| `unload` | `unload()` | Move the drone inventory into the base warehouse and return {moved, left}. | 1 tick at the base | `result = unload()` | available from the start |
-| `stock` | `stock()` | Return the warehouse contents and capacity as {items, capacity, used, free}. | 0 ticks | `stock()['items']` | available from the start |
-| `sell_stock` | `sell_stock(item, amount=None)` | Sell items from the warehouse at market prices and return the money gained. | 2 ticks at the base | `earned = sell_stock('stone', 10)` | available from the start |
-| `price` | `price(item)` | Return the current market price of an unlocked item, or None. | 0 ticks | `price('stone')` | available from the start |
-| `prices` | `prices()` | Return a dict of current market prices for every unlocked item. | 0 ticks | `prices()['stone']` | available from the start |
-| `price_history` | `price_history(item, n=50)` | Return up to n recent price samples for an unlocked item, or None. | 0 ticks | `price_history('stone', 20)` | available from the start |
+| `unload` | `unload()` | Move the drone inventory into the base warehouse and return {moved, left}. | 1 tick at the base | `result = unload()` | unlocks with the **Storage Unit** achievement |
+| `stock` | `stock()` | Return the warehouse contents and capacity as {items, capacity, used, free}. | 0 ticks | `stock()['items']` | unlocks with the **Storage Unit** achievement |
+| `sell_stock` | `sell_stock(item, amount=None)` | Sell items from the warehouse at market prices and return the money gained. | 2 ticks at the base | `earned = sell_stock('stone', 10)` | unlocks with the **Storage Unit** achievement |
+| `price` | `price(item)` | Return the current market price of an unlocked item, or None. | 0 ticks | `price('stone')` | unlocks with the **Market Watcher** achievement |
+| `prices` | `prices()` | Return a dict of current market prices for every unlocked item. | 0 ticks | `prices()['stone']` | unlocks with the **Market Watcher** achievement |
+| `price_history` | `price_history(item, n=50)` | Return up to n recent price samples for an unlocked item, or None. | 0 ticks | `price_history('stone', 20)` | unlocks with the **Chartist** achievement |
 | `inventory` | `inventory()` | Return the inventory as a dict of ore id to count. | 0 ticks | `items = inventory()` | unlocks with the **Hello, Miner** achievement |
 | `scan` | `scan(radius)` | Scan for ore within radius tiles. Returns a list of (dx, dy, ore_id) for non-empty tiles. | 1 + radius ticks (radius capped by the scanner) | `for dx, dy, ore in scan(2): ...` | unlocks with the **Scout** achievement |
 | `stats` | `stats()` | Return per-ore mining statistics as {ore: {'attempts': n, 'successes': m}}. | 0 ticks | `stats()['stone']` | unlocks with the **Data Driven** achievement |
 | `buy_upgrade` | `buy_upgrade(upgrade_id)` | Buy the next level of the given upgrade and return the new level. | 0 ticks | `buy_upgrade('backpack')` | unlocks with the **First Sale** achievement |
 | `wait` | `wait(ticks)` | Wait for ticks (1 to 600) without doing anything else. | as many ticks as requested (1-600) | `wait(20)` | unlocks with the **Patience** achievement |
 | `tick` | `tick()` | Return the current game tick. | 0 ticks | `now = tick()` | unlocks with the **Clockwork** achievement |
-| `events` | `events()` | Return the active world events as dicts with kind, x, y, radius, ends_in, item and direction ('shortage' or 'glut' for market news). The exact price factor is never included. | 0 ticks | `for event in events(): print(event['kind'])` | available from the start |
+| `events` | `events()` | Return the active world events as dicts with kind, x, y, radius, ends_in, item and direction ('shortage' or 'glut' for market news). The exact price factor is never included. | 0 ticks | `for event in events(): print(event['kind'])` | unlocks with the **News Reader** achievement |
 | `distance` | `distance()` | Return the Chebyshev distance from the base at (0, 0). | 0 ticks | `d = distance()` | unlocks with the **Far From Home** achievement |
 | `biome` | `biome()` | Return the id of the biome under the miner. | 0 ticks | `here = biome()` | unlocks with the **Deep Diver** achievement |
 | `ore_info` | `ore_info(ore_id)` | Return {id, name, tier, hardness, base_value, regen_ticks} for a known ore, or None when it is unknown or locked. The mining probability is never included. | 0 ticks | `info = ore_info('coal')` | unlocks with the **Appraiser** achievement |
 | `inspect` | `inspect()` | Return {ore, mineable, reason, regrows_in} for the current tile. | 0 ticks | `seen = inspect()` | unlocks with the **Know Your Limits** achievement |
 | `submit_estimate` | `submit_estimate(ore_id, p)` | Submit an estimate p for the mining probability of an ore after at least 100 attempts. Allows three submissions per ore and returns {ok, close}. | 0 ticks | `submit_estimate('coal', 0.9)` | unlocks with the **Sampler** achievement |
-| `recipes` | `recipes()` | Return {recipe_id: {id, name, inputs, outputs, ticks, unlocked, unlocked_by}} for every refinery recipe. | 0 ticks | `bars = recipes()` | available from the start |
-| `refine` | `refine(recipe_id, times=1)` | Start a refinery job at the base. The inputs are consumed immediately; returns {ok, recipe, times, duration, finish_tick}. | 2 ticks | `refine('copper_bar', 2)` | available from the start |
-| `refinery` | `refinery()` | Return the running refinery jobs as a list of {recipe, times, ticks_left, progress, blocked, outputs}. | 0 ticks | `jobs = refinery()` | available from the start |
-| `contracts` | `contracts()` | Return the open delivery contracts as a list of {id, item, quantity, reward, deadline, ticks_left}. | 0 ticks | `board = contracts()` | available from the start |
-| `deliver` | `deliver(contract_id)` | Deliver a contract from the warehouse at the base and return the reward money. | 2 ticks | `paid = deliver(cid)` | available from the start |
-| `drone_id` | `drone_id()` | Return the id of the drone running this script. | 0 ticks | `me = drone_id()` | available from the start |
-| `drones` | `drones()` | Return the fleet as a list of {id, x, y, state, script, inventory_used} dicts. | 0 ticks | `for drone in drones(): print(drone['id'], drone['state'])` | available from the start |
-| `spawn_drone` | `spawn_drone(script_name)` | Buy a drone on the base and start script_name (a .py file in the scripts folder). Returns the new drone id or {ok: False, reason}. | 5 ticks plus the next drone cost | `worker = spawn_drone('worker.py')` | available from the start |
-| `kill_drone` | `kill_drone(drone_id)` | Stop the script of drone_id and remove that drone. Never removes drone 0. Returns True on success. | 0 ticks | `kill_drone(worker)` | available from the start |
-| `assign` | `assign(drone_id, script_name)` | Stop the current script of drone_id and start script_name instead. | 0 ticks | `assign(1, 'hauler.py')` | available from the start |
-| `shared_get` | `shared_get(key, default=None)` | Return the JSON value stored under key in the fleet-wide shared store, or default. | 0 ticks | `goal = shared_get('goal', 0)` | available from the start |
-| `shared_set` | `shared_set(key, value)` | Store a JSON value under key in the fleet-wide shared store (max 64 keys, 40-character keys, 4 KB values). | 0 ticks | `shared_set('goal', 20)` | available from the start |
+| `recipes` | `recipes()` | Return {recipe_id: {id, name, inputs, outputs, ticks, unlocked, unlocked_by}} for every refinery recipe. | 0 ticks | `bars = recipes()` | unlocks with the **Smelter** achievement |
+| `refine` | `refine(recipe_id, times=1)` | Start a refinery job at the base. The inputs are consumed immediately; returns {ok, recipe, times, duration, finish_tick}. | 2 ticks | `refine('copper_bar', 2)` | unlocks with the **Smelter** achievement |
+| `refinery` | `refinery()` | Return the running refinery jobs as a list of {recipe, times, ticks_left, progress, blocked, outputs}. | 0 ticks | `jobs = refinery()` | unlocks with the **Smelter** achievement |
+| `contracts` | `contracts()` | Return the open delivery contracts as a list of {id, item, quantity, reward, deadline, ticks_left}. | 0 ticks | `board = contracts()` | unlocks with the **First Order** achievement |
+| `deliver` | `deliver(contract_id)` | Deliver a contract from the warehouse at the base and return the reward money. | 2 ticks | `paid = deliver(cid)` | unlocks with the **First Order** achievement |
+| `drone_id` | `drone_id()` | Return the id of the drone running this script. | 0 ticks | `me = drone_id()` | unlocks with the **Second Pair of Hands** achievement |
+| `drones` | `drones()` | Return the fleet as a list of {id, x, y, state, script, inventory_used} dicts. | 0 ticks | `for drone in drones(): print(drone['id'], drone['state'])` | unlocks with the **Second Pair of Hands** achievement |
+| `spawn_drone` | `spawn_drone(script_name)` | Buy a drone on the base and start script_name (a .py file in the scripts folder). Returns the new drone id or {ok: False, reason}. | 5 ticks plus the next drone cost | `worker = spawn_drone('worker.py')` | unlocks with the **Second Pair of Hands** achievement |
+| `kill_drone` | `kill_drone(drone_id)` | Stop the script of drone_id and remove that drone. Never removes drone 0. Returns True on success. | 0 ticks | `kill_drone(worker)` | unlocks with the **Second Pair of Hands** achievement |
+| `assign` | `assign(drone_id, script_name)` | Stop the current script of drone_id and start script_name instead. | 0 ticks | `assign(1, 'hauler.py')` | unlocks with the **Second Pair of Hands** achievement |
+| `shared_get` | `shared_get(key, default=None)` | Return the JSON value stored under key in the fleet-wide shared store, or default. | 0 ticks | `goal = shared_get('goal', 0)` | unlocks with the **Teamwork** achievement |
+| `shared_set` | `shared_set(key, value)` | Store a JSON value under key in the fleet-wide shared store (max 64 keys, 40-character keys, 4 KB values). | 0 ticks | `shared_set('goal', 20)` | unlocks with the **Teamwork** achievement |
 
 ### `move`
 
@@ -150,7 +150,7 @@ earned = sell()
 result = unload()
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Storage Unit** achievement
 
 ### `stock`
 
@@ -168,7 +168,7 @@ result = unload()
 stock()['items']
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Storage Unit** achievement
 
 ### `sell_stock`
 
@@ -186,7 +186,7 @@ stock()['items']
 earned = sell_stock('stone', 10)
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Storage Unit** achievement
 
 ### `price`
 
@@ -204,7 +204,7 @@ earned = sell_stock('stone', 10)
 price('stone')
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Market Watcher** achievement
 
 ### `prices`
 
@@ -222,7 +222,7 @@ price('stone')
 prices()['stone']
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Market Watcher** achievement
 
 ### `price_history`
 
@@ -240,7 +240,7 @@ prices()['stone']
 price_history('stone', 20)
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Chartist** achievement
 
 ### `inventory`
 
@@ -366,7 +366,7 @@ now = tick()
 for event in events(): print(event['kind'])
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **News Reader** achievement
 
 ### `distance`
 
@@ -474,7 +474,7 @@ submit_estimate('coal', 0.9)
 bars = recipes()
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Smelter** achievement
 
 ### `refine`
 
@@ -492,7 +492,7 @@ bars = recipes()
 refine('copper_bar', 2)
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Smelter** achievement
 
 ### `refinery`
 
@@ -510,7 +510,7 @@ refine('copper_bar', 2)
 jobs = refinery()
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Smelter** achievement
 
 ### `contracts`
 
@@ -528,7 +528,7 @@ jobs = refinery()
 board = contracts()
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **First Order** achievement
 
 ### `deliver`
 
@@ -546,7 +546,7 @@ board = contracts()
 paid = deliver(cid)
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **First Order** achievement
 
 ### `drone_id`
 
@@ -564,7 +564,7 @@ paid = deliver(cid)
 me = drone_id()
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Second Pair of Hands** achievement
 
 ### `drones`
 
@@ -582,7 +582,7 @@ me = drone_id()
 for drone in drones(): print(drone['id'], drone['state'])
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Second Pair of Hands** achievement
 
 ### `spawn_drone`
 
@@ -600,7 +600,7 @@ for drone in drones(): print(drone['id'], drone['state'])
 worker = spawn_drone('worker.py')
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Second Pair of Hands** achievement
 
 ### `kill_drone`
 
@@ -618,7 +618,7 @@ worker = spawn_drone('worker.py')
 kill_drone(worker)
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Second Pair of Hands** achievement
 
 ### `assign`
 
@@ -636,7 +636,7 @@ kill_drone(worker)
 assign(1, 'hauler.py')
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Second Pair of Hands** achievement
 
 ### `shared_get`
 
@@ -654,7 +654,7 @@ assign(1, 'hauler.py')
 goal = shared_get('goal', 0)
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Teamwork** achievement
 
 ### `shared_set`
 
@@ -672,7 +672,7 @@ goal = shared_get('goal', 0)
 shared_set('goal', 20)
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Teamwork** achievement
 
 ## minerlib helper module
 
@@ -1077,10 +1077,10 @@ Player scripts may import the standard-library modules below once the required a
 | `functools` | unlocks with the **One-Liner** achievement |
 | `dataclasses` | unlocks with the **Object Oriented** achievement |
 | `typing` | unlocks with the **Safe Hands** achievement |
-| `abc` | available from the start |
-| `enum` | available from the start |
-| `bisect` | available from the start |
-| `operator` | available from the start |
+| `abc` | unlocks with the **Inheritance** achievement |
+| `enum` | unlocks with the **Inheritance** achievement |
+| `bisect` | unlocks with the **Chartist** achievement |
+| `operator` | unlocks with the **Trend Follower** achievement |
 
 ## Safety
 

@@ -24,11 +24,23 @@ _DOCS = _ROOT / "docs"
 
 __all__ = ["generate_api_md", "generate_guide_md", "main"]
 
-_TAB_ORDER = ("code", "mining", "business", "explorer", "data")
+_TAB_ORDER = (
+    "code",
+    "mining",
+    "business",
+    "trading",
+    "industry",
+    "fleet",
+    "explorer",
+    "data",
+)
 _TAB_TITLES = {
     "code": "Code",
     "mining": "Mining",
     "business": "Business",
+    "trading": "Trading",
+    "industry": "Industry",
+    "fleet": "Fleet",
     "explorer": "Explorer",
     "data": "Data",
 }
@@ -254,6 +266,8 @@ def _reward_label(reward: Any) -> str:
         "unlock_module": "module",
         "unlock_skin": "skin",
         "unlock_example": "example",
+        "unlock_recipe": "recipe",
+        "unlock_feature": "feature",
     }
     kind = labels.get(str(reward_type))
     if kind is None:
@@ -270,6 +284,8 @@ def _unlocked_by_entries(achievement_id: str) -> list[str]:
         ("upgrades.json", "id", "upgrade"),
         ("skins.json", "id", "skin"),
         ("examples.json", "id", "example"),
+        ("recipes.json", "id", "recipe"),
+        ("features.json", "id", "feature"),
     )
     entries: list[str] = []
     for filename, key, kind in collections:
@@ -296,9 +312,10 @@ def generate_guide_md(output: str | Path | None = None) -> Path:
     lines.append("# MineSim Achievement Guide")
     lines.append("")
     lines.append(
-        "Every achievement belongs to one of five tabs: Code, Mining, Business, "
-        "Explorer and Data. An achievement becomes available once its parent is "
-        "completed. Completing it grants the rewards and unlocks listed below."
+        "Every achievement belongs to one of eight tabs: Code, Mining, Business, "
+        "Trading, Industry, Fleet, Explorer and Data. An achievement becomes "
+        "available once its parent is completed. Completing it grants the rewards "
+        "and unlocks listed below."
     )
     lines.append("")
 

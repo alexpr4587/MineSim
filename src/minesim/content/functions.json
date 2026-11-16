@@ -49,7 +49,7 @@
     "signature": "unload()",
     "doc": "Move the drone inventory into the base warehouse and return {moved, left}.",
     "category": "business",
-    "unlocked_by": null,
+    "unlocked_by": "storage_unit",
     "cost": "1 tick at the base",
     "example": "result = unload()"
   },
@@ -58,7 +58,7 @@
     "signature": "stock()",
     "doc": "Return the warehouse contents and capacity as {items, capacity, used, free}.",
     "category": "business",
-    "unlocked_by": null,
+    "unlocked_by": "storage_unit",
     "cost": "0 ticks",
     "example": "stock()['items']"
   },
@@ -67,7 +67,7 @@
     "signature": "sell_stock(item, amount=None)",
     "doc": "Sell items from the warehouse at market prices and return the money gained.",
     "category": "business",
-    "unlocked_by": null,
+    "unlocked_by": "storage_unit",
     "cost": "2 ticks at the base",
     "example": "earned = sell_stock('stone', 10)"
   },
@@ -76,7 +76,7 @@
     "signature": "price(item)",
     "doc": "Return the current market price of an unlocked item, or None.",
     "category": "market",
-    "unlocked_by": null,
+    "unlocked_by": "market_watcher",
     "cost": "0 ticks",
     "example": "price('stone')"
   },
@@ -85,7 +85,7 @@
     "signature": "prices()",
     "doc": "Return a dict of current market prices for every unlocked item.",
     "category": "market",
-    "unlocked_by": null,
+    "unlocked_by": "market_watcher",
     "cost": "0 ticks",
     "example": "prices()['stone']"
   },
@@ -94,7 +94,7 @@
     "signature": "price_history(item, n=50)",
     "doc": "Return up to n recent price samples for an unlocked item, or None.",
     "category": "market",
-    "unlocked_by": null,
+    "unlocked_by": "chartist",
     "cost": "0 ticks",
     "example": "price_history('stone', 20)"
   },
@@ -157,7 +157,7 @@
     "signature": "events()",
     "doc": "Return the active world events as dicts with kind, x, y, radius, ends_in, item and direction ('shortage' or 'glut' for market news). The exact price factor is never included.",
     "category": "world",
-    "unlocked_by": null,
+    "unlocked_by": "news_reader",
     "cost": "0 ticks",
     "example": "for event in events(): print(event['kind'])"
   },
@@ -211,7 +211,7 @@
     "signature": "recipes()",
     "doc": "Return {recipe_id: {id, name, inputs, outputs, ticks, unlocked, unlocked_by}} for every refinery recipe.",
     "category": "business",
-    "unlocked_by": null,
+    "unlocked_by": "smelter",
     "cost": "0 ticks",
     "example": "bars = recipes()"
   },
@@ -220,7 +220,7 @@
     "signature": "refine(recipe_id, times=1)",
     "doc": "Start a refinery job at the base. The inputs are consumed immediately; returns {ok, recipe, times, duration, finish_tick}.",
     "category": "business",
-    "unlocked_by": null,
+    "unlocked_by": "smelter",
     "cost": "2 ticks",
     "example": "refine('copper_bar', 2)"
   },
@@ -229,7 +229,7 @@
     "signature": "refinery()",
     "doc": "Return the running refinery jobs as a list of {recipe, times, ticks_left, progress, blocked, outputs}.",
     "category": "business",
-    "unlocked_by": null,
+    "unlocked_by": "smelter",
     "cost": "0 ticks",
     "example": "jobs = refinery()"
   },
@@ -238,7 +238,7 @@
     "signature": "contracts()",
     "doc": "Return the open delivery contracts as a list of {id, item, quantity, reward, deadline, ticks_left}.",
     "category": "business",
-    "unlocked_by": null,
+    "unlocked_by": "first_order",
     "cost": "0 ticks",
     "example": "board = contracts()"
   },
@@ -247,7 +247,7 @@
     "signature": "deliver(contract_id)",
     "doc": "Deliver a contract from the warehouse at the base and return the reward money.",
     "category": "business",
-    "unlocked_by": null,
+    "unlocked_by": "first_order",
     "cost": "2 ticks",
     "example": "paid = deliver(cid)"
   },
@@ -256,7 +256,7 @@
     "signature": "drone_id()",
     "doc": "Return the id of the drone running this script.",
     "category": "fleet",
-    "unlocked_by": null,
+    "unlocked_by": "second_pair_of_hands",
     "cost": "0 ticks",
     "example": "me = drone_id()"
   },
@@ -265,7 +265,7 @@
     "signature": "drones()",
     "doc": "Return the fleet as a list of {id, x, y, state, script, inventory_used} dicts.",
     "category": "fleet",
-    "unlocked_by": null,
+    "unlocked_by": "second_pair_of_hands",
     "cost": "0 ticks",
     "example": "for drone in drones(): print(drone['id'], drone['state'])"
   },
@@ -274,7 +274,7 @@
     "signature": "spawn_drone(script_name)",
     "doc": "Buy a drone on the base and start script_name (a .py file in the scripts folder). Returns the new drone id or {ok: False, reason}.",
     "category": "fleet",
-    "unlocked_by": null,
+    "unlocked_by": "second_pair_of_hands",
     "cost": "5 ticks plus the next drone cost",
     "example": "worker = spawn_drone('worker.py')"
   },
@@ -283,7 +283,7 @@
     "signature": "kill_drone(drone_id)",
     "doc": "Stop the script of drone_id and remove that drone. Never removes drone 0. Returns True on success.",
     "category": "fleet",
-    "unlocked_by": null,
+    "unlocked_by": "second_pair_of_hands",
     "cost": "0 ticks",
     "example": "kill_drone(worker)"
   },
@@ -292,7 +292,7 @@
     "signature": "assign(drone_id, script_name)",
     "doc": "Stop the current script of drone_id and start script_name instead.",
     "category": "fleet",
-    "unlocked_by": null,
+    "unlocked_by": "second_pair_of_hands",
     "cost": "0 ticks",
     "example": "assign(1, 'hauler.py')"
   },
@@ -301,7 +301,7 @@
     "signature": "shared_get(key, default=None)",
     "doc": "Return the JSON value stored under key in the fleet-wide shared store, or default.",
     "category": "fleet",
-    "unlocked_by": null,
+    "unlocked_by": "first_drone",
     "cost": "0 ticks",
     "example": "goal = shared_get('goal', 0)"
   },
@@ -310,7 +310,7 @@
     "signature": "shared_set(key, value)",
     "doc": "Store a JSON value under key in the fleet-wide shared store (max 64 keys, 40-character keys, 4 KB values).",
     "category": "fleet",
-    "unlocked_by": null,
+    "unlocked_by": "first_drone",
     "cost": "0 ticks",
     "example": "shared_set('goal', 20)"
   }

@@ -20,7 +20,7 @@ from minesim.core.commands import (
 )
 from minesim.core.content import ContentError, load_content
 from minesim.core.contracts import ContractBoard
-from minesim.core.engine import GameEngine
+from minesim.core.engine import AllUnlocked, GameEngine
 from minesim.core.events import EventBus
 from minesim.core.game import Game
 from minesim.core.items import ItemCatalog
@@ -73,7 +73,14 @@ def test_recipes_content_is_valid_and_loaded(content):
     assert content.get_recipe("copper_bar").inputs == {"copper": 3}
     assert content.get_recipe("steel_bar").inputs == {"iron_bar": 2, "coal": 2}
     assert content.get_recipe("cut_ruby").ticks == 200
-    assert all(recipe.unlocked_by is None for recipe in content.recipes.values())
+    assert {recipe.id: recipe.unlocked_by for recipe in content.recipes.values()} == {
+        "copper_bar": "smelter",
+        "iron_bar": "iron_works",
+        "steel_bar": "steel_age",
+        "silver_bar": "silversmith",
+        "gold_bar": "goldsmith",
+        "cut_ruby": "lapidary",
+    }
 
 
 def test_invalid_recipe_item_raises_content_error(tmp_path):
@@ -92,7 +99,7 @@ def test_invalid_recipe_item_raises_content_error(tmp_path):
 def test_refinery_consumes_inputs_and_finishes(content):
     warehouse = Warehouse(20)
     warehouse.add("copper", 6)
-    refinery = Refinery(content.recipes, 1, warehouse=warehouse)
+    refinery = Refinery(content.recipes, 1, AllUnlocked(), warehouse)
     job = refinery.start("copper_bar", 2, warehouse, 0)
     assert job.duration == 120
     assert warehouse.count("copper") == 0
@@ -110,11 +117,11 @@ def test_refinery_consumes_inputs_and_finishes(content):
 def test_refinery_validates_slots_inputs_and_recipes(content):
     warehouse = Warehouse(20)
     warehouse.add("copper", 3)
-    refinery = Refinery(content.recipes, 1, warehouse=warehouse)
+    refinery = Refinery(content.recipes, 1, AllUnlocked(), warehouse)
     refinery.start("copper_bar", 1, warehouse, 0)
     with pytest.raises(ValueError, match="no_free_slot"):
         refinery.start("copper_bar", 1, warehouse, 0)
-    other = Refinery(content.recipes, 1, warehouse=warehouse)
+    other = Refinery(content.recipes, 1, AllUnlocked(), warehouse)
     with pytest.raises(ValueError, match="insufficient_inputs"):
         other.start("copper_bar", 1, warehouse, 0)
     with pytest.raises(KeyError):
@@ -124,7 +131,7 @@ def test_refinery_validates_slots_inputs_and_recipes(content):
 def test_refinery_blocks_when_output_does_not_fit(content):
     warehouse = Warehouse(3)
     warehouse.add("copper", 3)
-    refinery = Refinery(content.recipes, 1, warehouse=warehouse)
+    refinery = Refinery(content.recipes, 1, AllUnlocked(), warehouse)
     refinery.start("copper_bar", 1, warehouse, 0)
     warehouse.add("stone", 3)
     assert refinery.advance(60) == []
@@ -222,6 +229,8 @@ def test_save_v5_fixture_migrates_to_refinery_and_contracts():
 
 def test_refinery_and_contracts_round_trip_through_save(tmp_path):
     game = Game.new(seed=123)
+    game.progression_state.unlocked_features.add("refinery")
+    game.progression_state.unlocked_recipes.add("copper_bar")
     game.engine.warehouse.capacity = 1_000_000
     game.engine.warehouse.add("copper", 3)
     assert game.start_refine("copper_bar", 1)["ok"] is True
@@ -239,6 +248,10 @@ def test_refinery_and_contracts_round_trip_through_save(tmp_path):
 
 def test_headless_session_mines_refines_sells_and_delivers():
     game = Game.new(seed=12345)
+    game.progression_state.unlocked_features.update(
+        {"warehouse", "market", "refinery", "contracts"}
+    )
+    game.progression_state.unlocked_recipes.add("copper_bar")
     game.engine.warehouse.capacity = 1_000_000
     game.progression_state.unlock_ore("copper")
     game.player_stats.tool_tier = 1

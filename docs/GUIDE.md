@@ -1,6 +1,6 @@
 # MineSim Achievement Guide
 
-Every achievement belongs to one of five tabs: Code, Mining, Business, Explorer and Data. An achievement becomes available once its parent is completed. Completing it grants the rewards and unlocks listed below.
+Every achievement belongs to one of eight tabs: Code, Mining, Business, Trading, Industry, Fleet, Explorer and Data. An achievement becomes available once its parent is completed. Completing it grants the rewards and unlocks listed below.
 
 ## Code
 
@@ -386,6 +386,306 @@ Buy five upgrade levels.
 
 **Unlocks:** Nothing.
 
+## Trading
+
+### Storage Unit (`storage_unit`)
+
+Sell ore five times.
+
+**Criteria:** `sales` reaches 5.
+
+**Rewards:** feature `warehouse`; function `unload`; function `stock`; function `sell_stock`; upgrade `warehouse`
+
+**Unlocks:** function `unload`; function `stock`; function `sell_stock`; upgrade `warehouse`; feature `warehouse`
+
+### Market Watcher (`market_watcher`)
+
+Unload a drone into the warehouse three times.
+
+**Requires:** Storage Unit
+
+**Criteria:** `unloads` reaches 3.
+
+**Rewards:** feature `market`; function `price`; function `prices`
+
+**Unlocks:** function `price`; function `prices`; feature `market`
+
+### Chartist (`chartist`)
+
+Read the market price 25 times.
+
+**Requires:** Market Watcher
+
+**Criteria:** `api:price` reaches 25.
+
+**Rewards:** function `price_history`; module `bisect`
+
+**Unlocks:** function `price_history`; module `bisect`
+
+### Sell High (`sell_high`)
+
+Sell 20 items while the market index is at least 1.25.
+
+**Requires:** Market Watcher
+
+**Criteria:** `sold_high` reaches 20.
+
+**Rewards:** +500 money
+
+**Unlocks:** Nothing.
+
+### Hoarder (`hoarder`)
+
+Store 300 items in the warehouse.
+
+**Requires:** Storage Unit
+
+**Criteria:** `warehouse_peak` reaches 300.
+
+**Rewards:** +300 money
+
+**Unlocks:** Nothing.
+
+### Trend Follower (`trend_follower`)
+
+Read the price history 20 times.
+
+**Requires:** Chartist
+
+**Criteria:** `api:price_history` reaches 20.
+
+**Rewards:** module `operator`; example `09_market_watcher`; example `15_price_forecast`
+
+**Unlocks:** module `operator`; example `09_market_watcher`; example `15_price_forecast`
+
+### First Order (`first_order`)
+
+Earn 2000 money from sales.
+
+**Requires:** Storage Unit
+
+**Criteria:** `money_earned` reaches 2000.
+
+**Rewards:** feature `contracts`; function `contracts`; function `deliver`; upgrade `contract_board`
+
+**Unlocks:** function `contracts`; function `deliver`; upgrade `contract_board`; feature `contracts`
+
+### Contract Runner (`contract_runner`)
+
+Complete three delivery contracts.
+
+**Requires:** First Order
+
+**Criteria:** `contracts_done` reaches 3.
+
+**Rewards:** example `11_contract_runner`
+
+**Unlocks:** example `11_contract_runner`
+
+### Big Client (`big_client`)
+
+Earn 20000 money from contracts.
+
+**Requires:** Contract Runner
+
+**Criteria:** `contract_reward_total` reaches 20000.
+
+**Rewards:** +2500 money
+
+**Unlocks:** Nothing.
+
+### Corporate Favorite (`corporate_favorite`)
+
+Complete fifteen delivery contracts.
+
+**Requires:** Contract Runner
+
+**Criteria:** `contracts_done` reaches 15.
+
+**Rewards:** +4000 money
+
+**Unlocks:** Nothing.
+
+### Market Master (`market_master`)
+
+Earn 50000 money from sales.
+
+**Requires:** Sell High
+
+**Criteria:** `money_earned` reaches 50000.
+
+**Rewards:** +5000 money
+
+**Unlocks:** Nothing.
+
+## Industry
+
+### Smelter (`smelter`)
+
+Mine 30 copper.
+
+**Criteria:** `mined:copper` reaches 30.
+
+**Rewards:** feature `refinery`; function `recipes`; function `refine`; function `refinery`; recipe `copper_bar`; upgrade `furnace`
+
+**Unlocks:** function `recipes`; function `refine`; function `refinery`; upgrade `furnace`; recipe `copper_bar`; feature `refinery`
+
+### Iron Works (`iron_works`)
+
+Refine five copper bars.
+
+**Requires:** Smelter
+
+**Criteria:** `recipe:copper_bar` reaches 5.
+
+**Rewards:** recipe `iron_bar`
+
+**Unlocks:** recipe `iron_bar`
+
+### Steel Age (`steel_age`)
+
+Refine five iron bars.
+
+**Requires:** Iron Works
+
+**Criteria:** `recipe:iron_bar` reaches 5.
+
+**Rewards:** recipe `steel_bar`
+
+**Unlocks:** recipe `steel_bar`
+
+### Silversmith (`silversmith`)
+
+Mine 10 silver.
+
+**Requires:** Iron Works
+
+**Criteria:** `mined:silver` reaches 10.
+
+**Rewards:** recipe `silver_bar`
+
+**Unlocks:** recipe `silver_bar`
+
+### Goldsmith (`goldsmith`)
+
+Mine 10 gold.
+
+**Requires:** Silversmith
+
+**Criteria:** `mined:gold` reaches 10.
+
+**Rewards:** recipe `gold_bar`
+
+**Unlocks:** recipe `gold_bar`
+
+### Lapidary (`lapidary`)
+
+Mine five rubies.
+
+**Requires:** Goldsmith
+
+**Criteria:** `mined:ruby` reaches 5.
+
+**Rewards:** recipe `cut_ruby`
+
+**Unlocks:** recipe `cut_ruby`
+
+### Bar Factory (`bar_factory`)
+
+Produce 50 refined bars.
+
+**Requires:** Steel Age
+
+**Criteria:** `bars_made` reaches 50.
+
+**Rewards:** +1500 money
+
+**Unlocks:** Nothing.
+
+### Production Line (`production_line`)
+
+Start 30 refinery jobs.
+
+**Requires:** Steel Age
+
+**Criteria:** `api:refine` reaches 30.
+
+**Rewards:** example `10_refine_everything`
+
+**Unlocks:** example `10_refine_everything`
+
+## Fleet
+
+### Second Pair of Hands (`second_pair_of_hands`)
+
+Earn 3000 money from sales.
+
+**Criteria:** `money_earned` reaches 3000.
+
+**Rewards:** feature `drones`; function `drone_id`; function `drones`; function `spawn_drone`; function `kill_drone`; function `assign`; upgrade `drone_bay`
+
+**Unlocks:** function `drone_id`; function `drones`; function `spawn_drone`; function `kill_drone`; function `assign`; upgrade `drone_bay`; feature `drones`
+
+### Teamwork (`first_drone`)
+
+Spawn your first drone.
+
+**Requires:** Second Pair of Hands
+
+**Criteria:** `drones_spawned` reaches 1.
+
+**Rewards:** function `shared_get`; function `shared_set`; example `12_two_drones`
+
+**Unlocks:** function `shared_get`; function `shared_set`; example `12_two_drones`
+
+### Small Fleet (`small_fleet`)
+
+Have three drones alive at once.
+
+**Requires:** Teamwork
+
+**Criteria:** `max_drones_alive` reaches 3.
+
+**Rewards:** +1000 money
+
+**Unlocks:** Nothing.
+
+### Swarm (`swarm`)
+
+Have five drones alive at once.
+
+**Requires:** Small Fleet
+
+**Criteria:** `max_drones_alive` reaches 5.
+
+**Rewards:** +3000 money
+
+**Unlocks:** Nothing.
+
+### Message Board (`message_board`)
+
+Write to the shared store 50 times.
+
+**Requires:** Teamwork
+
+**Criteria:** `api:shared_set` reaches 50.
+
+**Rewards:** example `16_fleet_manager`
+
+**Unlocks:** example `16_fleet_manager`
+
+### Inheritance (`inheritance`)
+
+Write a script that uses inheritance.
+
+**Requires:** Teamwork
+
+**Criteria:** A script uses `uses_inheritance`.
+
+**Rewards:** module `abc`; module `enum`; example `13_worker_classes`
+
+**Unlocks:** module `abc`; module `enum`; example `13_worker_classes`
+
 ## Explorer
 
 ### Far From Home (`far_from_home`)
@@ -443,6 +743,42 @@ Move 2000 tiles.
 **Criteria:** `tiles_moved` reaches 2000.
 
 **Rewards:** +300 money
+
+**Unlocks:** Nothing.
+
+### News Reader (`news_reader`)
+
+See three world events.
+
+**Requires:** Far From Home
+
+**Criteria:** `events_started` reaches 3.
+
+**Rewards:** function `events`
+
+**Unlocks:** function `events`
+
+### Prospector (`prospector`)
+
+Mine 10 items inside rich veins.
+
+**Requires:** News Reader
+
+**Criteria:** `rich_vein_mined` reaches 10.
+
+**Rewards:** example `14_event_hunter`; +400 money
+
+**Unlocks:** example `14_event_hunter`
+
+### Stuck in the Mud (`stuck_in_the_mud`)
+
+Make 20 moves in slow zones.
+
+**Requires:** News Reader
+
+**Criteria:** `slow_zone_moves` reaches 20.
+
+**Rewards:** +200 money
 
 **Unlocks:** Nothing.
 

@@ -77,31 +77,12 @@
       "first_sale": 21
     },
     "unlocked_functions": [
-      "assign",
       "buy_upgrade",
-      "contracts",
-      "deliver",
-      "drone_id",
-      "drones",
-      "events",
-      "kill_drone",
       "mine",
       "move",
       "peek",
       "position",
-      "price",
-      "price_history",
-      "prices",
-      "recipes",
-      "refine",
-      "refinery",
-      "sell",
-      "sell_stock",
-      "shared_get",
-      "shared_set",
-      "spawn_drone",
-      "stock",
-      "unload"
+      "sell"
     ],
     "unlocked_ores": [
       "coal",
@@ -109,51 +90,22 @@
     ],
     "unlocked_upgrades": [
       "backpack",
-      "contract_board",
-      "drone_bay",
-      "furnace",
       "motor",
       "pickaxe",
-      "scanner",
-      "warehouse"
+      "scanner"
     ],
     "unlocked_modules": [
-      "abc",
-      "bisect",
-      "enum",
-      "math",
-      "operator"
+      "math"
     ],
     "unlocked_skins": [
       "rusty_bot"
     ],
     "unlocked_examples": [
       "01_hello",
-      "02_sweep_and_sell",
-      "09_market_watcher",
-      "10_refine_everything",
-      "11_contract_runner",
-      "12_two_drones",
-      "13_worker_classes",
-      "14_event_hunter",
-      "15_price_forecast",
-      "16_fleet_manager"
+      "02_sweep_and_sell"
     ],
-    "unlocked_recipes": [
-      "copper_bar",
-      "cut_ruby",
-      "gold_bar",
-      "iron_bar",
-      "silver_bar",
-      "steel_bar"
-    ],
-    "unlocked_features": [
-      "contracts",
-      "drones",
-      "market",
-      "refinery",
-      "warehouse"
-    ],
+    "unlocked_recipes": [],
+    "unlocked_features": [],
     "current_streak": 4,
     "current_fail_streak": 0
   },

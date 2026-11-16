@@ -96,11 +96,7 @@ def test_recipe_and_feature_initial_unlocks(content):
     for recipe in content.recipes.values():
         assert state.is_recipe_unlocked(recipe.id) is (recipe.unlocked_by is None)
     assert state.unlocked_features == {
-        "warehouse",
-        "market",
-        "refinery",
-        "contracts",
-        "drones",
+        feature.id for feature in content.features.values() if feature.unlocked_by is None
     }
 
 
@@ -156,6 +152,7 @@ def test_game_actions_refuse_locked_features():
 def test_locked_recipe_refuses_refine():
     game = Game.new(seed=9)
     game.engine.warehouse.add("copper", 3)
+    game.progression_state.unlocked_features.add("refinery")
     game.progression_state.unlocked_recipes.discard("copper_bar")
     result = game.start_refine("copper_bar")
     assert result["ok"] is False
@@ -264,6 +261,7 @@ def test_base_panel_shows_lock_overlay_per_tab(qapp):
         name="Refinery",
         unlocked_by="first_dig",
     )
+    game.progression_state.unlocked_features.add("warehouse")
     game.progression_state.unlocked_features.discard("refinery")
     panel = BasePanel(game=game)
     panel.show()

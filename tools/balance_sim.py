@@ -1,8 +1,10 @@
-"""Headless balance report for the v0.2 achievement chain.
+"""Headless balance report for the v0.3 achievement chain.
 
-Runs two simple strategies for 200,000 ticks on the default seed and writes
+Runs three strategies for 300,000 ticks on the default seed and writes
 ``docs/BALANCE.md`` with the tick at which every achievement completes (or
-``never``). This is a reporting tool only: it never changes gameplay numbers.
+``never``). The third strategy exercises the warehouse, the dynamic market,
+the refinery and a second drone, driven in lockstep. This is a reporting tool
+only: it never changes gameplay numbers.
 
 Usage: ``python tools/balance_sim.py``
 """
@@ -19,7 +21,17 @@ _SRC = Path(__file__).resolve().parents[1] / "src"
 if _SRC.is_dir() and str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
-from minesim.core.commands import BuyUpgrade, Mine, Move, Sell  # noqa: E402
+from minesim.core.commands import (  # noqa: E402
+    BuyUpgrade,
+    Deliver,
+    Mine,
+    Move,
+    Refine,
+    Sell,
+    SellStock,
+    SpawnDrone,
+    Unload,
+)
 from minesim.core.direction import Direction  # noqa: E402
 from minesim.core.game import Game  # noqa: E402
 
@@ -28,6 +40,7 @@ _DOCS = _ROOT / "docs"
 
 __all__ = [
     "DEFAULT_TICKS",
+    "FleetTrader",
     "RandomWalker",
     "SerpentineSweeper",
     "build_report",
@@ -35,18 +48,27 @@ __all__ = [
     "run_strategy",
 ]
 
-DEFAULT_TICKS = 200_000
+DEFAULT_TICKS = 300_000
 DEFAULT_SEED = 12345
 _DIRECTIONS = (Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST)
 _UPGRADE_ORDER = ("backpack", "pickaxe", "motor", "scanner")
-_TAB_ORDER = ("code", "mining", "business", "explorer", "data")
+_TAB_ORDER = (
+    "code",
+    "mining",
+    "business",
+    "trading",
+    "industry",
+    "fleet",
+    "explorer",
+    "data",
+)
 
 
-def _mineable(game: Game, tile: Any) -> bool:
-    """Return True when the miner can mine the tile right now."""
+def _mineable(game: Game, tile: Any, drone: Any = None) -> bool:
+    """Return True when ``drone`` (drone 0 by default) can mine the tile."""
     if tile.is_base or tile.depleted or tile.ore_id is None:
         return False
-    miner = game.miner
+    miner = game.miner if drone is None else drone
     if miner.inventory_size >= miner.capacity:
         return False
     ore = game.content.get_ore(tile.ore_id)
@@ -158,17 +180,226 @@ class SerpentineSweeper:
         return best
 
 
+class FleetTrader:
+    """Mine, haul into the warehouse, trade on the market, refine and spawn a drone.
+
+    The strategy only sells warehouse stock when the market index of an item
+    is at least ``sell_index`` (it sells the best item when the warehouse is
+    full so the fleet never stalls). It refines every unlocked recipe the stock
+    allows, delivers contracts, buys upgrades and drives a second drone in the
+    same lockstep as drone 0.
+    """
+
+    name = "Warehouse trader"
+
+    def __init__(self, radius: int = 90, sell_index: float = 1.1) -> None:
+        self._path = _serpentine_path(radius)
+        self._index: dict[int, int] = {}
+        self._selling: dict[int, bool] = {}
+        self._sell_index = float(sell_index)
+        self._upgrade_order = (
+            "pickaxe",
+            "drone_bay",
+            "backpack",
+            "furnace",
+            "motor",
+            "scanner",
+            "contract_board",
+            "warehouse",
+        )
+        self._refine_items = {"coal", "copper", "iron", "silver", "gold", "ruby"}
+        self._refine_order = (
+            "cut_ruby",
+            "gold_bar",
+            "steel_bar",
+            "silver_bar",
+            "iron_bar",
+            "copper_bar",
+        )
+
+    # -- driver ---------------------------------------------------------------
+
+    def next_commands(self, game: Game) -> list[tuple[int, Any]]:
+        """Return one command per idle drone (lockstep across the fleet)."""
+        commands: list[tuple[int, Any]] = []
+        for drone_id in sorted(game.engine.drones):
+            drone = game.engine.drone(drone_id)
+            self._index.setdefault(drone_id, drone_id * len(self._path) // 2)
+            self._selling.setdefault(drone_id, False)
+            commands.append((drone_id, self._command_for(game, drone)))
+        return commands
+
+    def next_command(self, game: Game) -> Any:
+        """Return drone 0's next command (single-drone compatibility)."""
+        commands = self.next_commands(game)
+        return commands[0][1] if commands else None
+
+    # -- decisions ------------------------------------------------------------
+
+    def _command_for(self, game: Game, drone: Any) -> Any:
+        on_base = bool(game.world.tile_at(drone.x, drone.y, game.tick).is_base)
+        if on_base:
+            command = self._base_command(game, drone)
+            if command is not None:
+                return command
+        return self._field_command(game, drone)
+
+    def _base_command(self, game: Game, drone: Any) -> Any:
+        warehouse = game.engine.warehouse
+        if game.is_feature_unlocked("market"):
+            item = self._best_stock_item(game)
+            if item is not None:
+                return SellStock(item)
+        if game.is_feature_unlocked("contracts"):
+            command = self._deliver_command(game)
+            if command is not None:
+                return command
+        if game.is_feature_unlocked("refinery"):
+            command = self._refine_command(game)
+            if command is not None:
+                return command
+        if drone.inventory:
+            if (
+                game.is_feature_unlocked("warehouse")
+                and warehouse.free > 0
+                and self._wants_unload(game, drone)
+            ):
+                return Unload()
+            return Sell()
+        spawn = self._spawn_command(game)
+        if spawn is not None:
+            return spawn
+        return self._next_upgrade(game)
+
+    def _wants_unload(self, game: Game, drone: Any) -> bool:
+        state = game.progression_state
+        if state.get_counter("unloads") < 3:
+            return True
+        if state.get_counter("money_earned") < 3500:
+            return False
+        return True
+
+    def _field_command(self, game: Game, drone: Any) -> Any:
+        if drone.inventory_size >= drone.capacity:
+            if (drone.x, drone.y) == (0, 0):
+                return None
+            return _step_towards(drone.x, drone.y, 0, 0)
+        for _ in range(len(self._path) + 1):
+            target = self._path[self._index[int(drone.id)] % len(self._path)]
+            if (drone.x, drone.y) != target:
+                return _step_towards(drone.x, drone.y, target[0], target[1])
+            tile = game.world.tile_at(drone.x, drone.y, game.tick)
+            if _mineable(game, tile, drone):
+                return Mine()
+            self._index[int(drone.id)] += 1
+        return None
+
+    def _best_stock_item(self, game: Game) -> str | None:
+        market = game.engine.market
+        warehouse = game.engine.warehouse
+        if market is None:
+            return None
+        best_item: str | None = None
+        best_index = self._sell_index
+        for item, count in warehouse.items.items():
+            if int(count) <= 0 or item in self._refine_items:
+                continue
+            index = float(market.index(item))
+            if index >= self._sell_index and index > best_index:
+                best_index = index
+                best_item = item
+        if best_item is None and warehouse.free <= 0:
+            fallback_index = -1.0
+            for item, count in warehouse.items.items():
+                if int(count) <= 0:
+                    continue
+                index = float(market.index(item))
+                if best_item is None or index > fallback_index:
+                    fallback_index = index
+                    best_item = item
+        return best_item
+
+    def _deliver_command(self, game: Game) -> Deliver | None:
+        board = game.engine.contracts
+        warehouse = game.engine.warehouse
+        for contract in list(board.contracts):
+            if warehouse.count(contract.item) >= contract.quantity:
+                return Deliver(contract.id)
+        return None
+
+    def _refine_command(self, game: Game) -> Refine | None:
+        refinery = game.engine.refinery
+        if len(refinery.jobs) >= refinery.slots:
+            return None
+        warehouse = game.engine.warehouse
+        for recipe_id in self._refine_order:
+            recipe = game.content.recipes.get(recipe_id)
+            if recipe is None or not game.progression.is_recipe_unlocked(recipe_id):
+                continue
+            if all(warehouse.count(item) >= count for item, count in recipe.inputs.items()):
+                return Refine(recipe_id, 1)
+        return None
+
+    def _spawn_command(self, game: Game) -> SpawnDrone | None:
+        if not game.is_feature_unlocked("drones"):
+            return None
+        if 1 in game.engine.drones or game.engine.max_drones < 2:
+            return None
+        cost = int(game.content.config.drone_costs[0])
+        if game.player_stats.money < cost:
+            return None
+        return SpawnDrone()
+
+    def _next_upgrade(self, game: Game) -> BuyUpgrade | None:
+        if (
+            game.is_feature_unlocked("drones")
+            and 1 not in game.engine.drones
+            and game.engine.max_drones >= 2
+            and game.player_stats.money < int(game.content.config.drone_costs[0])
+        ):
+            return None
+        for upgrade_id in self._upgrade_order:
+            if not game.progression.is_upgrade_unlocked(upgrade_id):
+                continue
+            upgrade = game.content.upgrades.get(upgrade_id)
+            if upgrade is None:
+                continue
+            level = int(game.player_stats.upgrades.get(upgrade_id, 0))
+            if level >= upgrade.max_level or level >= len(upgrade.costs):
+                continue
+            cost = int(upgrade.costs[level])
+            if game.player_stats.money >= cost:
+                return BuyUpgrade(upgrade_id)
+            if cost <= 1000:
+                return None
+        return None
+
+
+def _next_commands(strategy: Any, game: Game) -> list[tuple[int, Any]]:
+    producer = getattr(strategy, "next_commands", None)
+    if callable(producer):
+        raw = producer(game) or []
+    else:
+        command = strategy.next_command(game)
+        raw = [(0, command)] if command is not None else []
+    return [(int(drone_id), command) for drone_id, command in raw if command is not None]
+
+
 def run_strategy(strategy: Any, ticks: int = DEFAULT_TICKS, seed: int = DEFAULT_SEED) -> Game:
     """Run ``strategy`` headlessly for ``ticks`` engine ticks and return the game."""
     game = Game.new(seed=seed)
     while game.tick < ticks:
         if game.engine.is_idle:
             for _ in range(100):
-                command = strategy.next_command(game)
-                if command is None:
+                commands = _next_commands(strategy, game)
+                if not commands:
                     break
-                ticket = game.submit(command)
-                if not ticket.done:
+                waiting = False
+                for drone_id, command in commands:
+                    ticket = game.submit(command, drone_id=drone_id)
+                    if not ticket.done:
+                        waiting = True
+                if waiting:
                     break
         game.step()
     return game
@@ -195,7 +426,7 @@ def build_report(results: list[tuple[str, Game]], ticks: int, seed: int) -> str:
     lines.append("")
     lines.append(
         f"Generated by `tools/balance_sim.py` from a headless {ticks:,}-tick simulation "
-        f"of two simple strategies on seed {seed}. This is a report only; no gameplay "
+        f"of three strategies on seed {seed}. This is a report only; no gameplay "
         "numbers were tuned."
     )
     lines.append("")
@@ -207,6 +438,12 @@ def build_report(results: list[tuple[str, Game]], ticks: int, seed: int) -> str:
         "- **Serpentine sweeper**: follows an outward serpentine path, returns home to "
         "sell when the inventory is full and buys the cheapest available upgrade level "
         "before resuming."
+    )
+    lines.append(
+        "- **Warehouse trader**: mines and unloads into the warehouse, sells stock only "
+        "when the market index is at least 1.1, refines every unlocked recipe it can, "
+        "delivers contracts, buys upgrades and spawns a second drone. Both drones run "
+        "in lockstep."
     )
     lines.append("")
     lines.append("## Strategy totals")
@@ -247,7 +484,7 @@ def main(argv: list[str] | None = None) -> int:
     seed = int(args[1]) if len(args) > 1 else DEFAULT_SEED
     results = [
         (strategy.name, run_strategy(strategy, ticks=ticks, seed=seed))
-        for strategy in (RandomWalker(), SerpentineSweeper())
+        for strategy in (RandomWalker(), SerpentineSweeper(), FleetTrader())
     ]
     report = build_report(results, ticks, seed)
     print(report)

@@ -35,6 +35,7 @@ def _clean_settings(qapp):
 
 def _window(qapp, tmp_path: Path, slots: int = 3) -> tuple[Game, MainWindow]:
     game = Game.new()
+    game.progression_state.unlocked_features.add("drones")
     game.player_stats.money = 10000
     game.player_stats.upgrades["drone_bay"] = int(slots)
     window = MainWindow(game, scripts_dir=tmp_path)
@@ -168,6 +169,7 @@ def test_d_key_and_view_menu_toggle_the_panel(qapp, tmp_path):
 
 def test_drones_panel_works_without_main_window(qapp, tmp_path):
     game = Game.new()
+    game.progression_state.unlocked_features.add("drones")
     game.player_stats.money = 1000
     game.player_stats.upgrades["drone_bay"] = 1
     game.engine.spawn_drone()

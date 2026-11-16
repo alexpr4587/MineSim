@@ -79,7 +79,7 @@
       1500,
       4000
     ],
-    "unlocked_by": null
+    "unlocked_by": "second_pair_of_hands"
   },
   {
     "id": "warehouse",
@@ -95,7 +95,7 @@
       2500,
       6000
     ],
-    "unlocked_by": null
+    "unlocked_by": "storage_unit"
   },
   {
     "id": "furnace",
@@ -109,7 +109,7 @@
       900,
       2500
     ],
-    "unlocked_by": null
+    "unlocked_by": "smelter"
   },
   {
     "id": "contract_board",
@@ -122,6 +122,6 @@
       500,
       1500
     ],
-    "unlocked_by": null
+    "unlocked_by": "first_order"
   }
 ]
