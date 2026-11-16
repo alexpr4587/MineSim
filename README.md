@@ -8,41 +8,54 @@ functions, ores, upgrades and Python modules.
 
 ## Screenshots
 
-Lit 2.5D terrain:
+Base panel with the warehouse, refinery and contracts:
 
-![MineSim lit terrain](docs/screenshot.png)
+![MineSim base panel](docs/screenshot.png)
 
-Wardrobe and miner skins:
+Market chart with live prices and price history:
 
-![MineSim wardrobe](docs/screenshot-wardrobe.png)
+![MineSim market chart](docs/screenshot-market.png)
+
+Drone fleet with a script and console per drone:
+
+![MineSim drones](docs/screenshot-drones.png)
 
 ## Features
 
 - Infinite, procedurally generated and regenerating world with biomes and
   per-ore mining probabilities.
+- A fleet of drones, each running its own Python script and sharing a typed
+  key/value memory with the rest of the fleet.
+- Base warehouse with per-drone unloading and stock, a dynamic market with
+  price history and a chart, a refinery with six recipes and delivery
+  contracts.
+- World events: rich veins, slow zones and market news.
 - Lit 2.5D terrain renderer that can be toggled with `H`.
-- 41 achievements in five tabs (Code, Mining, Business, Explorer, Data) that
-  unlock API functions, ores, upgrades, modules and example scripts.
+- 69 achievements in eight tabs (Code, Mining, Business, Trading, Industry,
+  Fleet, Explorer and Data) that unlock API functions, ores, upgrades, modules,
+  features, recipes and example scripts.
 - Miner skins and pixel-art sprites, selected in the wardrobe panel (`K`).
 - Floating script editor with syntax highlighting (`Ctrl+R` run, `Ctrl+.` stop),
-  API reference, console, HUD and achievement toasts.
-- 16 player API functions, the `minerlib` helper module and eight example
-  scripts.
-- Data-driven content, deterministic seeded worlds and save format v3 with
-  autosave and v0.1.0 save migration.
-- One-dir PyInstaller builds for Windows and Linux.
+  API reference, console, HUD, fleet consoles and achievement toasts.
+- 35 player API functions, the `minerlib` helper module (including route,
+  trading, data and OOP helpers) and 16 example scripts.
+- Data-driven content, deterministic seeded worlds and save format v8 with
+  autosave and migration of v0.1.0, v0.2.0 and later saves.
+- One-dir PyInstaller builds for Windows and Linux, with multi-drone scripts
+  supported in the frozen build.
 
 ## Documentation
 
 - [API reference](docs/API.md)
-- [Player guide](docs/GUIDE.md)
+- [Achievement guide](docs/GUIDE.md)
+- [Progression counters](docs/PROGRESSION.md)
 - [Balance report](docs/BALANCE.md)
 
 ## Controls
 
-Single-letter keys (`E F L U K H C G Space 1-5`) work while the world view has
-focus. While the code editor has focus, letters are typed as code — press
-`Esc` (or click the world) first, or use the **View** menu, which works
+Single-letter keys (`E F L U K B M D H C G Space 1-5`) work while the world
+view has focus. While the code editor has focus, letters are typed as code —
+press `Esc` (or click the world) first, or use the **View** menu, which works
 from anywhere.
 
 | Key | Action |
@@ -52,6 +65,9 @@ from anywhere.
 | `L` / `Ctrl+L` or View menu | Toggle the achievements panel |
 | `U` / `Ctrl+U` or View menu | Toggle the upgrades panel |
 | `K` / `Ctrl+K` or View menu | Toggle the wardrobe panel |
+| `B` / `Ctrl+B` or View menu | Toggle the base panel (warehouse, refinery, contracts) |
+| `M` / `Ctrl+M` or View menu | Toggle the market panel and price chart |
+| `D` / `Ctrl+D` or View menu | Toggle the drones panel and fleet view |
 | `H` or View menu | Toggle lit 2.5D terrain lighting |
 | `C` | Recenter the world on the miner |
 | `G` | Toggle the world grid |

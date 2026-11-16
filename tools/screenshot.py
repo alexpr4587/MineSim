@@ -43,6 +43,7 @@ __all__ = [
     "main",
     "parse_size",
     "prepare_economy",
+    "unlock_everything",
 ]
 
 DRONE_SCRIPT = (
@@ -88,6 +89,20 @@ def parse_size(value: str) -> tuple[int, int]:
     if len(parts) != 2:
         raise argparse.ArgumentTypeError(f"invalid size: {value!r} (expected WIDTHxHEIGHT)")
     return (int(parts[0]), int(parts[1]))
+
+
+def unlock_everything(game: Game) -> Game:
+    """Unlock every feature, function and recipe for a documentation screenshot."""
+    state = game.progression_state
+    for feature in game.content.features.values():
+        state.unlocked_features.add(feature.id)
+    for function in game.content.functions.values():
+        state.unlocked_functions.add(function.name)
+    for module in game.content.modules.values():
+        state.unlocked_modules.add(module.name)
+    for recipe in game.content.recipes.values():
+        state.unlocked_recipes.add(recipe.id)
+    return game
 
 
 def prepare_economy(game: Game, ticks: int = 3000) -> Game:
@@ -245,6 +260,8 @@ def build_window(
     if drones:
         scripts_dir = Path(tempfile.mkdtemp(prefix="minesim_drones_"))
         (scripts_dir / "worker.py").write_text(DRONE_SCRIPT, encoding="utf-8")
+    if panel or drones:
+        unlock_everything(game)
     if panel:
         prepare_economy(game)
     if skin:

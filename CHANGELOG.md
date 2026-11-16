@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.3.0] - 2026-11-16
+
+### Added
+
+- A fleet of drones: every drone runs its own script and the fleet shares a
+  typed key/value memory (`spawn_drone`, `assign`, `kill_drone`, `drones`,
+  `drone_id`, `shared_get` and `shared_set`).
+- A base warehouse with per-drone unloading, capacity and warehouse stock
+  (`unload`, `stock`, `sell_stock`).
+- A dynamic market with an index, per-item prices and price history
+  (`price`, `prices`, `price_history`), plus the market chart panel (`M`).
+- A refinery with six recipes and timed jobs (`recipes`, `refine`, `refinery`)
+  in the new base panel (`B`).
+- Delivery contracts generated at the base (`contracts`, `deliver`).
+- World events: rich veins, slow zones and market news.
+- The new `minerlib` library with route, trading, data and OOP helpers.
+- Eight new example scripts: market watching, refining, contracts, two drones,
+  worker classes, event hunting, price forecasting and fleet management.
+- 28 new achievements across three new tabs (Trading, Industry and Fleet), for
+  69 achievements in eight tabs in total.
+- Drones panel and fleet view (`D`), with per-drone scripts and consoles.
+- Save format version 8, with automatic migration of v0.1.0, v0.2.0 and later
+  saves; the fleet, per-drone scripts, shared memory, warehouse, market,
+  refinery and contracts are persisted.
+
 ## [0.2.0] - 2026-11-12
 
 ### Added

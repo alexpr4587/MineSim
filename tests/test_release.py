@@ -1,7 +1,8 @@
-"""Release checks for v0.2.0 packaging and documentation."""
+"""Release checks for v0.3.0 packaging and documentation."""
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -9,7 +10,12 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 
+from minesim.core.direction import Direction
+from minesim.core.game import Game
+from minesim.core.save import CURRENT_VERSION, migrate
+
 ROOT = Path(__file__).resolve().parents[1]
+FIXTURES = ROOT / "tests" / "fixtures"
 
 
 def _read(relative: str) -> str:
@@ -23,36 +29,67 @@ def qapp():
     return QApplication.instance() or QApplication([])
 
 
-def test_project_version_is_0_2_0() -> None:
-    assert 'version = "0.2.0"' in _read("pyproject.toml")
+def test_project_version_is_0_3_0() -> None:
+    assert 'version = "0.3.0"' in _read("pyproject.toml")
 
 
-def test_changelog_has_0_2_0_entry() -> None:
+def test_changelog_has_0_3_0_entry() -> None:
     changelog = _read("CHANGELOG.md")
-    assert "## [0.2.0]" in changelog
+    assert "## [0.3.0]" in changelog
     for phrase in (
-        "lit 2.5d terrain",
-        "skins and pixel-art sprites",
-        "41 achievements",
-        "seven new player api functions",
-        "minerlib",
-        "four new python modules",
-        "eight example scripts",
-        "save format version 3",
+        "fleet of drones",
+        "per-drone scripts",
+        "shared",
+        "warehouse",
+        "market",
+        "price history",
+        "refinery",
+        "six recipes",
+        "contracts",
+        "world events",
+        "route",
+        "trading",
+        "oop helpers",
+        "eight new example scripts",
+        "28 new achievements",
+        "eight tabs",
+        "save format version 8",
     ):
         assert phrase in changelog.lower()
 
 
-def test_readme_documents_features_and_links() -> None:
+def test_readme_documents_features_screenshots_and_links() -> None:
     readme = _read("README.md")
-    assert "docs/screenshot.png" in readme
-    assert "docs/screenshot-wardrobe.png" in readme
-    for target in ("docs/API.md", "docs/GUIDE.md", "docs/BALANCE.md"):
+    assert readme.startswith("# MineSim")
+    assert "MineSim is an open-source" in readme
+    for image in (
+        "docs/screenshot.png",
+        "docs/screenshot-market.png",
+        "docs/screenshot-drones.png",
+    ):
+        assert image in readme
+        assert (ROOT / image).is_file()
+    for target in ("docs/API.md", "docs/GUIDE.md", "docs/PROGRESSION.md", "docs/BALANCE.md"):
         assert target in readme
         assert (ROOT / target).is_file()
-    assert "`K`" in readme
-    assert "`H`" in readme
+    for key in ("`B`", "`M`", "`D`", "`H`", "`K`"):
+        assert key in readme
+    for feature in (
+        "69 achievements",
+        "eight tabs",
+        "fleet of drones",
+        "warehouse",
+        "price history",
+        "six recipes",
+        "contracts",
+        "world events",
+        "35 player API functions",
+        "16 example scripts",
+        "save format v8",
+    ):
+        assert feature.lower() in readme.lower()
     assert "## Features" in readme
+    assert "## Controls" in readme
 
 
 def test_spec_bundles_examples_assets_and_numpy() -> None:
@@ -60,6 +97,44 @@ def test_spec_bundles_examples_assets_and_numpy() -> None:
     assert '"src/minesim/examples"' in spec
     assert '"assets"' in spec
     assert '"numpy"' in spec
+
+
+def test_frozen_build_supports_multi_drone_scripts() -> None:
+    main = _read("src/minesim/__main__.py")
+    assert "multiprocessing.freeze_support()" in main
+    assert main.index("multiprocessing.freeze_support()") < main.index("ArgumentParser")
+    host = _read("src/minesim/scripting/host.py")
+    assert 'multiprocessing.get_context("spawn")' in host
+    workflow = _read(".github/workflows/release.yml")
+    assert "--selftest " in workflow or "--selftest\n" in workflow
+    assert "--selftest-ui" in workflow
+
+
+def test_v0_2_0_save_fixture_migrates() -> None:
+    path = FIXTURES / "save_v0.2.0.json"
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    assert raw["version"] == 3
+
+    migrated = migrate(raw)
+    assert CURRENT_VERSION == 8
+    assert migrated["version"] == CURRENT_VERSION
+    assert migrated["player_stats"]["money"] == 43
+    assert migrated["fleet"] == [
+        {"id": 0, "x": 0, "y": 0, "facing": "west", "inventory": {}, "script": ""}
+    ]
+    assert migrated["warehouse"] == {}
+    assert migrated["market"] == {}
+
+    game = Game.load(path)
+    assert game.tick == 21
+    assert game.player_stats.money == 43
+    assert len(game.drones) == 1
+    assert (game.miner.x, game.miner.y) == (0, 0)
+    assert game.miner.facing is Direction.WEST
+    assert game.progression_state.is_completed("first_dig")
+    assert game.progression_state.is_completed("first_sale")
+    assert game.engine.warehouse.total() == 0
+    assert game.engine.market.step == 0
 
 
 def test_selftest_ui_renders_chunk_and_sprite(qapp, capsys) -> None:
