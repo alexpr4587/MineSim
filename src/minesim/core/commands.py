@@ -174,6 +174,21 @@ def _is_unlocked(engine: Any, content: Any, ore_id: str) -> bool:
     return ore.unlocked_by is None
 
 
+def _is_feature_unlocked(engine: Any, feature_id: str) -> bool:
+    view = _get(engine, "progression_view") or _get(engine, "progression") or _get(engine, "view")
+    checker = _get(view, "is_feature_unlocked")
+    if callable(checker):
+        try:
+            return bool(checker(str(feature_id)))
+        except Exception:
+            return True
+    return True
+
+
+def _locked_feature(feature_id: str) -> dict[str, Any]:
+    return {"ok": False, "reason": "locked_feature", "feature": str(feature_id)}
+
+
 def _is_upgrade_unlocked(engine: Any, content: Any, upgrade_id: str) -> bool:
     view = _get(engine, "progression_view") or _get(engine, "progression") or _get(engine, "view")
     checker = _get(view, "is_upgrade_unlocked")
@@ -588,6 +603,8 @@ class Unload:
         return 0
 
     def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+        if not _is_feature_unlocked(engine, "warehouse"):
+            return _locked_feature("warehouse")
         miner = _drone(engine, drone)
         if not _on_base(engine, miner):
             return {"ok": False, "reason": "not_on_base"}
@@ -637,6 +654,8 @@ class SellStock:
         return 2
 
     def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+        if not _is_feature_unlocked(engine, "market"):
+            return _locked_feature("market")
         miner = _drone(engine, drone)
         if not _on_base(engine, miner):
             return {"ok": False, "reason": "not_on_base"}
@@ -742,6 +761,8 @@ class Refine:
         return 2
 
     def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+        if not _is_feature_unlocked(engine, "refinery"):
+            return _locked_feature("refinery")
         miner = _drone(engine, drone)
         if not _on_base(engine, miner):
             return {"ok": False, "reason": "not_on_base"}
@@ -827,6 +848,8 @@ class Deliver:
         return 2
 
     def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+        if not _is_feature_unlocked(engine, "contracts"):
+            return _locked_feature("contracts")
         miner = _drone(engine, drone)
         if not _on_base(engine, miner):
             return {"ok": False, "reason": "not_on_base"}
@@ -1071,6 +1094,8 @@ class SpawnDrone:
         return int(_get(config, "spawn_ticks", 5) or 5)
 
     def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+        if not _is_feature_unlocked(engine, "drones"):
+            return _locked_feature("drones")
         drones = _get(engine, "drones") or {}
         max_drones = int(_get(engine, "max_drones", 1) or 1)
         if len(drones) >= max_drones:
@@ -1109,6 +1134,8 @@ class RemoveDrone:
         return 0
 
     def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+        if not _is_feature_unlocked(engine, "drones"):
+            return _locked_feature("drones")
         target = int(self.id)
         if target == 0:
             return {"ok": False, "reason": "cannot_remove_main", "drone_id": target}

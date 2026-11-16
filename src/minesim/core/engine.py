@@ -63,6 +63,10 @@ class ProgressionView(Protocol):
         """Return True if the recipe is unlocked."""
         ...
 
+    def is_feature_unlocked(self, feature_id: str) -> bool:
+        """Return True if the feature is unlocked."""
+        ...
+
     def is_function_unlocked(self, name: str) -> bool:
         """Return True if the function is unlocked."""
         ...
@@ -93,6 +97,10 @@ class AllUnlocked:
 
     def is_recipe_unlocked(self, recipe_id: str) -> bool:
         """Return True for every recipe."""
+        return True
+
+    def is_feature_unlocked(self, feature_id: str) -> bool:
+        """Return True for every feature."""
         return True
 
     def is_function_unlocked(self, name: str) -> bool:

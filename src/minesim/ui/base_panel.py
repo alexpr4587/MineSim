@@ -40,6 +40,7 @@ from minesim.core.events import (
     Unloaded,
 )
 from minesim.ui.floating_panel import FloatingPanel
+from minesim.ui.lock_overlay import LockOverlay
 from minesim.ui.theme import BUTTON_BORDER, DISABLED_TEXT, ERROR, TEXT, TEXT_DIM
 
 __all__ = ["BasePanel"]
@@ -299,6 +300,7 @@ class BasePanel(FloatingPanel):
         self.slot_bars: list[QProgressBar] = []
         self.contract_cards: dict[int, _ContractCard] = {}
         self._unsubscribers: list[Any] = []
+        self._lock_overlays: dict[str, LockOverlay] = {}
 
         self._build_warehouse_tab()
         self._build_refinery_tab()
@@ -359,6 +361,7 @@ class BasePanel(FloatingPanel):
         layout.addWidget(inventory)
 
         self.tabs.addTab(tab, "Warehouse")
+        self._register_lock(tab, "warehouse")
 
     def _build_refinery_tab(self) -> None:
         tab = QWidget(self.tabs)
@@ -392,6 +395,7 @@ class BasePanel(FloatingPanel):
         self._ensure_slot_bars()
 
         self.tabs.addTab(tab, "Refinery")
+        self._register_lock(tab, "refinery")
 
     def _build_contracts_tab(self) -> None:
         tab = QWidget(self.tabs)
@@ -415,6 +419,11 @@ class BasePanel(FloatingPanel):
         layout.addWidget(scroll, 1)
 
         self.tabs.addTab(tab, "Contracts")
+        self._register_lock(tab, "contracts")
+
+    def _register_lock(self, parent: QWidget, feature_id: str) -> None:
+        overlay = LockOverlay(parent, feature_id, self.feature_title(feature_id))
+        self._lock_overlays[feature_id] = overlay
 
     def _rebuild_recipe_rows(self) -> None:
         while self.recipe_rows_layout.count():
@@ -497,6 +506,35 @@ class BasePanel(FloatingPanel):
         recipe = self.recipe(recipe_id)
         return _get(recipe, "unlocked_by") is None
 
+    def is_feature_unlocked(self, feature_id: str) -> bool:
+        """Return True when the feature is unlocked."""
+        checker = getattr(self.progression, "is_feature_unlocked", None)
+        if callable(checker):
+            try:
+                return bool(checker(str(feature_id)))
+            except Exception:
+                pass
+        return True
+
+    def feature_title(self, feature_id: str) -> str:
+        """Return the achievement title that unlocks ``feature_id``."""
+        getter = getattr(self.progression, "requirement_title", None)
+        if callable(getter):
+            try:
+                return str(getter("feature", str(feature_id)))
+            except Exception:
+                pass
+        features = _get(self.content_data, "features", {}) or {}
+        feature = features.get(str(feature_id)) if isinstance(features, dict) else None
+        return str(_get(feature, "name", feature_id))
+
+    def _sync_lock_overlays(self) -> None:
+        for feature_id, overlay in self._lock_overlays.items():
+            overlay.set_locked(
+                not self.is_feature_unlocked(feature_id),
+                self.feature_title(feature_id),
+            )
+
     def requirement_title(self, achievement_id: Any) -> str:
         """Return a human-readable achievement title for ``achievement_id``."""
         if achievement_id is None:
@@ -551,6 +589,7 @@ class BasePanel(FloatingPanel):
         self._refresh_warehouse()
         self._refresh_refinery()
         self._refresh_contracts()
+        self._sync_lock_overlays()
 
     def _refresh_warehouse(self) -> None:
         warehouse = self.warehouse()

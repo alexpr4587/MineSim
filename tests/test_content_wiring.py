@@ -59,6 +59,8 @@ def test_every_unlockable_thing_has_exactly_one_unlocking_achievement(content):
         "module": content.modules,
         "skin": content.skins,
         "example": content.examples,
+        "recipe": content.recipes,
+        "feature": content.features,
     }
     reward_kinds = {
         "unlock_function": "function",
@@ -67,6 +69,8 @@ def test_every_unlockable_thing_has_exactly_one_unlocking_achievement(content):
         "unlock_module": "module",
         "unlock_skin": "skin",
         "unlock_example": "example",
+        "unlock_recipe": "recipe",
+        "unlock_feature": "feature",
     }
     rewarders: dict[tuple[str, str], list[str]] = defaultdict(list)
     for achievement in content.achievements.values():

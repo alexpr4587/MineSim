@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
 
 from minesim.core.events import StockSold, TickAdvanced
 from minesim.ui.floating_panel import FloatingPanel
+from minesim.ui.lock_overlay import LockOverlay
 from minesim.ui.theme import (
     ACCENT,
     BACKGROUND,
@@ -343,6 +344,11 @@ class MarketPanel(FloatingPanel):
         if game is not None and content is None:
             content = _get(game, "content")
         self.content_data = content
+        self.progression = (
+            _get(game, "progression_service")
+            or _get(game, "progression")
+            or _get(game, "progression_view")
+        )
         self.current_item = ""
         self._row_items: list[str] = []
         self._unsubscribers: list[Any] = []
@@ -400,6 +406,7 @@ class MarketPanel(FloatingPanel):
         layout.addWidget(news_frame)
 
         self.content_layout.addLayout(layout)
+        self.lock_overlay = LockOverlay(self.content_widget, "market", self.feature_title("market"))
 
         self._populate_items()
         self.item_selector.currentIndexChanged.connect(self._on_item_changed)
@@ -420,6 +427,28 @@ class MarketPanel(FloatingPanel):
     def market(self) -> Any:
         """Return the market."""
         return _get(_get(self.game, "engine"), "market")
+
+    def is_feature_unlocked(self, feature_id: str) -> bool:
+        """Return True when the feature is unlocked."""
+        checker = getattr(self.progression, "is_feature_unlocked", None)
+        if callable(checker):
+            try:
+                return bool(checker(str(feature_id)))
+            except Exception:
+                pass
+        return True
+
+    def feature_title(self, feature_id: str) -> str:
+        """Return the achievement title that unlocks ``feature_id``."""
+        getter = getattr(self.progression, "requirement_title", None)
+        if callable(getter):
+            try:
+                return str(getter("feature", str(feature_id)))
+            except Exception:
+                pass
+        features = _get(self.content_data, "features", {}) or {}
+        feature = features.get(str(feature_id)) if isinstance(features, dict) else None
+        return str(_get(feature, "name", feature_id))
 
     def _item_ids(self) -> list[str]:
         catalog = self.catalog()
@@ -519,6 +548,9 @@ class MarketPanel(FloatingPanel):
         else:
             self.price_label.setText("Price: —")
         self.news_label.setText(self._news_text())
+        self.lock_overlay.set_locked(
+            not self.is_feature_unlocked("market"), self.feature_title("market")
+        )
 
     def _news_text(self) -> str:
         """Return the active market news lines without revealing factors."""

@@ -13,8 +13,9 @@ default 1024x768), ``--flat``, ``--skin`` (select a miner skin, saved as
 active so the walk animation is captured), ``--achievements`` (keep the
 achievements panel visible), ``--wardrobe`` (show the wardrobe panel,
 saved as ``artifacts/ui_wardrobe.png``), ``--panel base|market|refinery|contracts``
-(a scripted economy session, saved as ``artifacts/ui_<panel>.png``) and
-``--output``.
+(a scripted economy session, saved as ``artifacts/ui_<panel>.png``),
+``--locked`` (lock every feature and show the market lock overlay,
+saved as ``artifacts/ui_locked.png``) and ``--output``.
 """
 
 from __future__ import annotations
@@ -220,11 +221,26 @@ def build_window(
     drones: int = 0,
     panel: str | None = None,
     events: bool = False,
+    locked: bool = False,
 ) -> MainWindow:
     """Build the real main window and run ``ticks`` engine ticks."""
     app = QApplication.instance() or QApplication([])
     apply_theme(app)
     game = Game.new()
+    if locked:
+        from minesim.core.schemas import Feature
+
+        for feature_id in ("warehouse", "market", "refinery", "contracts", "drones"):
+            feature = game.content.features.get(feature_id)
+            if feature is None:
+                continue
+            game.content.features[feature_id] = Feature(
+                id=feature.id,
+                name=feature.name,
+                description=feature.description,
+                unlocked_by="first_dig",
+            )
+            game.progression_state.unlocked_features.discard(feature_id)
     scripts_dir: Path | None = None
     if drones:
         scripts_dir = Path(tempfile.mkdtemp(prefix="minesim_drones_"))
@@ -350,6 +366,11 @@ def main() -> int:
         default=None,
         help="screenshot a base/market panel after a scripted economy session",
     )
+    parser.add_argument(
+        "--locked",
+        action="store_true",
+        help="lock every feature and save artifacts/ui_locked.png",
+    )
     parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args()
     window = build_window(
@@ -362,6 +383,7 @@ def main() -> int:
         drones=args.drones,
         panel=args.panel,
         events=args.events,
+        locked=args.locked,
     )
     for panel_name in (
         "achievements_panel",
@@ -390,7 +412,12 @@ def main() -> int:
             window.show_wardrobe()
         except Exception:
             window.wardrobe_panel.show_panel()
-    if args.panel == "market":
+    if args.locked and not args.panel:
+        try:
+            window.show_market()
+        except Exception:
+            window.market_panel.show_panel()
+    elif args.panel == "market":
         try:
             window.show_market()
         except Exception:
@@ -424,6 +451,8 @@ def main() -> int:
         default_name = "ui_events.png"
     if args.drones:
         default_name = "ui_drones.png"
+    if args.locked:
+        default_name = "ui_locked.png"
     out = args.output or (Path(__file__).resolve().parents[1] / "artifacts" / default_name)
     out.parent.mkdir(parents=True, exist_ok=True)
     window.grab().save(str(out))

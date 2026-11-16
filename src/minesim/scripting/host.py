@@ -60,7 +60,7 @@ from minesim.core.commands import (
     Wait,
 )
 from minesim.core.direction import Direction
-from minesim.core.events import ScriptFailed, ScriptFinished, ScriptStarted
+from minesim.core.events import ApiCalled, ScriptFailed, ScriptFinished, ScriptStarted
 
 __all__ = [
     "ConsoleLine",
@@ -80,8 +80,8 @@ def analyze_features(source: str, filename: str = "<script>") -> frozenset[str]:
     The source is parsed, never executed. Unknown/invalid syntax yields
     an empty feature set. Features: ``defines_function``,
     ``uses_import``, ``uses_comprehension``, ``uses_class``,
-    ``uses_try``, ``uses_recursion``, ``uses_lambda`` and
-    ``uses_generator``.
+    ``uses_try``, ``uses_recursion``, ``uses_lambda``,
+    ``uses_generator`` and ``uses_inheritance``.
     """
     try:
         tree = ast.parse(source, filename=filename)
@@ -97,6 +97,8 @@ def analyze_features(source: str, filename: str = "<script>") -> frozenset[str]:
             features.add("uses_comprehension")
         elif isinstance(node, ast.ClassDef):
             features.add("uses_class")
+            if any(not (isinstance(base, ast.Name) and base.id == "object") for base in node.bases):
+                features.add("uses_inheritance")
         elif isinstance(node, (ast.Try, ast.TryStar)):
             features.add("uses_try")
         elif isinstance(node, ast.Lambda):
@@ -901,7 +903,11 @@ class ScriptHost:
             return False
 
     def _reply(
-        self, request_id: Any, result: Any = None, error: dict[str, Any] | None = None
+        self,
+        request_id: Any,
+        result: Any = None,
+        error: dict[str, Any] | None = None,
+        api_name: str | None = None,
     ) -> None:
         message: dict[str, Any] = {"kind": "reply", "id": request_id, "result": result}
         if error is not None:
@@ -909,6 +915,23 @@ class ScriptHost:
             message["result"] = None
         self._send(message)
         self._last_activity = time.monotonic()
+        if error is None and api_name:
+            self._publish_api_called(api_name)
+
+    def _publish_api_called(self, name: str) -> None:
+        manager = self.manager
+        publisher = getattr(manager, "publish_api_called", None)
+        if callable(publisher):
+            try:
+                publisher(str(name), self.drone_id)
+                return
+            except Exception:
+                pass
+        if self._bus is not None and hasattr(self._bus, "publish"):
+            try:
+                self._bus.publish(ApiCalled(function=str(name), drone_id=int(self.drone_id)))
+            except Exception:
+                pass
 
     def _reply_error(self, request_id: Any, error_type: str, message: str) -> None:
         self._reply(request_id, error={"type": error_type, "message": message})
@@ -1272,7 +1295,11 @@ class ScriptHost:
                     return
         ticket = self._submit(command)
         if ticket.done:
-            self._reply(request_id, result=self._extract_result(name, ticket.result))
+            self._reply(
+                request_id,
+                result=self._extract_result(name, ticket.result),
+                api_name=name,
+            )
         else:
             self._pending = _Pending(
                 request_id=request_id, name=name, command=command, ticket=ticket
@@ -1327,11 +1354,15 @@ class ScriptHost:
                 self._manager_assign(request_id, args, kwargs)
             elif name == "shared_get":
                 key, default = self._manager_shared_args(name, args, kwargs)
-                self._reply(request_id, result=manager.shared_get(key, default))
+                self._reply(
+                    request_id,
+                    result=manager.shared_get(key, default),
+                    api_name=name,
+                )
             elif name == "shared_set":
                 key, value = self._manager_shared_args(name, args, kwargs)
                 manager.shared_set(key, value)
-                self._reply(request_id, result=None)
+                self._reply(request_id, result=None, api_name=name)
             else:
                 self._reply_error(request_id, "NameError", f"unknown function '{name}'")
         except Exception as exc:  # noqa: BLE001 - reported to the player script
@@ -1352,7 +1383,11 @@ class ScriptHost:
         command = SpawnDrone()
         ticket = self._submit(command)
         if ticket.done:
-            self._reply(request_id, result=self._finish_spawn(ticket.result, script_name))
+            self._reply(
+                request_id,
+                result=self._finish_spawn(ticket.result, script_name),
+                api_name="spawn_drone",
+            )
         else:
             self._pending = _Pending(
                 request_id=request_id,
@@ -1378,12 +1413,16 @@ class ScriptHost:
             )
             return
         if target == 0 or not bool(self.engine.has_drone(target)):
-            self._reply(request_id, result=False)
+            self._reply(request_id, result=False, api_name="kill_drone")
             return
         command = RemoveDrone(target)
         ticket = self._submit(command)
         if ticket.done:
-            self._reply(request_id, result=self._finish_kill(ticket.result, target))
+            self._reply(
+                request_id,
+                result=self._finish_kill(ticket.result, target),
+                api_name="kill_drone",
+            )
         else:
             self._pending = _Pending(
                 request_id=request_id,
@@ -1415,7 +1454,7 @@ class ScriptHost:
             )
             return
         self.manager.assign(target, script_name)
-        self._reply(request_id, result=None)
+        self._reply(request_id, result=None, api_name="assign")
 
     def _manager_shared_args(
         self, name: str, args: list[Any], kwargs: dict[str, Any]
@@ -1482,7 +1521,9 @@ class ScriptHost:
             if ticket.done:
                 self._pending = None
                 self._reply(
-                    pending.request_id, result=self._extract_result(pending.name, ticket.result)
+                    pending.request_id,
+                    result=self._extract_result(pending.name, ticket.result),
+                    api_name=pending.name,
                 )
             else:
                 pending.wait_ticket = None
@@ -1496,16 +1537,20 @@ class ScriptHost:
                 self._reply(
                     pending.request_id,
                     result=self._finish_spawn(ticket.result, extra[1]),
+                    api_name="spawn_drone",
                 )
                 return
             if extra and extra[0] == "kill":
                 self._reply(
                     pending.request_id,
                     result=self._finish_kill(ticket.result, int(extra[1])),
+                    api_name="kill_drone",
                 )
                 return
             self._reply(
-                pending.request_id, result=self._extract_result(pending.name, ticket.result)
+                pending.request_id,
+                result=self._extract_result(pending.name, ticket.result),
+                api_name=pending.name,
             )
 
     def _fail(self, error: dict[str, Any], out: list[HostEvent]) -> None:

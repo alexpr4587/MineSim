@@ -13,6 +13,8 @@ from minesim.core.commands import BuyUpgrade, Mine, Move, Sell
 from minesim.core.content import load_content
 from minesim.core.direction import Direction
 from minesim.core.events import (
+    ApiCalled,
+    ContractDelivered,
     EstimateSubmitted,
     MineAttempted,
     Moved,
@@ -22,6 +24,7 @@ from minesim.core.events import (
     Sold,
     TileRegenerated,
     UpgradeBought,
+    WorldEventStarted,
 )
 from minesim.core.game import Game
 from minesim.core.progression.state import ProgressionState
@@ -300,11 +303,11 @@ def test_saved_version_1_fixture_migrates(tmp_path):
     path = FIXTURES / "save_v1.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     migrated = migrate(data)
-    assert migrated["version"] == 7
+    assert migrated["version"] == 8
     assert migrated["selected_skin"] == DEFAULT_SKIN
 
     savegame = SaveGame.load(path)
-    assert savegame.version == 7
+    assert savegame.version == 8
     assert savegame.selected_skin == DEFAULT_SKIN
 
     game = Game.load(path)
@@ -318,10 +321,10 @@ def test_saved_version_2_fixture_migrates(content):
     path = FIXTURES / "save_v2.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     migrated = migrate(data)
-    assert migrated["version"] == 7
+    assert migrated["version"] == 8
 
     savegame = SaveGame.load(path)
-    assert savegame.version == 7
+    assert savegame.version == 8
     assert savegame.selected_skin == "steel_walker"
     assert savegame.progression["counters"]["tiles_moved"] == 12
 
@@ -451,6 +454,21 @@ def test_headless_scripted_session_moves_every_documented_counter():
     game.miner.x, game.miner.y = 0, 0
     game.miner.inventory = {"stone": 3, "coal": 2, "copper": 1}
     assert _submit(game, Sell())["ok"]
+    game.events.publish(Sold(money=100, items={"stone": 10}, avg_index=1.5))
+
+    # Warehouse, refinery, contracts, fleet and world events.
+    game.miner.inventory = {"stone": 4}
+    assert game.unload(0)["ok"]
+    game.engine.warehouse.add("copper", 3)
+    assert game.start_refine("copper_bar", 1)["ok"]
+    for _ in range(70):
+        game.step()
+    game.events.publish(ContractDelivered(id=1, reward=500))
+    game.engine.spawn_drone()
+    game.events.publish(WorldEventStarted(kind="slow_zone", id=1))
+    game.events.publish(OreMined(ore_id="stone", amount=2, in_rich_vein=True))
+    game.events.publish(Moved(x=0, y=0, in_slow_zone=True))
+    game.events.publish(ApiCalled(function="move", drone_id=0))
 
     # Upgrade.
     game.miner.money = 10**6

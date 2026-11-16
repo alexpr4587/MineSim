@@ -216,7 +216,7 @@ def test_save_load_round_trip_and_next_500_ticks(tmp_path):
         "contracts",
         "shared_memory",
     }
-    assert raw["version"] == 7
+    assert raw["version"] == 8
     assert [drone["id"] for drone in raw["fleet"]] == [0]
     assert raw["selected_skin"] == "rusty_bot"
     loaded = Game.load(path)

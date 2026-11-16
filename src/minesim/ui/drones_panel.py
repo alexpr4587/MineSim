@@ -39,6 +39,7 @@ from minesim.core.events import (
 )
 from minesim.ui.editor_panel import default_scripts_dir
 from minesim.ui.floating_panel import FloatingPanel
+from minesim.ui.lock_overlay import LockOverlay
 from minesim.ui.theme import (
     ACCENT,
     BUTTON_BORDER,
@@ -226,6 +227,12 @@ class DronesPanel(FloatingPanel):
         self.game = game
         self.engine = _get(game, "engine") or game
         self.game_content = _get(game, "content") or _get(self.engine, "content")
+        self.progression = (
+            _get(game, "progression_service")
+            or _get(game, "progression")
+            or _get(game, "progression_view")
+            or _get(self.engine, "progression_view")
+        )
         self.manager = manager
         if manager is not None and getattr(manager, "scripts_dir", None) is not None:
             scripts_dir = manager.scripts_dir
@@ -290,6 +297,7 @@ class DronesPanel(FloatingPanel):
         body.addWidget(self.scroll, 1)
 
         self.content_layout.addLayout(body)
+        self.lock_overlay = LockOverlay(self.content_widget, "drones", self.feature_title("drones"))
         self._subscribe_events()
         self.refresh()
 
@@ -319,6 +327,28 @@ class DronesPanel(FloatingPanel):
     def _money(self) -> int:
         player = _get(self.game, "player_stats") or _get(self.engine, "player_stats")
         return int(_get(player, "money", 0) or 0)
+
+    def is_feature_unlocked(self, feature_id: str) -> bool:
+        """Return True when the feature is unlocked."""
+        checker = getattr(self.progression, "is_feature_unlocked", None)
+        if callable(checker):
+            try:
+                return bool(checker(str(feature_id)))
+            except Exception:
+                pass
+        return True
+
+    def feature_title(self, feature_id: str) -> str:
+        """Return the achievement title that unlocks ``feature_id``."""
+        getter = getattr(self.progression, "requirement_title", None)
+        if callable(getter):
+            try:
+                return str(getter("feature", str(feature_id)))
+            except Exception:
+                pass
+        features = _get(self.game_content, "features", {}) or {}
+        feature = features.get(str(feature_id)) if isinstance(features, dict) else None
+        return str(_get(feature, "name", feature_id))
 
     def next_drone_cost(self) -> int | None:
         """Return the price of the next drone, or None when no slot remains."""
@@ -396,6 +426,9 @@ class DronesPanel(FloatingPanel):
         for drone_id, row in self.rows.items():
             row.set_selected(drone_id == self.selected_drone)
         self._refresh_spawn_controls()
+        self.lock_overlay.set_locked(
+            not self.is_feature_unlocked("drones"), self.feature_title("drones")
+        )
 
     # -- selection -------------------------------------------------------------
 

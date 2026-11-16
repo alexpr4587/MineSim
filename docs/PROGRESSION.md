@@ -4,7 +4,7 @@
 script events. Achievement criteria of type `counter` read the counter
 named by `counter`; `script_feature` criteria read the internal
 `script_feature:<feature>` counters. All counters are stored in the
-save file (save version 3) and default to `0` when a save predates them.
+save file (save version 8) and default to `0` when a save predates them.
 
 | Counter | Event | Meaning |
 |---|---|---|
@@ -30,6 +30,29 @@ save file (save version 3) and default to `0` when a save predates them.
 | `scripts_finished` | `ScriptFinished` | Scripts that finished normally. |
 | `script_feature:<feature>` | `ScriptStarted` | `1` once a script with that feature starts (internal; used by `script_feature` criteria). |
 | `good_estimates` | `EstimateSubmitted` | Estimates judged good (within tolerance). |
+| `unloads` | `Unloaded` | Unloads that moved at least one item into the warehouse. |
+| `warehouse_peak` | `Unloaded`, `RefineFinished`, `StockSold`, `TickAdvanced` | Largest number of items ever stored in the warehouse. |
+| `sold_high` | `Sold` | Items sold while the market index was at least `1.25`. |
+| `recipe:<id>` | `RefineFinished` | Completed runs of recipe `<id>`. |
+| `bars_made` | `RefineFinished` | Refined output items produced. |
+| `contracts_done` | `ContractDelivered` | Delivery contracts completed. |
+| `contract_reward_total` | `ContractDelivered` | Total money earned from completed contracts. |
+| `drones_spawned` | `DroneSpawned` | Drones added to the fleet. |
+| `max_drones_alive` | `DroneSpawned`, `DroneRemoved` | Largest fleet size ever reached. |
+| `events_started` | `WorldEventStarted` | Random world events that started. |
+| `rich_vein_mined` | `OreMined` | Ore items mined while a rich vein was active. |
+| `slow_zone_moves` | `Moved` | Moves made into or inside a slow zone. |
+| `api:<function>` | `ApiCalled` | Successful calls to the player API function `<function>`. |
+
+## Features and recipe unlocks
+
+`features.json` names every gated game feature (`warehouse`, `market`,
+`refinery`, `contracts`, `drones`). A feature or recipe with
+`unlocked_by: null` starts unlocked; otherwise the achievement named
+there grants it with an `unlock_feature` or `unlock_recipe` reward.
+The UI shows an overlay with `Unlocks with: <achievement title>` while
+a feature is locked, and game actions on the feature refuse with
+`reason: locked_feature`.
 
 ## Script features
 
@@ -46,6 +69,7 @@ it) and reports a `frozenset[str]` on `ScriptStarted`:
 | `uses_recursion` | a function that calls itself by name |
 | `uses_lambda` | a `lambda` |
 | `uses_generator` | a `yield` or `yield from` inside a function |
+| `uses_inheritance` | a `class` with a base other than `object` |
 
 The legacy criteria type `script_defines_function` is an alias of the
 `script_feature` criterion with feature `defines_function`.

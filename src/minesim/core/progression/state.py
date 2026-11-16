@@ -24,16 +24,15 @@ def _entries(content: Any, attr: str) -> list[Any]:
     return []
 
 
+_ID_KINDS = ("ore", "upgrade", "skin", "example", "recipe", "feature")
+
+
 def _entry_id(entry: Any, kind: str) -> str | None:
     """Return the identifier of a content entry."""
     if isinstance(entry, dict):
-        value = entry.get("id" if kind in ("ore", "upgrade", "skin", "example") else "name")
+        value = entry.get("id" if kind in _ID_KINDS else "name")
         return str(value) if value is not None else None
-    value = (
-        getattr(entry, "id", None)
-        if kind in ("ore", "upgrade", "skin", "example")
-        else getattr(entry, "name", None)
-    )
+    value = getattr(entry, "id", None) if kind in _ID_KINDS else getattr(entry, "name", None)
     if value is None:
         value = getattr(entry, "id", None) or getattr(entry, "name", None)
     return str(value) if value is not None else None
@@ -48,6 +47,8 @@ def _initial_unlocked(content: Any) -> dict[str, set[str]]:
         "unlocked_modules": set(),
         "unlocked_skins": set(),
         "unlocked_examples": set(),
+        "unlocked_recipes": set(),
+        "unlocked_features": set(),
     }
     if content is None:
         return result
@@ -58,6 +59,8 @@ def _initial_unlocked(content: Any) -> dict[str, set[str]]:
         ("modules", "module", "unlocked_modules"),
         ("skins", "skin", "unlocked_skins"),
         ("examples", "example", "unlocked_examples"),
+        ("recipes", "recipe", "unlocked_recipes"),
+        ("features", "feature", "unlocked_features"),
     ]
     for attr, kind, field_name in mapping:
         for entry in _entries(content, attr):
@@ -85,6 +88,8 @@ class ProgressionState:
         "unlocked_modules",
         "unlocked_skins",
         "unlocked_examples",
+        "unlocked_recipes",
+        "unlocked_features",
         "current_streak",
         "current_fail_streak",
     )
@@ -100,6 +105,8 @@ class ProgressionState:
         unlocked_modules: Any = None,
         unlocked_skins: Any = None,
         unlocked_examples: Any = None,
+        unlocked_recipes: Any = None,
+        unlocked_features: Any = None,
         data: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
@@ -116,6 +123,8 @@ class ProgressionState:
             self.unlocked_modules = parsed.unlocked_modules
             self.unlocked_skins = parsed.unlocked_skins
             self.unlocked_examples = parsed.unlocked_examples
+            self.unlocked_recipes = parsed.unlocked_recipes
+            self.unlocked_features = parsed.unlocked_features
             self.current_streak = parsed.current_streak
             self.current_fail_streak = parsed.current_fail_streak
             return
@@ -150,6 +159,14 @@ class ProgressionState:
             if unlocked_examples is not None
             else initial["unlocked_examples"]
         )
+        self.unlocked_recipes = (
+            set(unlocked_recipes) if unlocked_recipes is not None else initial["unlocked_recipes"]
+        )
+        self.unlocked_features = (
+            set(unlocked_features)
+            if unlocked_features is not None
+            else initial["unlocked_features"]
+        )
         self.current_streak = 0
         self.current_fail_streak = 0
         if kwargs:
@@ -160,6 +177,8 @@ class ProgressionState:
                 "unlocked_module_ids",
                 "unlocked_skin_ids",
                 "unlocked_example_ids",
+                "unlocked_recipe_ids",
+                "unlocked_feature_ids",
             }
             if unknown:
                 raise TypeError(f"unexpected arguments: {sorted(unknown)}")
@@ -172,12 +191,16 @@ class ProgressionState:
             "unlocked_module_ids": "unlocked_modules",
             "unlocked_skin_ids": "unlocked_skins",
             "unlocked_example_ids": "unlocked_examples",
+            "unlocked_recipe_ids": "unlocked_recipes",
+            "unlocked_feature_ids": "unlocked_features",
             "functions_unlocked": "unlocked_functions",
             "ores_unlocked": "unlocked_ores",
             "upgrades_unlocked": "unlocked_upgrades",
             "modules_unlocked": "unlocked_modules",
             "skins_unlocked": "unlocked_skins",
             "examples_unlocked": "unlocked_examples",
+            "recipes_unlocked": "unlocked_recipes",
+            "features_unlocked": "unlocked_features",
             "completed_achievements": "completed",
         }
         if name in aliases:
@@ -232,6 +255,8 @@ class ProgressionState:
             "unlocked_modules",
             "unlocked_skins",
             "unlocked_examples",
+            "unlocked_recipes",
+            "unlocked_features",
         ):
             raw = data.get(field_name)
             if raw is None:
@@ -258,6 +283,8 @@ class ProgressionState:
             "unlocked_modules": sorted(self.unlocked_modules),
             "unlocked_skins": sorted(self.unlocked_skins),
             "unlocked_examples": sorted(self.unlocked_examples),
+            "unlocked_recipes": sorted(self.unlocked_recipes),
+            "unlocked_features": sorted(self.unlocked_features),
             "current_streak": int(self.current_streak),
             "current_fail_streak": int(self.current_fail_streak),
         }
@@ -331,13 +358,31 @@ class ProgressionState:
         self.unlocked_examples.add(example_id)
         return True
 
+    def unlock_recipe(self, recipe_id: str) -> bool:
+        """Unlock a refinery recipe; return True if it was newly unlocked."""
+        if recipe_id in self.unlocked_recipes:
+            return False
+        self.unlocked_recipes.add(recipe_id)
+        return True
+
+    def unlock_feature(self, feature_id: str) -> bool:
+        """Unlock a UI/game feature; return True if it was newly unlocked."""
+        if feature_id in self.unlocked_features:
+            return False
+        self.unlocked_features.add(feature_id)
+        return True
+
     def is_ore_unlocked(self, ore_id: str) -> bool:
         """Return True if the ore is unlocked."""
         return ore_id in self.unlocked_ores
 
     def is_recipe_unlocked(self, recipe_id: str) -> bool:
-        """Return True until recipe unlocks are tracked (prompt 23)."""
-        return True
+        """Return True if the recipe is unlocked."""
+        return recipe_id in self.unlocked_recipes
+
+    def is_feature_unlocked(self, feature_id: str) -> bool:
+        """Return True if the feature is unlocked."""
+        return feature_id in self.unlocked_features
 
     def is_function_unlocked(self, name: str) -> bool:
         """Return True if the function is unlocked."""
@@ -374,4 +419,8 @@ class ProgressionState:
             return self.is_skin_unlocked(ident)
         if kind_normalised == "example":
             return self.is_example_unlocked(ident)
+        if kind_normalised == "recipe":
+            return self.is_recipe_unlocked(ident)
+        if kind_normalised == "feature":
+            return self.is_feature_unlocked(ident)
         raise ValueError(f"unknown kind: {kind!r}")

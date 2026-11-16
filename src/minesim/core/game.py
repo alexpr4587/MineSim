@@ -379,8 +379,52 @@ class Game:
         """Alias for :meth:`run_until_idle`."""
         self.run_until_idle(max_ticks)
 
+    def is_feature_unlocked(self, feature_id: str) -> bool:
+        """Return True if the named feature is unlocked."""
+        service = self._progression_service
+        checker = getattr(service, "is_feature_unlocked", None)
+        if callable(checker):
+            return bool(checker(str(feature_id)))
+        checker = getattr(self._progression_state, "is_feature_unlocked", None)
+        if callable(checker):
+            return bool(checker(str(feature_id)))
+        features = getattr(self._content, "features", None) or {}
+        feature = features.get(str(feature_id)) if isinstance(features, dict) else None
+        if feature is None:
+            return True
+        return getattr(feature, "unlocked_by", None) is None
+
+    def locked_feature_result(self, feature_id: str) -> dict[str, Any]:
+        """Return the refusal result for an action on a locked feature."""
+        title = ""
+        service = self._progression_service
+        getter = getattr(service, "requirement_title", None)
+        if callable(getter):
+            try:
+                title = str(getter("feature", str(feature_id)))
+            except Exception:
+                title = ""
+        if not title:
+            features = getattr(self._content, "features", None) or {}
+            feature = features.get(str(feature_id)) if isinstance(features, dict) else None
+            title = str(getattr(feature, "name", feature_id))
+        return {
+            "ok": False,
+            "reason": "locked_feature",
+            "feature": str(feature_id),
+            "message": f"Unlocks with: {title}",
+        }
+
+    def _require_feature(self, feature_id: str) -> dict[str, Any] | None:
+        if self.is_feature_unlocked(feature_id):
+            return None
+        return self.locked_feature_result(feature_id)
+
     def start_refine(self, recipe_id: str, times: int = 1) -> dict[str, Any]:
         """Start a refinery job immediately (UI convenience)."""
+        locked = self._require_feature("refinery")
+        if locked is not None:
+            return locked
         return self._engine.start_refine(recipe_id, times)
 
     def refine(self, recipe_id: str, times: int = 1) -> dict[str, Any]:
@@ -397,10 +441,16 @@ class Game:
 
     def deliver_contract(self, contract_id: int) -> dict[str, Any]:
         """Deliver a contract immediately (UI convenience)."""
+        locked = self._require_feature("contracts")
+        if locked is not None:
+            return locked
         return self._engine.deliver_contract(contract_id)
 
     def sell_stock(self, item: str, amount: int | None = None) -> dict[str, Any]:
         """Sell warehouse stock immediately (UI convenience)."""
+        locked = self._require_feature("market")
+        if locked is not None:
+            return locked
         return self._engine.sell_stock(item, amount)
 
     def unload(self, drone_id: int = 0) -> dict[str, Any]:
@@ -411,6 +461,9 @@ class Game:
         """
         from minesim.core.commands import Unload
 
+        locked = self._require_feature("warehouse")
+        if locked is not None:
+            return locked
         try:
             drone = self._engine.drone(drone_id)
         except KeyError:

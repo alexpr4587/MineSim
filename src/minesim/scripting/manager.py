@@ -13,6 +13,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from minesim.core.events import ApiCalled
 from minesim.scripting.host import HostEvent, ScriptHost, ScriptState
 
 __all__ = ["ScriptManager"]
@@ -258,6 +259,20 @@ class ScriptManager:
                 item["inventory_used"] = int(getattr(drone, "inventory_size", 0) or 0)
             decorated.append(item)
         return decorated
+
+    # -- API events -------------------------------------------------------
+
+    def publish_api_called(self, function: str, drone_id: int = 0) -> None:
+        """Publish :class:`ApiCalled` for a successful script API call."""
+        bus = (
+            _get(self.game, "events")
+            or _get(self.game, "event_bus")
+            or _get(self.engine, "events")
+            or _get(self.engine, "event_bus")
+        )
+        if bus is None or not hasattr(bus, "publish"):
+            return
+        bus.publish(ApiCalled(function=str(function), drone_id=int(drone_id)))
 
     # -- shared memory ----------------------------------------------------
 

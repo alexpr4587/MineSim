@@ -23,6 +23,7 @@ from minesim.core.schemas import (
     Config,
     ContentError,
     Example,
+    Feature,
     FunctionSpec,
     MarketEntry,
     ModuleSpec,
@@ -63,6 +64,7 @@ class Content:
     sprites: Sprites | None = None
     skins: dict[str, Skin] = field(default_factory=dict)
     examples: dict[str, Example] = field(default_factory=dict)
+    features: dict[str, Feature] = field(default_factory=dict)
 
     def get_skin(self, skin_id: str) -> Skin:
         """Return the skin with ``skin_id`` or raise ContentError."""
@@ -105,6 +107,17 @@ class Content:
     def examples_by_id(self) -> dict[str, Example]:
         """Alias for :attr:`examples`."""
         return self.examples
+
+    def get_feature(self, feature_id: str) -> Feature:
+        """Return the feature with ``feature_id`` or raise ContentError."""
+        try:
+            return self.features[feature_id]
+        except KeyError:
+            raise ContentError(f"features.json: $.id: unknown feature id '{feature_id}'") from None
+
+    def feature(self, feature_id: str) -> Feature:
+        """Alias for :meth:`get_feature`."""
+        return self.get_feature(feature_id)
 
     def get_achievement(self, achievement_id: str) -> Achievement:
         """Return the achievement with ``achievement_id`` or raise ContentError."""
@@ -378,6 +391,17 @@ _KNOWN_COUNTERS = {
     "good_estimates",
     "script_defines_function",
     "scripts_defines_function",
+    "unloads",
+    "warehouse_peak",
+    "sold_high",
+    "bars_made",
+    "contracts_done",
+    "contract_reward_total",
+    "drones_spawned",
+    "max_drones_alive",
+    "events_started",
+    "rich_vein_mined",
+    "slow_zone_moves",
 }
 
 _KNOWN_FAIL_REASONS = {
@@ -397,6 +421,7 @@ _KNOWN_SCRIPT_FEATURES = {
     "uses_recursion",
     "uses_lambda",
     "uses_generator",
+    "uses_inheritance",
 }
 
 
@@ -412,10 +437,12 @@ def _cross_validate(
     products: dict[str, Product] | None = None,
     market: dict[str, MarketEntry] | None = None,
     recipes: dict[str, Recipe] | None = None,
+    features: dict[str, Feature] | None = None,
 ) -> None:
     products = products or {}
     market = market or {}
     recipes = recipes or {}
+    features = features or {}
     for product_id in products:
         if product_id in ores:
             raise ContentError(
@@ -518,6 +545,20 @@ def _cross_validate(
                         f"achievements.json: $.{ach_index}.criteria.counter: "
                         f"unknown failure reason '{reason}'"
                     )
+            elif isinstance(counter, str) and counter.startswith("recipe:"):
+                recipe_id = counter[len("recipe:") :]
+                if recipe_id not in recipes:
+                    raise ContentError(
+                        f"achievements.json: $.{ach_index}.criteria.counter: "
+                        f"unknown recipe id '{recipe_id}'"
+                    )
+            elif isinstance(counter, str) and counter.startswith("api:"):
+                function_name = counter[len("api:") :]
+                if function_name not in functions:
+                    raise ContentError(
+                        f"achievements.json: $.{ach_index}.criteria.counter: "
+                        f"unknown function name '{function_name}'"
+                    )
             else:
                 raise ContentError(
                     f"achievements.json: $.{ach_index}.criteria.counter: "
@@ -554,6 +595,8 @@ def _cross_validate(
                 "unlock_module": modules,
                 "unlock_skin": skins,
                 "unlock_example": examples,
+                "unlock_recipe": recipes,
+                "unlock_feature": features,
             }
             target = targets.get(reward_type)
             if target is not None and reward_id not in target:
@@ -564,6 +607,8 @@ def _cross_validate(
                     "unlock_module": "module",
                     "unlock_skin": "skin",
                     "unlock_example": "example",
+                    "unlock_recipe": "recipe",
+                    "unlock_feature": "feature",
                 }
                 raise ContentError(
                     f"achievements.json: $.{ach_index}.rewards.{reward_index}.id: "
@@ -587,6 +632,7 @@ def _cross_validate(
     _check_unlocked_by(modules, "modules.json", "name")
     _check_unlocked_by(skins, "skins.json", "id")
     _check_unlocked_by(recipes, "recipes.json", "id")
+    _check_unlocked_by(features, "features.json", "id")
     if examples_present:
         _check_unlocked_by(examples, "examples.json", "id")
 
@@ -730,6 +776,18 @@ def load_content(content_dir: str | Path | None = None) -> Content:
         skins_list = _validate(skins_data, TypeAdapter(list[Skin]), "skins.json")
         skins = _index_by_id(skins_list, "skins.json", "skin")
 
+    features: dict[str, Feature] = {}
+    try:
+        features_data = _read_json(base_path, "features.json")
+    except ContentError as exc:
+        if "file not found" not in str(exc):
+            raise
+    else:
+        if isinstance(features_data, dict):
+            features_data = features_data.get("features", features_data)
+        features_list = _validate(features_data, TypeAdapter(list[Feature]), "features.json")
+        features = _index_by_id(features_list, "features.json", "feature")
+
     examples: dict[str, Example] = {}
     examples_present = False
     try:
@@ -756,11 +814,13 @@ def load_content(content_dir: str | Path | None = None) -> Content:
         products,
         market,
         recipes,
+        features,
     )
     logger.debug(
         "Loaded content: %d ores, %d products, %d recipes, %d market entries, "
         "%d world event kinds, %d biomes, "
-        "%d upgrades, %d functions, %d modules, %d achievements, %d skins, %d examples",
+        "%d upgrades, %d functions, %d modules, %d achievements, %d skins, "
+        "%d examples, %d features",
         len(ores),
         len(products),
         len(recipes),
@@ -773,6 +833,7 @@ def load_content(content_dir: str | Path | None = None) -> Content:
         len(achievements),
         len(skins),
         len(examples),
+        len(features),
     )
     return Content(
         config=config,
@@ -789,6 +850,7 @@ def load_content(content_dir: str | Path | None = None) -> Content:
         sprites=sprites,
         skins=skins,
         examples=examples,
+        features=features,
     )
 
 

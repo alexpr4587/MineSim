@@ -6,17 +6,25 @@ from typing import Any
 
 from minesim.core.events import (
     AchievementUnlocked,
+    ApiCalled,
+    ContractDelivered,
+    DroneRemoved,
+    DroneSpawned,
     EstimateSubmitted,
     EventBus,
     MineAttempted,
     Moved,
     OreMined,
+    RefineFinished,
     ScriptFinished,
     ScriptStarted,
     Sold,
+    StockSold,
     TickAdvanced,
     TileRegenerated,
+    Unloaded,
     UpgradeBought,
+    WorldEventStarted,
 )
 from minesim.core.progression.state import ProgressionState
 
@@ -246,6 +254,16 @@ class ProgressionService:
         return self._state.unlocked_examples
 
     @property
+    def unlocked_recipes(self) -> set[str]:
+        """Alias for the state's unlocked recipes."""
+        return self._state.unlocked_recipes
+
+    @property
+    def unlocked_features(self) -> set[str]:
+        """Alias for the state's unlocked features."""
+        return self._state.unlocked_features
+
+    @property
     def tick(self) -> int:
         """The current tick (from the engine if attached)."""
         if self._engine is not None:
@@ -282,6 +300,14 @@ class ProgressionService:
             bus.subscribe(TileRegenerated, self._on_tile_regenerated)
             bus.subscribe(EstimateSubmitted, self._on_estimate_submitted)
             bus.subscribe(UpgradeBought, self._on_upgrade_bought)
+            bus.subscribe(Unloaded, self._on_unloaded)
+            bus.subscribe(StockSold, self._on_stock_sold)
+            bus.subscribe(RefineFinished, self._on_refine_finished)
+            bus.subscribe(ContractDelivered, self._on_contract_delivered)
+            bus.subscribe(DroneSpawned, self._on_drone_spawned)
+            bus.subscribe(DroneRemoved, self._on_drone_removed)
+            bus.subscribe(WorldEventStarted, self._on_world_event_started)
+            bus.subscribe(ApiCalled, self._on_api_called)
         except Exception:
             return
         self._subscribed_bus = bus
@@ -313,6 +339,8 @@ class ProgressionService:
         x = int(_get(event, "x", 0) or 0)
         y = int(_get(event, "y", 0) or 0)
         self._state.add_counter("tiles_moved", 1)
+        if bool(_get(event, "in_slow_zone", False)):
+            self._state.add_counter("slow_zone_moves", 1)
         distance = max(abs(x), abs(y))
         if distance > self._state.get_counter("max_distance"):
             self._state.counters["max_distance"] = distance
@@ -360,6 +388,8 @@ class ProgressionService:
             if amount > 0 and self._state.get_counter(f"mined:{ore_id}") == 0:
                 self._state.add_counter("unique_ores_mined", 1)
             self._state.add_counter(f"mined:{ore_id}", amount)
+        if bool(_get(event, "in_rich_vein", False)) and amount > 0:
+            self._state.add_counter("rich_vein_mined", amount)
         self._check_achievements()
 
     def _on_sold(self, event: Any) -> None:
@@ -373,6 +403,11 @@ class ProgressionService:
             distinct = sum(1 for count in items.values() if int(count) > 0)
             if distinct > self._state.get_counter("ores_in_one_sale"):
                 self._state.counters["ores_in_one_sale"] = distinct
+            avg_index = float(_get(event, "avg_index", 1.0) or 1.0)
+            if avg_index >= 1.25:
+                units = sum(int(count) for count in items.values() if int(count) > 0)
+                if units > 0:
+                    self._state.add_counter("sold_high", units)
         self._check_achievements()
 
     def _on_script_started(self, event: Any) -> None:
@@ -395,6 +430,96 @@ class ProgressionService:
         tick = _get(event, "tick")
         if tick is not None:
             self._tick = int(tick)
+        self._update_warehouse_peak()
+
+    def _warehouse_total(self) -> int | None:
+        warehouse = _get(self._engine, "warehouse") if self._engine is not None else None
+        if warehouse is None:
+            return None
+        total = getattr(warehouse, "total", None)
+        if callable(total):
+            try:
+                return int(total())
+            except Exception:
+                return None
+        if total is not None:
+            try:
+                return int(total)
+            except Exception:
+                return None
+        items = getattr(warehouse, "items", None)
+        if isinstance(items, dict):
+            return sum(int(count) for count in items.values())
+        return None
+
+    def _update_warehouse_peak(self, extra: int = 0) -> None:
+        total = self._warehouse_total()
+        if total is None:
+            return
+        peak = int(total) + max(0, int(extra))
+        if peak > self._state.get_counter("warehouse_peak"):
+            self._state.counters["warehouse_peak"] = peak
+
+    def _drone_count(self) -> int:
+        drones = _get(self._engine, "drones") if self._engine is not None else None
+        if isinstance(drones, dict):
+            return len(drones)
+        return 0
+
+    def _on_unloaded(self, event: Any) -> None:
+        items = _get(event, "items") or {}
+        moved = sum(int(count) for count in items.values() if int(count) > 0)
+        if moved > 0:
+            self._state.add_counter("unloads", 1)
+        self._update_warehouse_peak()
+        self._check_achievements()
+
+    def _on_stock_sold(self, event: Any) -> None:
+        amount = int(_get(event, "amount", 0) or 0)
+        self._update_warehouse_peak(extra=amount)
+        self._check_achievements()
+
+    def _on_refine_finished(self, event: Any) -> None:
+        recipe_id = str(_get(event, "recipe", "") or "")
+        times = max(1, int(_get(event, "times", 1) or 1))
+        outputs = _get(event, "outputs") or {}
+        if recipe_id:
+            self._state.add_counter(f"recipe:{recipe_id}", times)
+        produced = sum(int(count) for count in outputs.values() if int(count) > 0)
+        if produced > 0:
+            self._state.add_counter("bars_made", produced)
+        self._update_warehouse_peak()
+        self._check_achievements()
+
+    def _on_contract_delivered(self, event: Any) -> None:
+        self._state.add_counter("contracts_done", 1)
+        reward = int(_get(event, "reward", 0) or 0)
+        if reward > 0:
+            self._state.add_counter("contract_reward_total", reward)
+        self._check_achievements()
+
+    def _on_drone_spawned(self, event: Any) -> None:
+        self._state.add_counter("drones_spawned", 1)
+        alive = self._drone_count()
+        if alive > self._state.get_counter("max_drones_alive"):
+            self._state.counters["max_drones_alive"] = alive
+        self._check_achievements()
+
+    def _on_drone_removed(self, event: Any) -> None:
+        alive = self._drone_count()
+        if alive > self._state.get_counter("max_drones_alive"):
+            self._state.counters["max_drones_alive"] = alive
+        self._check_achievements()
+
+    def _on_world_event_started(self, event: Any) -> None:
+        self._state.add_counter("events_started", 1)
+        self._check_achievements()
+
+    def _on_api_called(self, event: Any) -> None:
+        function = str(_get(event, "function", "") or "")
+        if function:
+            self._state.add_counter(f"api:{function}", 1)
+        self._check_achievements()
 
     def _on_tile_regenerated(self, event: Any) -> None:
         self._state.add_counter("regens", 1)
@@ -431,6 +556,22 @@ class ProgressionService:
             self._on_estimate_submitted(event)
         elif isinstance(event, UpgradeBought):
             self._on_upgrade_bought(event)
+        elif isinstance(event, Unloaded):
+            self._on_unloaded(event)
+        elif isinstance(event, StockSold):
+            self._on_stock_sold(event)
+        elif isinstance(event, RefineFinished):
+            self._on_refine_finished(event)
+        elif isinstance(event, ContractDelivered):
+            self._on_contract_delivered(event)
+        elif isinstance(event, DroneSpawned):
+            self._on_drone_spawned(event)
+        elif isinstance(event, DroneRemoved):
+            self._on_drone_removed(event)
+        elif isinstance(event, WorldEventStarted):
+            self._on_world_event_started(event)
+        elif isinstance(event, ApiCalled):
+            self._on_api_called(event)
         else:
             name = type(event).__name__
             if name == "Moved":
@@ -453,6 +594,22 @@ class ProgressionService:
                 self._on_estimate_submitted(event)
             elif name == "UpgradeBought":
                 self._on_upgrade_bought(event)
+            elif name == "Unloaded":
+                self._on_unloaded(event)
+            elif name == "StockSold":
+                self._on_stock_sold(event)
+            elif name == "RefineFinished":
+                self._on_refine_finished(event)
+            elif name == "ContractDelivered":
+                self._on_contract_delivered(event)
+            elif name == "DroneSpawned":
+                self._on_drone_spawned(event)
+            elif name == "DroneRemoved":
+                self._on_drone_removed(event)
+            elif name == "WorldEventStarted":
+                self._on_world_event_started(event)
+            elif name == "ApiCalled":
+                self._on_api_called(event)
 
     def handle(self, event: Any) -> None:
         """Alias for :meth:`handle_event`."""
@@ -562,6 +719,10 @@ class ProgressionService:
                 self._state.unlock_skin(str(reward_id))
             elif reward_type == "unlock_example" and reward_id:
                 self._state.unlock_example(str(reward_id))
+            elif reward_type == "unlock_recipe" and reward_id:
+                self._state.unlock_recipe(str(reward_id))
+            elif reward_type == "unlock_feature" and reward_id:
+                self._state.unlock_feature(str(reward_id))
             elif reward_type == "money":
                 amount = _get(reward, "amount")
                 if amount is not None:
@@ -618,15 +779,11 @@ class ProgressionService:
 
     def is_recipe_unlocked(self, recipe_id: str) -> bool:
         """Return True if the recipe is unlocked."""
-        raw = _get(self._content, "recipes") if self._content is not None else None
-        if raw is None and isinstance(self._content, dict):
-            raw = self._content.get("recipes")
-        if not isinstance(raw, dict):
-            return False
-        recipe = raw.get(str(recipe_id))
-        if recipe is None:
-            return False
-        return _get(recipe, "unlocked_by") is None
+        return self._state.is_recipe_unlocked(recipe_id)
+
+    def is_feature_unlocked(self, feature_id: str) -> bool:
+        """Return True if the feature is unlocked."""
+        return self._state.is_feature_unlocked(feature_id)
 
     def is_function_unlocked(self, name: str) -> bool:
         """Return True if the function is unlocked."""
@@ -666,7 +823,14 @@ class ProgressionService:
                 title = _get(achievement, "title")
                 if title:
                     return str(title)
-            for collection_name in ("ores", "functions", "upgrades", "modules"):
+            for collection_name in (
+                "ores",
+                "functions",
+                "upgrades",
+                "modules",
+                "recipes",
+                "features",
+            ):
                 raw = _get(self._content, collection_name) if self._content is not None else None
                 if isinstance(raw, dict) and single in raw:
                     unlocked_by = _get(raw[single], "unlocked_by")
@@ -685,6 +849,8 @@ class ProgressionService:
             "function": "functions",
             "upgrade": "upgrades",
             "module": "modules",
+            "recipe": "recipes",
+            "feature": "features",
         }
         collection_name = collection_map.get(kind_str)
         if collection_name is not None:
@@ -705,7 +871,7 @@ class ProgressionService:
             title = _get(achievement, "title")
             if title:
                 return str(title)
-        for name in ("ores", "functions", "upgrades", "modules"):
+        for name in ("ores", "functions", "upgrades", "modules", "recipes", "features"):
             raw = _get(self._content, name) if self._content is not None else None
             if isinstance(raw, dict) and ident_str in raw:
                 unlocked_by = _get(raw[ident_str], "unlocked_by")

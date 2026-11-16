@@ -314,6 +314,15 @@ class ModuleSpec(_ContentModel):
     unlocked_by: str | None = None
 
 
+class Feature(_ContentModel):
+    """A gated game feature (features.json)."""
+
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    description: str = ""
+    unlocked_by: str | None = None
+
+
 class CounterCriteria(_ContentModel):
     """A counter-based achievement criterion."""
 
@@ -352,6 +361,8 @@ class Reward(_ContentModel):
         "unlock_module",
         "unlock_skin",
         "unlock_example",
+        "unlock_recipe",
+        "unlock_feature",
         "money",
     ]
     id: str | None = None
@@ -432,6 +443,7 @@ __all__ = [
     "CounterCriteria",
     "Criteria",
     "Example",
+    "Feature",
     "FunctionSpec",
     "MarketEntry",
     "MinerFrames",

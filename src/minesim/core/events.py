@@ -8,6 +8,7 @@ from typing import Any
 
 __all__ = [
     "AchievementUnlocked",
+    "ApiCalled",
     "ContractDelivered",
     "ContractExpired",
     "ContractGenerated",
@@ -203,6 +204,14 @@ class AchievementUnlocked:
     """An achievement was unlocked."""
 
     id: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class ApiCalled:
+    """A player script successfully called a game API function."""
+
+    function: str = ""
+    drone_id: int = 0
 
 
 @dataclass(frozen=True, slots=True)
