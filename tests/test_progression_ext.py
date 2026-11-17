@@ -303,11 +303,11 @@ def test_saved_version_1_fixture_migrates(tmp_path):
     path = FIXTURES / "save_v1.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     migrated = migrate(data)
-    assert migrated["version"] == 8
+    assert migrated["version"] == 9
     assert migrated["selected_skin"] == DEFAULT_SKIN
 
     savegame = SaveGame.load(path)
-    assert savegame.version == 8
+    assert savegame.version == 9
     assert savegame.selected_skin == DEFAULT_SKIN
 
     game = Game.load(path)
@@ -321,10 +321,10 @@ def test_saved_version_2_fixture_migrates(content):
     path = FIXTURES / "save_v2.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     migrated = migrate(data)
-    assert migrated["version"] == 8
+    assert migrated["version"] == 9
 
     savegame = SaveGame.load(path)
-    assert savegame.version == 8
+    assert savegame.version == 9
     assert savegame.selected_skin == "steel_walker"
     assert savegame.progression["counters"]["tiles_moved"] == 12
 
@@ -425,7 +425,7 @@ def _documented_counters() -> list[str]:
 def test_headless_scripted_session_moves_every_documented_counter(content):
     game = Game.new(seed=12345)
     state = game.progression_state
-    state.unlocked_features.update({"warehouse", "market", "refinery", "contracts", "drones"})
+    state.unlocked_features.update({"warehouse", "market", "refinery", "contracts", "miners"})
     state.unlocked_recipes.update(content.recipes)
     state.unlocked_upgrades.update(content.upgrades)
 
@@ -467,11 +467,11 @@ def test_headless_scripted_session_moves_every_documented_counter(content):
     for _ in range(70):
         game.step()
     game.events.publish(ContractDelivered(id=1, reward=500))
-    game.engine.spawn_drone()
+    game.engine.spawn_miner()
     game.events.publish(WorldEventStarted(kind="slow_zone", id=1))
     game.events.publish(OreMined(ore_id="stone", amount=2, in_rich_vein=True))
     game.events.publish(Moved(x=0, y=0, in_slow_zone=True))
-    game.events.publish(ApiCalled(function="move", drone_id=0))
+    game.events.publish(ApiCalled(function="move", miner_id=0))
 
     # Upgrade.
     game.miner.money = 10**6

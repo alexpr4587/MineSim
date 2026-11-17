@@ -400,7 +400,7 @@ Sell ore five times.
 
 ### Market Watcher (`market_watcher`)
 
-Unload a drone into the warehouse three times.
+Unload a miner into the warehouse three times.
 
 **Requires:** Storage Unit
 
@@ -622,29 +622,29 @@ Earn 3000 money from sales.
 
 **Criteria:** `money_earned` reaches 3000.
 
-**Rewards:** feature `drones`; function `drone_id`; function `drones`; function `spawn_drone`; function `kill_drone`; function `assign`; upgrade `drone_bay`
+**Rewards:** feature `miners`; function `miner_id`; function `miners`; function `spawn_miner`; function `kill_miner`; function `assign`; upgrade `miner_bay`
 
-**Unlocks:** function `drone_id`; function `drones`; function `spawn_drone`; function `kill_drone`; function `assign`; upgrade `drone_bay`; feature `drones`
+**Unlocks:** function `miner_id`; function `miners`; function `spawn_miner`; function `kill_miner`; function `assign`; upgrade `miner_bay`; feature `miners`
 
-### Teamwork (`first_drone`)
+### Teamwork (`first_miner`)
 
-Spawn your first drone.
+Spawn your first miner.
 
 **Requires:** Second Pair of Hands
 
-**Criteria:** `drones_spawned` reaches 1.
+**Criteria:** `miners_spawned` reaches 1.
 
-**Rewards:** function `shared_get`; function `shared_set`; example `12_two_drones`
+**Rewards:** function `shared_get`; function `shared_set`; example `12_two_miners`
 
-**Unlocks:** function `shared_get`; function `shared_set`; example `12_two_drones`
+**Unlocks:** function `shared_get`; function `shared_set`; example `12_two_miners`
 
 ### Small Fleet (`small_fleet`)
 
-Have three drones alive at once.
+Have three miners alive at once.
 
 **Requires:** Teamwork
 
-**Criteria:** `max_drones_alive` reaches 3.
+**Criteria:** `max_miners_alive` reaches 3.
 
 **Rewards:** +1000 money
 
@@ -652,11 +652,11 @@ Have three drones alive at once.
 
 ### Swarm (`swarm`)
 
-Have five drones alive at once.
+Have five miners alive at once.
 
 **Requires:** Small Fleet
 
-**Criteria:** `max_drones_alive` reaches 5.
+**Criteria:** `max_miners_alive` reaches 5.
 
 **Rewards:** +3000 money
 

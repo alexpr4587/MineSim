@@ -67,10 +67,10 @@
     "unlocked_by": "investor"
   },
   {
-    "id": "drone_bay",
-    "name": "Drone Bay",
-    "description": "Dock one more drone: max drones +1 per level.",
-    "stat": "drone_slots",
+    "id": "miner_bay",
+    "name": "Miner Bay",
+    "description": "Dock one more miner: max miners +1 per level.",
+    "stat": "miner_slots",
     "per_level": 1,
     "max_level": 4,
     "costs": [

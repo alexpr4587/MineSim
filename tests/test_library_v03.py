@@ -331,10 +331,10 @@ def test_worker_subclasses_and_fleet(monkeypatch):
     assert (2, 2) in visited
     assert hauler.carried == 10
 
-    monkeypatch.setattr(minerlib, "drone_id", lambda: 0)
-    monkeypatch.setattr(minerlib, "drones", lambda: [{"id": 0}, {"id": 1}, {"id": 2}])
-    monkeypatch.setattr(minerlib, "kill_drone", lambda drone_id: drone_id == 1)
-    monkeypatch.setattr(minerlib, "spawn_drone", lambda script: 9)
+    monkeypatch.setattr(minerlib, "miner_id", lambda: 0)
+    monkeypatch.setattr(minerlib, "miners", lambda: [{"id": 0}, {"id": 1}, {"id": 2}])
+    monkeypatch.setattr(minerlib, "kill_miner", lambda miner_id: miner_id == 1)
+    monkeypatch.setattr(minerlib, "spawn_miner", lambda script: 9)
     shared: dict[str, object] = {}
     monkeypatch.setattr(minerlib, "shared_set", lambda key, value: shared.__setitem__(key, value))
     monkeypatch.setattr(minerlib, "shared_get", lambda key, default=None: shared.get(key, default))
@@ -350,7 +350,7 @@ def test_v03_examples_are_listed_and_compile(content):
         "09_market_watcher",
         "10_refine_everything",
         "11_contract_runner",
-        "12_two_drones",
+        "12_two_miners",
         "13_worker_classes",
         "14_event_hunter",
         "15_price_forecast",
@@ -387,7 +387,7 @@ def test_new_modules_are_available(content):
         "09_market_watcher",
         "10_refine_everything",
         "11_contract_runner",
-        "12_two_drones",
+        "12_two_miners",
         "13_worker_classes",
         "14_event_hunter",
         "15_price_forecast",

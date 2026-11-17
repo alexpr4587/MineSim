@@ -85,3 +85,39 @@ def test_runner_imports_only_stdlib_and_runner() -> None:
             assert top in allowed or module.startswith("minesim.runner"), (
                 f"{path}: runner imports {module}"
             )
+
+
+LEGACY_WORD = "dr" + "one"
+LEGACY_ALLOWED = {
+    Path("src/minesim/runner/aliases.py"),
+    Path("src/minesim/core/legacy_ids.py"),
+    Path("tests/test_aliases.py"),
+    Path("tests/test_scripting.py"),
+    Path("tests/test_legacy_ids.py"),
+    Path("docs/API.md"),
+    Path("minesim_api.pyi"),
+    Path("CHANGELOG.md"),
+}
+_TEXT_SUFFIXES = {".py", ".pyi", ".json", ".md", ".toml", ".txt"}
+
+
+def test_no_legacy_names_outside_aliases_and_migration() -> None:
+    offenders: list[str] = []
+    for path in ROOT.rglob("*"):
+        if not path.is_file() or path.suffix not in _TEXT_SUFFIXES:
+            continue
+        rel = path.relative_to(ROOT)
+        if any(
+            part in {".git", ".venv", "__pycache__", "kit", "fixtures", "dist"}
+            for part in rel.parts
+        ):
+            continue
+        if rel in LEGACY_ALLOWED:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        if LEGACY_WORD in text.lower():
+            offenders.append(str(rel))
+    assert not offenders, f"legacy names remain in: {offenders}"

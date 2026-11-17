@@ -1,8 +1,8 @@
-"""Drones panel (key D): fleet rows, selection, assignment and spawning.
+"""Miners panel (key T): fleet rows, selection, assignment and spawning.
 
-Each row shows one drone with its badge colour, script state, active
+Each row shows one miner with its badge colour, script state, active
 script, position and inventory load. Selecting a row highlights the
-drone in the world view and switches the console to it. Spawning and
+miner in the world view and switches the console to it. Spawning and
 killing go through the same engine commands as player scripts, so the
 fleet rules (slots, price and process limit) stay in one place.
 """
@@ -25,10 +25,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from minesim.core.commands import RemoveDrone, SpawnDrone
+from minesim.core.commands import RemoveMiner, SpawnMiner
 from minesim.core.events import (
-    DroneRemoved,
-    DroneSpawned,
+    MinerRemoved,
+    MinerSpawned,
     Moved,
     OreMined,
     ScriptFailed,
@@ -47,10 +47,10 @@ from minesim.ui.theme import (
     ERROR,
     TEXT,
     TEXT_DIM,
-    drone_badge_color,
+    miner_badge_color,
 )
 
-__all__ = ["DronesPanel", "DroneRow", "drone_state_label"]
+__all__ = ["MinersPanel", "MinerRow", "miner_state_label"]
 
 
 def _get(obj: Any, name: str, default: Any = None) -> Any:
@@ -61,7 +61,7 @@ def _get(obj: Any, name: str, default: Any = None) -> Any:
     return getattr(obj, name, default)
 
 
-def drone_state_label(state: Any) -> str:
+def miner_state_label(state: Any) -> str:
     """Map a script state to the panel's Running/Idle/Failed label."""
     text = str(state or "").upper()
     if "RUNNING" in text:
@@ -86,14 +86,14 @@ def _populate_scripts(combo: QComboBox, scripts: list[str]) -> None:
     combo.blockSignals(False)
 
 
-class DroneRow(QFrame):
+class MinerRow(QFrame):
     """One fleet row: badge, state, script, position, inventory and actions."""
 
-    def __init__(self, drone_id: int, panel: DronesPanel) -> None:
+    def __init__(self, miner_id: int, panel: MinersPanel) -> None:
         super().__init__(panel.rows_container)
-        self.drone_id = int(drone_id)
+        self.miner_id = int(miner_id)
         self.panel = panel
-        self.setObjectName(f"drone_row_{self.drone_id}")
+        self.setObjectName(f"miner_row_{self.miner_id}")
         self.setFrameShape(QFrame.Shape.StyledPanel)
         self.setStyleSheet(f"QFrame {{ border: 1px solid {BUTTON_BORDER}; }}")
         layout = QVBoxLayout(self)
@@ -102,19 +102,19 @@ class DroneRow(QFrame):
 
         top = QHBoxLayout()
         self.badge = QLabel(self)
-        self.badge.setObjectName(f"drone_badge_{self.drone_id}")
+        self.badge.setObjectName(f"miner_badge_{self.miner_id}")
         self.badge.setFixedSize(16, 16)
-        self.id_label = QLabel(f"Drone {self.drone_id}", self)
+        self.id_label = QLabel(f"Miner {self.miner_id}", self)
         self.id_label.setStyleSheet(f"color: {TEXT}; font-weight: bold;")
         self.state_label = QLabel("Idle", self)
-        self.state_label.setObjectName(f"drone_state_{self.drone_id}")
+        self.state_label.setObjectName(f"miner_state_{self.miner_id}")
         self.select_button = QPushButton("Select", self)
-        self.select_button.setObjectName(f"drone_select_{self.drone_id}")
+        self.select_button.setObjectName(f"miner_select_{self.miner_id}")
         self.kill_button = QPushButton("Kill", self)
-        self.kill_button.setObjectName(f"drone_kill_{self.drone_id}")
-        self.kill_button.setEnabled(self.drone_id != 0)
-        self.select_button.clicked.connect(lambda: self.panel.select_drone(self.drone_id))
-        self.kill_button.clicked.connect(lambda: self.panel.kill_drone(self.drone_id))
+        self.kill_button.setObjectName(f"miner_kill_{self.miner_id}")
+        self.kill_button.setEnabled(self.miner_id != 0)
+        self.select_button.clicked.connect(lambda: self.panel.select_miner(self.miner_id))
+        self.kill_button.clicked.connect(lambda: self.panel.kill_miner(self.miner_id))
         top.addWidget(self.badge)
         top.addWidget(self.id_label)
         top.addWidget(self.state_label)
@@ -125,7 +125,7 @@ class DroneRow(QFrame):
 
         info = QHBoxLayout()
         self.script_label = QLabel("Script: —", self)
-        self.script_label.setObjectName(f"drone_script_{self.drone_id}")
+        self.script_label.setObjectName(f"miner_script_{self.miner_id}")
         self.position_label = QLabel("Pos: (0, 0)", self)
         self.inventory_label = QLabel("0/10", self)
         for label in (self.script_label, self.inventory_label):
@@ -139,11 +139,11 @@ class DroneRow(QFrame):
         assign_label = QLabel("Assign:", self)
         assign_label.setStyleSheet(f"color: {TEXT_DIM};")
         self.assign_combo = QComboBox(self)
-        self.assign_combo.setObjectName(f"drone_assign_combo_{self.drone_id}")
+        self.assign_combo.setObjectName(f"miner_assign_combo_{self.miner_id}")
         self.assign_button = QPushButton("Assign", self)
-        self.assign_button.setObjectName(f"drone_assign_{self.drone_id}")
+        self.assign_button.setObjectName(f"miner_assign_{self.miner_id}")
         self.assign_button.clicked.connect(
-            lambda: self.panel.assign_drone(self.drone_id, self.assign_combo.currentText())
+            lambda: self.panel.assign_miner(self.miner_id, self.assign_combo.currentText())
         )
         assign.addWidget(assign_label)
         assign.addWidget(self.assign_combo, 1)
@@ -160,9 +160,9 @@ class DroneRow(QFrame):
         width = 2 if selected else 1
         self.setStyleSheet(f"QFrame {{ border: {width}px solid {color}; }}")
 
-    def refresh(self, drone: Any, state: Any, scripts: list[str]) -> None:
-        """Update every field from the drone and its script state."""
-        label = drone_state_label(state)
+    def refresh(self, miner: Any, state: Any, scripts: list[str]) -> None:
+        """Update every field from the miner and its script state."""
+        label = miner_state_label(state)
         self.state_label.setText(label)
         if label == "Running":
             color = ACCENT
@@ -171,36 +171,36 @@ class DroneRow(QFrame):
         else:
             color = TEXT_DIM
         self.state_label.setStyleSheet(f"color: {color}; font-weight: bold;")
-        script = str(_get(drone, "script", "") or "")
+        script = str(_get(miner, "script", "") or "")
         self.script_label.setText(f"Script: {script or '—'}")
         script_tip = script or "No script assigned"
         self.script_label.setToolTip(script_tip)
         position = (
-            int(_get(drone, "x", 0) or 0),
-            int(_get(drone, "y", 0) or 0),
+            int(_get(miner, "x", 0) or 0),
+            int(_get(miner, "y", 0) or 0),
         )
         self.position_label.setText(f"Pos: ({position[0]}, {position[1]})")
-        used = int(_get(drone, "inventory_size", 0) or 0)
-        capacity = int(_get(drone, "capacity", 0) or 0)
+        used = int(_get(miner, "inventory_size", 0) or 0)
+        capacity = int(_get(miner, "capacity", 0) or 0)
         self.inventory_label.setText(f"{used}/{capacity}")
         self.inventory_label.setToolTip("Inventory used / capacity")
-        color = drone_badge_color(self.drone_id)
+        color = miner_badge_color(self.miner_id)
         self.badge.setStyleSheet(
             f"background-color: {color}; border: 1px solid {TEXT}; border-radius: 8px;"
         )
-        self.badge.setToolTip(f"Badge colour of Drone {self.drone_id}")
+        self.badge.setToolTip(f"Badge colour of Miner {self.miner_id}")
         self.set_scripts(scripts)
-        self.set_selected(self.drone_id == self.panel.selected_drone)
+        self.set_selected(self.miner_id == self.panel.selected_miner)
 
 
-class DronesPanel(FloatingPanel):
-    """Fleet panel: one row per drone plus spawning controls."""
+class MinersPanel(FloatingPanel):
+    """Fleet panel: one row per miner plus spawning controls."""
 
-    drone_selected = Signal(int)
+    miner_selected = Signal(int)
     selection_changed = Signal(int)
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        title = kwargs.pop("title", None) or "Drones"
+        title = kwargs.pop("title", None) or "Miners"
         parent = kwargs.pop("parent", None)
         game = kwargs.pop("game", None)
         manager = kwargs.pop("manager", None) or kwargs.pop("script_manager", None)
@@ -241,8 +241,8 @@ class DronesPanel(FloatingPanel):
         self.scripts_dir = Path(scripts_dir)
         self.world_view = world_view
         self.console_panel = console_panel
-        self.selected_drone: int = 0
-        self.rows: dict[int, DroneRow] = {}
+        self.selected_miner: int = 0
+        self.rows: dict[int, MinerRow] = {}
         self.status_text: str = ""
 
         super().__init__(title, parent=parent)
@@ -258,11 +258,11 @@ class DronesPanel(FloatingPanel):
 
         controls = QHBoxLayout()
         self.spawn_script_selector = QComboBox(self.content_widget)
-        self.spawn_script_selector.setObjectName("drone_spawn_script")
-        self.spawn_script_selector.setToolTip("Script for the next spawned drone")
+        self.spawn_script_selector.setObjectName("miner_spawn_script")
+        self.spawn_script_selector.setToolTip("Script for the next spawned miner")
         self.spawn_button = QPushButton("Spawn", self.content_widget)
-        self.spawn_button.setObjectName("drone_spawn_button")
-        self.spawn_button.clicked.connect(lambda: self.spawn_drone())
+        self.spawn_button.setObjectName("miner_spawn_button")
+        self.spawn_button.clicked.connect(lambda: self.spawn_miner())
         self.follow_checkbox = QCheckBox("Follow selected", self.content_widget)
         self.follow_checkbox.setObjectName("follow_selected_checkbox")
         self.follow_checkbox.setChecked(bool(_get(self.world_view, "follow_selected", True)))
@@ -273,22 +273,22 @@ class DronesPanel(FloatingPanel):
         body.addLayout(controls)
 
         self.spawn_info = QLabel("", self.content_widget)
-        self.spawn_info.setObjectName("drone_spawn_info")
+        self.spawn_info.setObjectName("miner_spawn_info")
         self.spawn_info.setStyleSheet(f"color: {TEXT_DIM};")
         body.addWidget(self.spawn_info)
 
         self.status_label = QLabel("", self.content_widget)
-        self.status_label.setObjectName("drone_status")
+        self.status_label.setObjectName("miner_status")
         self.status_label.setStyleSheet(f"color: {DISABLED_TEXT};")
         self.status_label.setWordWrap(True)
         body.addWidget(self.status_label)
 
         self.scroll = QScrollArea(self.content_widget)
-        self.scroll.setObjectName("drone_rows_scroll")
+        self.scroll.setObjectName("miner_rows_scroll")
         self.scroll.setWidgetResizable(True)
         self.scroll.setFrameShape(QFrame.Shape.NoFrame)
         self.rows_container = QWidget(self.scroll)
-        self.rows_container.setObjectName("drone_rows")
+        self.rows_container.setObjectName("miner_rows")
         self.rows_layout = QVBoxLayout(self.rows_container)
         self.rows_layout.setContentsMargins(2, 2, 2, 2)
         self.rows_layout.setSpacing(4)
@@ -297,15 +297,15 @@ class DronesPanel(FloatingPanel):
         body.addWidget(self.scroll, 1)
 
         self.content_layout.addLayout(body)
-        self.lock_overlay = LockOverlay(self.content_widget, "drones", self.feature_title("drones"))
+        self.lock_overlay = LockOverlay(self.content_widget, "miners", self.feature_title("miners"))
         self._subscribe_events()
         self.refresh()
 
     # -- data helpers ----------------------------------------------------------
 
-    def _drones(self) -> dict[int, Any]:
-        drones = _get(self.engine, "drones") or {}
-        return drones if isinstance(drones, dict) else {}
+    def _miners(self) -> dict[int, Any]:
+        miners = _get(self.engine, "miners") or {}
+        return miners if isinstance(miners, dict) else {}
 
     def _scripts(self) -> list[str]:
         try:
@@ -350,35 +350,35 @@ class DronesPanel(FloatingPanel):
         feature = features.get(str(feature_id)) if isinstance(features, dict) else None
         return str(_get(feature, "name", feature_id))
 
-    def next_drone_cost(self) -> int | None:
-        """Return the price of the next drone, or None when no slot remains."""
-        drones = self._drones()
+    def next_miner_cost(self) -> int | None:
+        """Return the price of the next miner, or None when no slot remains."""
+        miners = self._miners()
         config = _get(self.game_content, "config")
-        costs = list(_get(config, "drone_costs", []) or [])
-        extra = max(0, len(drones) - 1)
+        costs = list(_get(config, "miner_costs", []) or [])
+        extra = max(0, len(miners) - 1)
         if extra >= len(costs):
             return None
         return int(costs[extra])
 
     def free_slots(self) -> int:
-        """Return how many drones may still be spawned."""
-        max_drones = int(_get(self.engine, "max_drones", 1) or 1)
-        return max(0, max_drones - len(self._drones()))
+        """Return how many miners may still be spawned."""
+        max_miners = int(_get(self.engine, "max_miners", 1) or 1)
+        return max(0, max_miners - len(self._miners()))
 
     def _refresh_spawn_controls(self) -> None:
         scripts = self._scripts()
         _populate_scripts(self.spawn_script_selector, scripts)
         free = self.free_slots()
-        cost = self.next_drone_cost()
-        total = len(self._drones())
-        max_drones = int(_get(self.engine, "max_drones", 1) or 1)
+        cost = self.next_miner_cost()
+        total = len(self._miners())
+        max_miners = int(_get(self.engine, "max_miners", 1) or 1)
         if free <= 0:
-            self.spawn_info.setText(f"Free slots: 0 · fleet full ({total}/{max_drones})")
+            self.spawn_info.setText(f"Free slots: 0 · fleet full ({total}/{max_miners})")
         elif cost is None:
-            self.spawn_info.setText(f"Free slots: {free} · no more drone prices")
+            self.spawn_info.setText(f"Free slots: {free} · no more miner prices")
         else:
             self.spawn_info.setText(
-                f"Free slots: {free} · next drone: {cost} money (have {self._money()})"
+                f"Free slots: {free} · next miner: {cost} money (have {self._money()})"
             )
         if cost is None:
             self.spawn_button.setText("Spawn")
@@ -394,66 +394,66 @@ class DronesPanel(FloatingPanel):
         if not scripts:
             self.spawn_button.setToolTip("Add a .py script to the scripts folder first")
         elif free <= 0:
-            self.spawn_button.setToolTip("Buy a Drone Bay upgrade for another slot")
+            self.spawn_button.setToolTip("Buy a Miner Bay upgrade for another slot")
         elif cost is not None and self._money() < cost:
-            self.spawn_button.setToolTip("Not enough money for the next drone")
+            self.spawn_button.setToolTip("Not enough money for the next miner")
         else:
-            self.spawn_button.setToolTip("Spawn a drone with the selected script")
+            self.spawn_button.setToolTip("Spawn a miner with the selected script")
 
     # -- refresh ---------------------------------------------------------------
 
     def refresh(self) -> None:
         """Rebuild rows for the current fleet and update spawn controls."""
-        drones = self._drones()
+        miners = self._miners()
         states = self._states()
         scripts = self._scripts()
-        for drone_id in sorted(int(key) for key in drones):
-            row = self.rows.get(drone_id)
+        for miner_id in sorted(int(key) for key in miners):
+            row = self.rows.get(miner_id)
             if row is None:
-                row = DroneRow(drone_id, self)
-                self.rows[drone_id] = row
+                row = MinerRow(miner_id, self)
+                self.rows[miner_id] = row
                 self.rows_layout.addWidget(row)
-            row.refresh(drones[drone_id], states.get(drone_id), scripts)
-        for drone_id in list(self.rows):
-            if drone_id in drones:
+            row.refresh(miners[miner_id], states.get(miner_id), scripts)
+        for miner_id in list(self.rows):
+            if miner_id in miners:
                 continue
-            row = self.rows.pop(drone_id)
+            row = self.rows.pop(miner_id)
             self.rows_layout.removeWidget(row)
             row.setParent(None)
             row.deleteLater()
-        if self.selected_drone not in drones:
-            self.selected_drone = 0 if 0 in drones else (min(drones) if drones else 0)
-        for drone_id, row in self.rows.items():
-            row.set_selected(drone_id == self.selected_drone)
+        if self.selected_miner not in miners:
+            self.selected_miner = 0 if 0 in miners else (min(miners) if miners else 0)
+        for miner_id, row in self.rows.items():
+            row.set_selected(miner_id == self.selected_miner)
         self._refresh_spawn_controls()
         self.lock_overlay.set_locked(
-            not self.is_feature_unlocked("drones"), self.feature_title("drones")
+            not self.is_feature_unlocked("miners"), self.feature_title("miners")
         )
 
     # -- selection -------------------------------------------------------------
 
-    def select_drone(self, drone_id: int) -> None:
-        """Select a drone in the panel, world view and console."""
-        drone_id = int(drone_id)
-        if drone_id not in self._drones():
+    def select_miner(self, miner_id: int) -> None:
+        """Select a miner in the panel, world view and console."""
+        miner_id = int(miner_id)
+        if miner_id not in self._miners():
             return
-        changed = drone_id != self.selected_drone
-        self.selected_drone = drone_id
+        changed = miner_id != self.selected_miner
+        self.selected_miner = miner_id
         for row_id, row in self.rows.items():
-            row.set_selected(row_id == drone_id)
+            row.set_selected(row_id == miner_id)
         if self.world_view is not None:
             try:
-                self.world_view.select_drone(drone_id)
+                self.world_view.select_miner(miner_id)
             except Exception:
                 pass
         if self.console_panel is not None:
             try:
-                self.console_panel.set_drone(drone_id)
+                self.console_panel.set_miner(miner_id)
             except Exception:
                 pass
         if changed:
-            self.drone_selected.emit(drone_id)
-            self.selection_changed.emit(drone_id)
+            self.miner_selected.emit(miner_id)
+            self.selection_changed.emit(miner_id)
 
     def set_follow_selected(self, enabled: bool) -> None:
         """Apply the Follow selected toggle to the world view."""
@@ -477,54 +477,54 @@ class DronesPanel(FloatingPanel):
 
     # -- fleet actions ---------------------------------------------------------
 
-    def kill_drone(self, drone_id: int) -> bool:
-        """Kill ``drone_id`` (never drone 0) and drop its script host."""
-        drone_id = int(drone_id)
-        if drone_id == 0:
+    def kill_miner(self, miner_id: int) -> bool:
+        """Kill ``miner_id`` (never miner 0) and drop its script host."""
+        miner_id = int(miner_id)
+        if miner_id == 0:
             return False
         if self.manager is not None:
             try:
-                self.manager.discard_host(drone_id)
+                self.manager.discard_host(miner_id)
             except Exception:
                 pass
-        result = RemoveDrone(drone_id).execute(self.engine)
+        result = RemoveMiner(miner_id).execute(self.engine)
         if not result.get("ok"):
             self.status_text = str(result.get("reason", "kill failed"))
             self.status_label.setText(f"Kill failed: {self.status_text}")
             self.refresh()
             return False
-        self.status_text = f"Drone {drone_id} killed"
+        self.status_text = f"Miner {miner_id} killed"
         self.status_label.setText(self.status_text)
         self.refresh()
-        if self.selected_drone not in self._drones():
-            drones = self._drones()
-            self.select_drone(0 if 0 in drones else (min(drones) if drones else 0))
+        if self.selected_miner not in self._miners():
+            miners = self._miners()
+            self.select_miner(0 if 0 in miners else (min(miners) if miners else 0))
         return True
 
-    def assign_drone(self, drone_id: int, script_name: str) -> bool:
-        """Assign ``script_name`` to ``drone_id`` and start it."""
-        drone_id = int(drone_id)
+    def assign_miner(self, miner_id: int, script_name: str) -> bool:
+        """Assign ``script_name`` to ``miner_id`` and start it."""
+        miner_id = int(miner_id)
         name = Path(str(script_name or "")).name
-        if not name or drone_id not in self._drones():
+        if not name or miner_id not in self._miners():
             return False
         try:
             if self.manager is not None:
-                self.manager.assign(drone_id, name)
+                self.manager.assign(miner_id, name)
             else:
-                drone = self.engine.drone(drone_id)
-                drone.script = name
+                miner = self.engine.miner_by_id(miner_id)
+                miner.script = name
         except Exception as exc:
             self.status_text = f"assign failed: {exc}"
             self.status_label.setText(self.status_text)
             self.refresh()
             return False
-        self.status_text = f"Drone {drone_id} runs {name}"
+        self.status_text = f"Miner {miner_id} runs {name}"
         self.status_label.setText(self.status_text)
         self.refresh()
         return True
 
-    def spawn_drone(self, script_name: str | None = None) -> dict[str, Any]:
-        """Spawn a drone with ``script_name`` and start it."""
+    def spawn_miner(self, script_name: str | None = None) -> dict[str, Any]:
+        """Spawn a miner with ``script_name`` and start it."""
         name = script_name or self.spawn_script_selector.currentText()
         name = Path(str(name or "")).name
         if not name:
@@ -542,26 +542,26 @@ class DronesPanel(FloatingPanel):
                 self.status_label.setText(f"Spawn failed: {self.status_text}")
                 self._refresh_spawn_controls()
                 return error
-        result = SpawnDrone().execute(self.engine)
+        result = SpawnMiner().execute(self.engine)
         if not result.get("ok"):
             self.status_text = str(result.get("reason", "spawn failed"))
             self.status_label.setText(f"Spawn failed: {self.status_text}")
             self._refresh_spawn_controls()
             return result
-        drone_id = int(result["drone_id"])
+        miner_id = int(result["miner_id"])
         if self.manager is not None:
             try:
-                self.manager.start_spawned(drone_id, name)
+                self.manager.start_spawned(miner_id, name)
             except Exception as exc:
-                self.engine.remove_drone(drone_id)
+                self.engine.remove_miner(miner_id)
                 error = {"ok": False, "reason": "process_limit", "error": str(exc)}
                 self.status_text = f"spawn failed: {exc}"
                 self.status_label.setText(self.status_text)
                 self._refresh_spawn_controls()
                 return error
         else:
-            self.engine.drone(drone_id).script = name
-        self.status_text = f"Drone {drone_id} spawned on {name}"
+            self.engine.miner_by_id(miner_id).script = name
+        self.status_text = f"Miner {miner_id} spawned on {name}"
         self.status_label.setText(self.status_text)
         self.refresh()
         return result
@@ -574,8 +574,8 @@ class DronesPanel(FloatingPanel):
             return
         try:
             for event_type in (
-                DroneSpawned,
-                DroneRemoved,
+                MinerSpawned,
+                MinerRemoved,
                 ScriptStarted,
                 ScriptFinished,
                 ScriptFailed,
@@ -603,7 +603,7 @@ class DronesPanel(FloatingPanel):
             row.setParent(None)
             row.deleteLater()
         self.rows.clear()
-        self.selected_drone = 0
+        self.selected_miner = 0
         self.status_text = ""
         self.status_label.setText("")
         self._subscribe_events()

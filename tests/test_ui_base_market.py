@@ -155,9 +155,9 @@ def test_unload_button_enabled_only_on_base(qapp):
     calls: list[int] = []
     original = game.unload
 
-    def spy(drone_id=0):
-        calls.append(int(drone_id))
-        return original(drone_id)
+    def spy(miner_id=0):
+        calls.append(int(miner_id))
+        return original(miner_id)
 
     game.unload = spy
     panel.unload_button.click()

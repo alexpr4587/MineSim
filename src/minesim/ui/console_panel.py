@@ -81,7 +81,7 @@ class ConsolePanel(QWidget):
         self.editor = editor
         self.code_editor = editor
         self.manager: Any = None
-        self.selected_drone: int = 0
+        self.selected_miner: int = 0
         self.formats: dict[str, QTextCharFormat] = {}
         for kind, color in (("out", CONSOLE_OUT), ("err", CONSOLE_ERR), ("info", CONSOLE_INFO)):
             fmt = QTextCharFormat()
@@ -102,12 +102,12 @@ class ConsolePanel(QWidget):
         self.auto_scroll_checkbox.setChecked(True)
         self.autoscroll_checkbox = self.auto_scroll_checkbox
         self.auto_scroll_check = self.auto_scroll_checkbox
-        self.drone_selector = QComboBox(self)
-        self.drone_selector.setObjectName("drone_selector")
-        self.drone_selector.setToolTip("Show the console of another drone")
-        self.drone_selector.currentIndexChanged.connect(self._on_drone_changed)
+        self.miner_selector = QComboBox(self)
+        self.miner_selector.setObjectName("miner_selector")
+        self.miner_selector.setToolTip("Show the console of another miner")
+        self.miner_selector.currentIndexChanged.connect(self._on_miner_changed)
         header.addWidget(self.clear_button)
-        header.addWidget(self.drone_selector)
+        header.addWidget(self.miner_selector)
         header.addWidget(self.auto_scroll_checkbox)
         header.addStretch(1)
         layout.addLayout(header)
@@ -248,64 +248,64 @@ class ConsolePanel(QWidget):
         """Alias for :meth:`append_line`."""
         self.append_line(text, kind, **kwargs)
 
-    # -- drone selection ----------------------------------------------------------
+    # -- miner selection ----------------------------------------------------------
 
     def set_manager(self, manager: Any) -> None:
-        """Attach a ScriptManager and show drone 0's console."""
+        """Attach a ScriptManager and show miner 0's console."""
         self.manager = manager
-        self.selected_drone = 0
-        self.refresh_drones()
+        self.selected_miner = 0
+        self.refresh_miners()
         self._reload_console()
 
-    def refresh_drones(self) -> None:
-        """Rebuild the drone selector when the fleet changes."""
+    def refresh_miners(self) -> None:
+        """Rebuild the miner selector when the fleet changes."""
         manager = self.manager
         if manager is None:
             return
-        drones = getattr(getattr(manager, "engine", None), "drones", {}) or {}
-        drone_ids = sorted(int(drone_id) for drone_id in drones)
+        miners = getattr(getattr(manager, "engine", None), "miners", {}) or {}
+        miner_ids = sorted(int(miner_id) for miner_id in miners)
         current = [
-            int(self.drone_selector.itemData(index)) for index in range(self.drone_selector.count())
+            int(self.miner_selector.itemData(index)) for index in range(self.miner_selector.count())
         ]
-        if drone_ids == current:
+        if miner_ids == current:
             return
-        selected = self.selected_drone
-        if selected not in drone_ids:
-            selected = 0 if 0 in drone_ids else (drone_ids[0] if drone_ids else 0)
-        self.drone_selector.blockSignals(True)
-        self.drone_selector.clear()
-        for drone_id in drone_ids:
-            self.drone_selector.addItem(f"Drone {drone_id}", drone_id)
-        index = self.drone_selector.findData(selected)
+        selected = self.selected_miner
+        if selected not in miner_ids:
+            selected = 0 if 0 in miner_ids else (miner_ids[0] if miner_ids else 0)
+        self.miner_selector.blockSignals(True)
+        self.miner_selector.clear()
+        for miner_id in miner_ids:
+            self.miner_selector.addItem(f"Miner {miner_id}", miner_id)
+        index = self.miner_selector.findData(selected)
         if index >= 0:
-            self.drone_selector.setCurrentIndex(index)
-        self.drone_selector.blockSignals(False)
-        changed = selected != self.selected_drone
-        self.selected_drone = selected
+            self.miner_selector.setCurrentIndex(index)
+        self.miner_selector.blockSignals(False)
+        changed = selected != self.selected_miner
+        self.selected_miner = selected
         if changed:
             self._reload_console()
 
-    def set_drone(self, drone_id: int) -> None:
-        """Select ``drone_id`` in the console dropdown."""
-        target = int(drone_id)
-        index = self.drone_selector.findData(target)
+    def set_miner(self, miner_id: int) -> None:
+        """Select ``miner_id`` in the console dropdown."""
+        target = int(miner_id)
+        index = self.miner_selector.findData(target)
         if index < 0:
-            self.refresh_drones()
-            index = self.drone_selector.findData(target)
+            self.refresh_miners()
+            index = self.miner_selector.findData(target)
         if index >= 0:
-            self.drone_selector.setCurrentIndex(index)
+            self.miner_selector.setCurrentIndex(index)
 
-    def _on_drone_changed(self, index: int) -> None:
-        value = self.drone_selector.itemData(index)
+    def _on_miner_changed(self, index: int) -> None:
+        value = self.miner_selector.itemData(index)
         if value is None:
             return
         try:
-            drone_id = int(value)
+            miner_id = int(value)
         except (TypeError, ValueError):
             return
-        if drone_id == self.selected_drone:
+        if miner_id == self.selected_miner:
             return
-        self.selected_drone = drone_id
+        self.selected_miner = miner_id
         self._reload_console()
 
     def _reload_console(self) -> None:
@@ -313,17 +313,17 @@ class ConsolePanel(QWidget):
             return
         self.clear()
         try:
-            lines = self.manager.console(self.selected_drone)
+            lines = self.manager.console(self.selected_miner)
         except Exception:
             lines = []
         for event in lines:
             self.append_line(event)
 
     def append_events(self, events: Any) -> None:
-        """Append every HostEvent in ``events`` for the selected drone."""
+        """Append every HostEvent in ``events`` for the selected miner."""
         for event in events or []:
             if self.manager is not None:
-                if int(getattr(event, "drone_id", 0) or 0) != self.selected_drone:
+                if int(getattr(event, "miner_id", 0) or 0) != self.selected_miner:
                     continue
             self.append_line(event)
 

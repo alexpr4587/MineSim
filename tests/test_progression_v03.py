@@ -9,7 +9,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 
-from minesim.core.commands import SpawnDrone
+from minesim.core.commands import SpawnMiner
 from minesim.core.content import load_content
 from minesim.core.events import (
     ApiCalled,
@@ -71,9 +71,9 @@ def test_new_counters_move_on_their_events():
     assert state.get_counter("contracts_done") == 1
     assert state.get_counter("contract_reward_total") == 450
 
-    game.engine.spawn_drone()
-    assert state.get_counter("drones_spawned") == 1
-    assert state.get_counter("max_drones_alive") == 2
+    game.engine.spawn_miner()
+    assert state.get_counter("miners_spawned") == 1
+    assert state.get_counter("max_miners_alive") == 2
 
     game.events.publish(WorldEventStarted(kind="rich_vein", id=9))
     assert state.get_counter("events_started") == 1
@@ -84,9 +84,9 @@ def test_new_counters_move_on_their_events():
     game.events.publish(Moved(x=1, y=0, in_slow_zone=True))
     assert state.get_counter("slow_zone_moves") == 1
 
-    game.events.publish(ApiCalled(function="move", drone_id=0))
-    game.events.publish(ApiCalled(function="move", drone_id=1))
-    game.events.publish(ApiCalled(function="mine", drone_id=0))
+    game.events.publish(ApiCalled(function="move", miner_id=0))
+    game.events.publish(ApiCalled(function="move", miner_id=1))
+    game.events.publish(ApiCalled(function="mine", miner_id=0))
     assert state.get_counter("api:move") == 2
     assert state.get_counter("api:mine") == 1
 
@@ -143,10 +143,10 @@ def test_game_actions_refuse_locked_features():
     state.unlocked_features.discard("contracts")
     assert game.deliver_contract(1)["feature"] == "contracts"
 
-    state.unlocked_features.discard("drones")
-    result = SpawnDrone().execute(game.engine)
+    state.unlocked_features.discard("miners")
+    result = SpawnMiner().execute(game.engine)
     assert result["reason"] == "locked_feature"
-    assert result["feature"] == "drones"
+    assert result["feature"] == "miners"
 
 
 def test_locked_recipe_refuses_refine():
@@ -187,7 +187,7 @@ def test_uses_inheritance_feature():
 def test_save_v7_migrates_and_new_unlock_sets_default(content):
     data = {"version": 7, "seed": 1, "progression": {"counters": {"unloads": 3}}}
     migrated = migrate(data)
-    assert migrated["version"] == 8
+    assert migrated["version"] == 9
     state = ProgressionState.from_dict(migrated["progression"], content=content)
     assert state.get_counter("unloads") == 3
     assert state.unlocked_recipes == {
@@ -233,17 +233,17 @@ def test_market_panel_shows_lock_overlay(qapp):
     panel.close()
 
 
-def test_drones_panel_shows_lock_overlay(qapp):
-    from minesim.ui.drones_panel import DronesPanel
+def test_miners_panel_shows_lock_overlay(qapp):
+    from minesim.ui.miners_panel import MinersPanel
 
     game = Game.new(seed=12)
-    game.content.features["drones"] = Feature(
-        id="drones",
-        name="Drones",
+    game.content.features["miners"] = Feature(
+        id="miners",
+        name="Miners",
         unlocked_by="first_dig",
     )
-    game.progression_state.unlocked_features.discard("drones")
-    panel = DronesPanel(game=game, scripts_dir="/nonexistent")
+    game.progression_state.unlocked_features.discard("miners")
+    panel = MinersPanel(game=game, scripts_dir="/nonexistent")
     panel.show()
     qapp.processEvents()
     assert panel.lock_overlay.locked

@@ -12,6 +12,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from minesim.core.legacy_ids import migrate_names
+
 __all__ = [
     "CURRENT_VERSION",
     "DEFAULT_SAVE_PATH",
@@ -29,7 +31,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-CURRENT_VERSION = 8
+CURRENT_VERSION = 9
 SAVE_VERSION = CURRENT_VERSION
 DEFAULT_SKIN = "rusty_bot"
 
@@ -77,7 +79,7 @@ def _migrate_v2_to_v3(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def _migrate_v3_to_v4(data: dict[str, Any]) -> dict[str, Any]:
-    """Split the single version-3 miner into player stats and drone 0."""
+    """Split the single version-3 miner into player stats and miner 0."""
     migrated = dict(data)
     miner = migrated.pop("miner", {}) or {}
     if not isinstance(miner, dict):
@@ -127,7 +129,7 @@ def _migrate_v5_to_v6(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def _migrate_v6_to_v7(data: dict[str, Any]) -> dict[str, Any]:
-    """Add shared memory and per-drone script names introduced in version 7."""
+    """Add shared memory and per-miner script names introduced in version 7."""
     migrated = dict(data)
     migrated.setdefault("shared_memory", {})
     fleet = migrated.get("fleet")
@@ -153,6 +155,13 @@ def _migrate_v7_to_v8(data: dict[str, Any]) -> dict[str, Any]:
     return migrated
 
 
+def _migrate_v8_to_v9(data: dict[str, Any]) -> dict[str, Any]:
+    """Rename legacy identifiers to the miner names in version 9."""
+    migrated = migrate_names(dict(data))
+    migrated["version"] = 9
+    return migrated
+
+
 MIGRATIONS: dict[int, Callable[[dict[str, Any]], dict[str, Any]]] = {
     1: _migrate_v1_to_v2,
     2: _migrate_v2_to_v3,
@@ -161,6 +170,7 @@ MIGRATIONS: dict[int, Callable[[dict[str, Any]], dict[str, Any]]] = {
     5: _migrate_v5_to_v6,
     6: _migrate_v6_to_v7,
     7: _migrate_v7_to_v8,
+    8: _migrate_v8_to_v9,
 }
 
 
@@ -201,7 +211,7 @@ def migrate(data: Any) -> dict[str, Any]:
 
 
 class SaveGame(BaseModel):
-    """A serialised game state (save file schema, version 8)."""
+    """A serialised game state (save file schema, version 9)."""
 
     model_config = ConfigDict(extra="ignore")
 

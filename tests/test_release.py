@@ -37,8 +37,8 @@ def test_changelog_has_0_3_0_entry() -> None:
     changelog = _read("CHANGELOG.md")
     assert "## [0.3.0]" in changelog
     for phrase in (
-        "fleet of drones",
-        "per-drone scripts",
+        "fleet of miners",
+        "per-miner scripts",
         "shared",
         "warehouse",
         "market",
@@ -65,19 +65,19 @@ def test_readme_documents_features_screenshots_and_links() -> None:
     for image in (
         "docs/screenshot.png",
         "docs/screenshot-market.png",
-        "docs/screenshot-drones.png",
+        "docs/screenshot-miners.png",
     ):
         assert image in readme
         assert (ROOT / image).is_file()
     for target in ("docs/API.md", "docs/GUIDE.md", "docs/PROGRESSION.md", "docs/BALANCE.md"):
         assert target in readme
         assert (ROOT / target).is_file()
-    for key in ("`B`", "`M`", "`D`", "`H`", "`K`"):
+    for key in ("`B`", "`M`", "`T`", "`H`", "`K`"):
         assert key in readme
     for feature in (
         "69 achievements",
         "eight tabs",
-        "fleet of drones",
+        "fleet of miners",
         "warehouse",
         "price history",
         "six recipes",
@@ -85,7 +85,7 @@ def test_readme_documents_features_screenshots_and_links() -> None:
         "world events",
         "35 player API functions",
         "16 example scripts",
-        "save format v8",
+        "save format v9",
     ):
         assert feature.lower() in readme.lower()
     assert "## Features" in readme
@@ -99,7 +99,7 @@ def test_spec_bundles_examples_assets_and_numpy() -> None:
     assert '"numpy"' in spec
 
 
-def test_frozen_build_supports_multi_drone_scripts() -> None:
+def test_frozen_build_supports_multi_miner_scripts() -> None:
     main = _read("src/minesim/__main__.py")
     assert "multiprocessing.freeze_support()" in main
     assert main.index("multiprocessing.freeze_support()") < main.index("ArgumentParser")
@@ -116,7 +116,7 @@ def test_v0_2_0_save_fixture_migrates() -> None:
     assert raw["version"] == 3
 
     migrated = migrate(raw)
-    assert CURRENT_VERSION == 8
+    assert CURRENT_VERSION == 9
     assert migrated["version"] == CURRENT_VERSION
     assert migrated["player_stats"]["money"] == 43
     assert migrated["fleet"] == [
@@ -128,7 +128,7 @@ def test_v0_2_0_save_fixture_migrates() -> None:
     game = Game.load(path)
     assert game.tick == 21
     assert game.player_stats.money == 43
-    assert len(game.drones) == 1
+    assert len(game.miners) == 1
     assert (game.miner.x, game.miner.y) == (0, 0)
     assert game.miner.facing is Direction.WEST
     assert game.progression_state.is_completed("first_dig")

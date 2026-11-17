@@ -24,4 +24,4 @@ Archivos: `09-terrain-lit-renderer`, `10-skins-sprites`, `11-progression-engine-
 - Los más difíciles son el 09 y el 11: usá ahí tu mejor modelo de OpenRouter.
 - Si renombraste el proyecto a MineSim, corré esto antes de empezar: `sed -i 's/MineSim/MineSim/g; s/minesim/minesim/g' kit/prompts/09-*.md kit/prompts/1*.md`
 - Las skins no necesitan arte: son cambios de color sobre los mismos sprites. Si después dibujás los tuyos (Aseprite, Piskel), guardá un PNG por skin en `assets/skins/` y el juego lo usa solo.
-- Para v0.3, ideas que encajan con un juego de programar: mercado con precios que cambian, refinería (hornos), varios drones programables, contratos y eventos.
+- Para v0.3, ideas que encajan con un juego de programar: mercado con precios que cambian, refinería (hornos), varios mineros programables, contratos y eventos.

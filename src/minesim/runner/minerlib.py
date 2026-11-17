@@ -152,28 +152,28 @@ def events() -> Any:
     raise RuntimeError("minerlib is only available inside a player script")
 
 
-def drone_id() -> int:
-    """Return the id of this drone (injected by the runner)."""
+def miner_id() -> int:
+    """Return the id of this miner (injected by the runner)."""
     raise RuntimeError("minerlib is only available inside a player script")
 
 
-def drones() -> Any:
+def miners() -> Any:
     """Return the fleet (injected by the runner)."""
     raise RuntimeError("minerlib is only available inside a player script")
 
 
-def spawn_drone(script_name: str) -> Any:
-    """Buy a drone and start its script (injected by the runner)."""
+def spawn_miner(script_name: str) -> Any:
+    """Buy a miner and start its script (injected by the runner)."""
     raise RuntimeError("minerlib is only available inside a player script")
 
 
-def kill_drone(drone_id: int) -> bool:
-    """Remove a drone from the fleet (injected by the runner)."""
+def kill_miner(miner_id: int) -> bool:
+    """Remove a miner from the fleet (injected by the runner)."""
     raise RuntimeError("minerlib is only available inside a player script")
 
 
-def assign(drone_id: int, script_name: str) -> None:
-    """Assign a script to a drone (injected by the runner)."""
+def assign(miner_id: int, script_name: str) -> None:
+    """Assign a script to a miner (injected by the runner)."""
     raise RuntimeError("minerlib is only available inside a player script")
 
 
@@ -1128,19 +1128,19 @@ class Fleet:
     """
 
     def spawn(self, script: str) -> Any:
-        """Buy a drone running ``script``; return its id or an error dict."""
-        return spawn_drone(str(script))
+        """Buy a miner running ``script``; return its id or an error dict."""
+        return spawn_miner(str(script))
 
     def kill_all(self) -> list[int]:
-        """Remove every drone except drone 0 and the calling drone."""
-        me = int(drone_id() or 0)
+        """Remove every miner except miner 0 and the calling miner."""
+        me = int(miner_id() or 0)
         killed: list[int] = []
-        for entry in drones() or []:
+        for entry in miners() or []:
             target = int(_field(entry, "id", 0) or 0)
             if target == 0 or target == me:
                 continue
             try:
-                removed = bool(kill_drone(target))
+                removed = bool(kill_miner(target))
             except Exception:
                 removed = False
             if removed:
@@ -1148,7 +1148,7 @@ class Fleet:
         return killed
 
     def broadcast(self, key: str, value: Any) -> None:
-        """Publish ``value`` under ``key`` for every drone."""
+        """Publish ``value`` under ``key`` for every miner."""
         shared_set(str(key), value)
 
     def gather(self, key: str) -> Any:

@@ -24,9 +24,9 @@
     "unlocked_by": "first_order"
   },
   {
-    "id": "drones",
-    "name": "Drones",
-    "description": "Build and manage a fleet of mining drones.",
+    "id": "miners",
+    "name": "Miners",
+    "description": "Build and manage a fleet of miners.",
     "unlocked_by": "second_pair_of_hands"
   }
 ]

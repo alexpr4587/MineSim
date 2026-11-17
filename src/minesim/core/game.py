@@ -8,7 +8,7 @@ from typing import Any
 from minesim.core.content import load_content
 from minesim.core.engine import GameEngine
 from minesim.core.events import EventBus
-from minesim.core.miner import Drone, Miner, PlayerStats
+from minesim.core.miner import Miner, PlayerStats
 from minesim.core.progression.service import ProgressionService
 from minesim.core.progression.state import ProgressionState
 from minesim.core.save import CURRENT_VERSION, DEFAULT_SKIN, SaveGame, default_save_path
@@ -144,13 +144,13 @@ class Game:
 
     @property
     def shared_memory(self) -> dict[str, Any]:
-        """The JSON key-value store shared by all drone scripts."""
+        """The JSON key-value store shared by all miner scripts."""
         return self._engine.shared_memory
 
     @property
-    def drones(self) -> dict[int, Any]:
-        """The fleet, keyed by drone id."""
-        return self._engine.drones
+    def miners(self) -> dict[int, Any]:
+        """The fleet, keyed by miner id."""
+        return self._engine.miners
 
     @property
     def engine(self) -> Any:
@@ -296,7 +296,7 @@ class Game:
             seed=self.seed,
             tick=self.tick,
             selected_skin=self._selected_skin,
-            fleet=[drone.to_fleet_dict() for drone in self._engine.drones.values()],
+            fleet=[miner.to_fleet_dict() for miner in self._engine.miners.values()],
             player_stats=self._player_stats.to_dict(),
             world_delta=self._world.to_dict(),
             progression=self._progression_state.to_dict(),
@@ -318,15 +318,15 @@ class Game:
             content = load_content()
         game = cls.new(savegame.seed, content)
         player_stats = PlayerStats.from_dict(savegame.player_stats, content=content)
-        drones = [Drone.from_fleet_dict(entry, player_stats) for entry in savegame.fleet]
-        if not any(drone.id == 0 for drone in drones):
-            drones.insert(0, Drone(id=0, player_stats=player_stats))
+        miners = [Miner.from_fleet_dict(entry, player_stats) for entry in savegame.fleet]
+        if not any(miner.id == 0 for miner in miners):
+            miners.insert(0, Miner(id=0, player_stats=player_stats))
         engine = game._engine
         engine.player_stats = player_stats
-        engine.drones.clear()
-        for drone in drones:
-            drone.player_stats = player_stats
-            engine.drones[drone.id] = drone
+        engine.miners.clear()
+        for miner in miners:
+            miner.player_stats = player_stats
+            engine.miners[miner.id] = miner
         game._player_stats = player_stats
         game._miner = engine.miner
         game._world.load_dict(savegame.world_delta)
@@ -363,9 +363,9 @@ class Game:
         """Alias for :meth:`load`."""
         return cls.load(path, content)
 
-    def submit(self, command: Any, drone_id: int = 0) -> Any:
-        """Submit ``command`` to ``drone_id`` and return its ticket."""
-        return self._engine.submit(command, drone_id=drone_id)
+    def submit(self, command: Any, miner_id: int = 0) -> Any:
+        """Submit ``command`` to ``miner_id`` and return its ticket."""
+        return self._engine.submit(command, miner_id=miner_id)
 
     def step(self) -> None:
         """Advance the engine by one tick."""
@@ -453,10 +453,10 @@ class Game:
             return locked
         return self._engine.sell_stock(item, amount)
 
-    def unload(self, drone_id: int = 0) -> dict[str, Any]:
-        """Unload a drone's inventory into the warehouse immediately (UI convenience).
+    def unload(self, miner_id: int = 0) -> dict[str, Any]:
+        """Unload a miner's inventory into the warehouse immediately (UI convenience).
 
-        Only works while the drone stands on the base; otherwise the
+        Only works while the miner stands on the base; otherwise the
         returned mapping has ``ok`` false and ``reason`` ``'not_on_base'``.
         """
         from minesim.core.commands import Unload
@@ -465,10 +465,10 @@ class Game:
         if locked is not None:
             return locked
         try:
-            drone = self._engine.drone(drone_id)
+            miner = self._engine.miner_by_id(miner_id)
         except KeyError:
-            return {"ok": False, "reason": "unknown_drone", "drone_id": int(drone_id)}
-        return Unload().execute(self._engine, drone)
+            return {"ok": False, "reason": "unknown_miner", "miner_id": int(miner_id)}
+        return Unload().execute(self._engine, miner)
 
     def default_save_path(self) -> Path:
         """Return the default save path."""

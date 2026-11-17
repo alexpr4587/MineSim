@@ -22,7 +22,7 @@ def sell() -> int:
     'Sell the whole inventory at the base and return the money gained.'
     ...
 def unload() -> dict:
-    'Move the drone inventory into the base warehouse and return {moved, left}.'
+    'Move the miner inventory into the base warehouse and return {moved, left}.'
     ...
 def stock() -> dict:
     'Return the warehouse contents and capacity as {items, capacity, used, free}.'
@@ -90,20 +90,20 @@ def contracts() -> list[dict]:
 def deliver(contract_id: int) -> int:
     'Deliver a contract from the warehouse at the base and return the reward money.'
     ...
-def drone_id() -> int:
-    'Return the id of the drone running this script.'
+def miner_id() -> int:
+    'Return the id of the miner running this script.'
     ...
-def drones() -> list[dict]:
+def miners() -> list[dict]:
     'Return the fleet as a list of {id, x, y, state, script, inventory_used} dicts.'
     ...
-def spawn_drone(script_name: str) -> int | dict:
-    'Buy a drone on the base and start script_name (a .py file in the scripts folder). Returns the new drone id or {ok: False, reason}.'
+def spawn_miner(script_name: str) -> int | dict:
+    'Buy a miner on the base and start script_name (a .py file in the scripts folder). Returns the new miner id or {ok: False, reason}.'
     ...
-def kill_drone(drone_id: int) -> bool:
-    'Stop the script of drone_id and remove that drone. Never removes drone 0. Returns True on success.'
+def kill_miner(miner_id: int) -> bool:
+    'Stop the script of miner_id and remove that miner. Never removes miner 0. Returns True on success.'
     ...
-def assign(drone_id: int, script_name: str) -> None:
-    'Stop the current script of drone_id and start script_name instead.'
+def assign(miner_id: int, script_name: str) -> None:
+    'Stop the current script of miner_id and start script_name instead.'
     ...
 def shared_get(key: str, default: Any = None) -> Any:
     'Return the JSON value stored under key in the fleet-wide shared store, or default.'
@@ -113,6 +113,16 @@ def shared_set(key: str, value: Any) -> None:
     ...
 
 class NotUnlockedError(Exception): ...
+
+# --- deprecated aliases ---
+def drone_id(*args: Any, **kwargs: Any) -> Any: ...
+    """Deprecated alias for miner_id()."""
+def drones(*args: Any, **kwargs: Any) -> Any: ...
+    """Deprecated alias for miners()."""
+def spawn_drone(*args: Any, **kwargs: Any) -> Any: ...
+    """Deprecated alias for spawn_miner()."""
+def kill_drone(*args: Any, **kwargs: Any) -> Any: ...
+    """Deprecated alias for kill_miner()."""
 
 # --- minerlib ---
 def goto(x: int, y: int) -> None:

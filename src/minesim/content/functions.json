@@ -47,7 +47,7 @@
   {
     "name": "unload",
     "signature": "unload()",
-    "doc": "Move the drone inventory into the base warehouse and return {moved, left}.",
+    "doc": "Move the miner inventory into the base warehouse and return {moved, left}.",
     "category": "business",
     "unlocked_by": "storage_unit",
     "cost": "1 tick at the base",
@@ -252,45 +252,45 @@
     "example": "paid = deliver(cid)"
   },
   {
-    "name": "drone_id",
-    "signature": "drone_id()",
-    "doc": "Return the id of the drone running this script.",
+    "name": "miner_id",
+    "signature": "miner_id()",
+    "doc": "Return the id of the miner running this script.",
     "category": "fleet",
     "unlocked_by": "second_pair_of_hands",
     "cost": "0 ticks",
-    "example": "me = drone_id()"
+    "example": "me = miner_id()"
   },
   {
-    "name": "drones",
-    "signature": "drones()",
+    "name": "miners",
+    "signature": "miners()",
     "doc": "Return the fleet as a list of {id, x, y, state, script, inventory_used} dicts.",
     "category": "fleet",
     "unlocked_by": "second_pair_of_hands",
     "cost": "0 ticks",
-    "example": "for drone in drones(): print(drone['id'], drone['state'])"
+    "example": "for miner in miners(): print(miner['id'], miner['state'])"
   },
   {
-    "name": "spawn_drone",
-    "signature": "spawn_drone(script_name)",
-    "doc": "Buy a drone on the base and start script_name (a .py file in the scripts folder). Returns the new drone id or {ok: False, reason}.",
+    "name": "spawn_miner",
+    "signature": "spawn_miner(script_name)",
+    "doc": "Buy a miner on the base and start script_name (a .py file in the scripts folder). Returns the new miner id or {ok: False, reason}.",
     "category": "fleet",
     "unlocked_by": "second_pair_of_hands",
-    "cost": "5 ticks plus the next drone cost",
-    "example": "worker = spawn_drone('worker.py')"
+    "cost": "5 ticks plus the next miner cost",
+    "example": "worker = spawn_miner('worker.py')"
   },
   {
-    "name": "kill_drone",
-    "signature": "kill_drone(drone_id)",
-    "doc": "Stop the script of drone_id and remove that drone. Never removes drone 0. Returns True on success.",
+    "name": "kill_miner",
+    "signature": "kill_miner(miner_id)",
+    "doc": "Stop the script of miner_id and remove that miner. Never removes miner 0. Returns True on success.",
     "category": "fleet",
     "unlocked_by": "second_pair_of_hands",
     "cost": "0 ticks",
-    "example": "kill_drone(worker)"
+    "example": "kill_miner(worker)"
   },
   {
     "name": "assign",
-    "signature": "assign(drone_id, script_name)",
-    "doc": "Stop the current script of drone_id and start script_name instead.",
+    "signature": "assign(miner_id, script_name)",
+    "doc": "Stop the current script of miner_id and start script_name instead.",
     "category": "fleet",
     "unlocked_by": "second_pair_of_hands",
     "cost": "0 ticks",
@@ -301,7 +301,7 @@
     "signature": "shared_get(key, default=None)",
     "doc": "Return the JSON value stored under key in the fleet-wide shared store, or default.",
     "category": "fleet",
-    "unlocked_by": "first_drone",
+    "unlocked_by": "first_miner",
     "cost": "0 ticks",
     "example": "goal = shared_get('goal', 0)"
   },
@@ -310,7 +310,7 @@
     "signature": "shared_set(key, value)",
     "doc": "Store a JSON value under key in the fleet-wide shared store (max 64 keys, 40-character keys, 4 KB values).",
     "category": "fleet",
-    "unlocked_by": "first_drone",
+    "unlocked_by": "first_miner",
     "cost": "0 ticks",
     "example": "shared_set('goal', 20)"
   }

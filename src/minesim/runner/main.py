@@ -1,8 +1,8 @@
 """Child-side runner: executes player code in a restricted namespace.
 
 This module runs inside the subprocess started by
-``minesim.scripting.host``. It imports only the standard library.
-Player code is never executed in the game process.
+``minesim.scripting.host``. It imports only the standard library and
+its own runner modules. Player code is never executed in the game process.
 """
 
 from __future__ import annotations
@@ -14,6 +14,12 @@ import traceback
 import types
 from pathlib import Path
 from typing import Any
+
+from minesim.runner.aliases import (
+    DEPRECATED_ALIASES,
+    alias_warning,
+    translate_kwargs,
+)
 
 __all__ = ["NotUnlockedError", "run"]
 
@@ -160,28 +166,28 @@ _DEFAULT_FUNCTIONS: tuple[dict[str, Any], ...] = (
         "category": "",
     },
     {
-        "name": "drone_id",
-        "signature": "drone_id()",
-        "doc": "Return the own drone id.",
+        "name": "miner_id",
+        "signature": "miner_id()",
+        "doc": "Return the own miner id.",
         "category": "",
     },
-    {"name": "drones", "signature": "drones()", "doc": "Return the fleet.", "category": ""},
+    {"name": "miners", "signature": "miners()", "doc": "Return the fleet.", "category": ""},
     {
-        "name": "spawn_drone",
-        "signature": "spawn_drone(script_name)",
-        "doc": "Buy a drone and start its script.",
+        "name": "spawn_miner",
+        "signature": "spawn_miner(script_name)",
+        "doc": "Buy a miner and start its script.",
         "category": "",
     },
     {
-        "name": "kill_drone",
-        "signature": "kill_drone(drone_id)",
-        "doc": "Remove a drone.",
+        "name": "kill_miner",
+        "signature": "kill_miner(miner_id)",
+        "doc": "Remove a miner.",
         "category": "",
     },
     {
         "name": "assign",
-        "signature": "assign(drone_id, script_name)",
-        "doc": "Assign a script to a drone.",
+        "signature": "assign(miner_id, script_name)",
+        "doc": "Assign a script to a miner.",
         "category": "",
     },
     {
@@ -475,7 +481,7 @@ def run(
         name = str(entry.get("name"))
 
         def proxy(*args: Any, **kwargs: Any) -> Any:
-            return call_api(name, args, kwargs)
+            return call_api(name, args, translate_kwargs(kwargs))
 
         proxy.__name__ = name
         proxy.__doc__ = str(entry.get("doc") or "")
@@ -487,6 +493,33 @@ def run(
         name = str(entry.get("name") or "")
         if name:
             proxies[name] = make_proxy(entry)
+
+    warned_aliases: set[str] = set()
+
+    def make_deprecated_proxy(old_name: str, new_name: str) -> Any:
+        def proxy(*args: Any, **kwargs: Any) -> Any:
+            if old_name not in warned_aliases:
+                warned_aliases.add(old_name)
+                try:
+                    send_message(
+                        {
+                            "kind": "console",
+                            "text": alias_warning(old_name, new_name),
+                            "stream": "info",
+                        }
+                    )
+                except (EOFError, BrokenPipeError, OSError):
+                    pass
+            return call_api(new_name, args, translate_kwargs(kwargs))
+
+        proxy.__name__ = old_name
+        proxy.__doc__ = f"Deprecated alias for {new_name}()."
+        proxy.__module__ = "minesim_api"
+        return proxy
+
+    for old_name, new_name in DEPRECATED_ALIASES.items():
+        if new_name in proxies:
+            proxies[old_name] = make_deprecated_proxy(old_name, new_name)
 
     def player_print(*args: Any, **kwargs: Any) -> None:
         sep = kwargs.get("sep", " ")

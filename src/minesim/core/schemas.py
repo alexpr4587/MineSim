@@ -38,7 +38,7 @@ class Config(_ContentModel):
     start_tool_power: int = Field(default=1, ge=1)
     start_tool_tier: int = Field(default=0, ge=0)
     start_scan_radius: int = Field(default=0, ge=0)
-    drone_costs: list[int] = Field(default_factory=lambda: [300, 800, 2000, 5000])
+    miner_costs: list[int] = Field(default_factory=lambda: [300, 800, 2000, 5000])
     spawn_ticks: int = Field(default=5, ge=0)
     max_script_processes: int = Field(default=8, ge=1)
     shared_max_keys: int = Field(default=64, ge=1)

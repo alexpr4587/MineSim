@@ -12,8 +12,8 @@ __all__ = [
     "ContractDelivered",
     "ContractExpired",
     "ContractGenerated",
-    "DroneRemoved",
-    "DroneSpawned",
+    "MinerRemoved",
+    "MinerSpawned",
     "EstimateSubmitted",
     "EventBus",
     "MineAttempted",
@@ -37,9 +37,9 @@ __all__ = [
 
 @dataclass(frozen=True, slots=True)
 class Moved:
-    """A drone moved one tile."""
+    """A miner moved one tile."""
 
-    drone_id: int = 0
+    miner_id: int = 0
     x: int = 0
     y: int = 0
     direction: str | None = None
@@ -56,7 +56,7 @@ class MineAttempted:
     a success or a ``'miss'`` counts as an attempt.
     """
 
-    drone_id: int = 0
+    miner_id: int = 0
     ore_id: str | None = None
     success: bool = False
     reason: str | None = None
@@ -66,7 +66,7 @@ class MineAttempted:
 class OreMined:
     """An ore item was mined."""
 
-    drone_id: int = 0
+    miner_id: int = 0
     ore_id: str | None = None
     amount: int = 1
     in_rich_vein: bool = False
@@ -74,9 +74,9 @@ class OreMined:
 
 @dataclass(frozen=True, slots=True)
 class Sold:
-    """A drone sold ore at the base."""
+    """A miner sold ore at the base."""
 
-    drone_id: int = 0
+    miner_id: int = 0
     money: int = 0
     items: dict[str, int] | None = None
     avg_index: float = 1.0
@@ -84,7 +84,7 @@ class Sold:
 
 @dataclass(frozen=True, slots=True)
 class Unloaded:
-    """A drone moved items into the base warehouse."""
+    """A miner moved items into the base warehouse."""
 
     items: dict[str, int] | None = None
 
@@ -160,21 +160,21 @@ class EstimateSubmitted:
 class UpgradeBought:
     """An upgrade level was bought."""
 
-    drone_id: int = 0
+    miner_id: int = 0
     id: str = ""
     level: int = 0
 
 
 @dataclass(frozen=True, slots=True)
-class DroneSpawned:
-    """A drone was added to the fleet."""
+class MinerSpawned:
+    """A miner was added to the fleet."""
 
     id: int = 0
 
 
 @dataclass(frozen=True, slots=True)
-class DroneRemoved:
-    """A drone was removed from the fleet."""
+class MinerRemoved:
+    """A miner was removed from the fleet."""
 
     id: int = 0
 
@@ -211,7 +211,7 @@ class ApiCalled:
     """A player script successfully called a game API function."""
 
     function: str = ""
-    drone_id: int = 0
+    miner_id: int = 0
 
 
 @dataclass(frozen=True, slots=True)

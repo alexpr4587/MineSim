@@ -38,7 +38,7 @@ from minesim.ui.theme import apply_theme  # noqa: E402
 
 __all__ = [
     "COMMAND_SEQUENCE",
-    "DRONE_SCRIPT",
+    "MINER_SCRIPT",
     "build_window",
     "main",
     "parse_size",
@@ -46,9 +46,9 @@ __all__ = [
     "unlock_everything",
 ]
 
-DRONE_SCRIPT = (
+MINER_SCRIPT = (
     "# Trivial worker: report once, then patrol the base until stopped.\n"
-    "print('drone', drone_id(), 'online')\n"
+    "print('miner', miner_id(), 'online')\n"
     "while True:\n"
     "    move(East)\n"
     "    move(West)\n"
@@ -161,14 +161,14 @@ def _position_on_rich_vein(window: MainWindow, game: Game) -> None:
     window.hud.refresh()
 
 
-def _setup_drones(window: MainWindow, game: Game, count: int, app: QApplication) -> None:
-    """Spawn ``count`` extra drones, run the worker script and show the fleet UI."""
+def _setup_miners(window: MainWindow, game: Game, count: int, app: QApplication) -> None:
+    """Spawn ``count`` extra miners, run the worker script and show the fleet UI."""
     scripts_dir = getattr(window, "scripts_dir", None)
     manager = getattr(window, "manager", None)
-    worker_source = DRONE_SCRIPT
+    worker_source = MINER_SCRIPT
     upgrades = getattr(game.player_stats, "upgrades", None)
     if upgrades is not None:
-        upgrades["drone_bay"] = max(int(upgrades.get("drone_bay", 0)), int(count) + 1)
+        upgrades["miner_bay"] = max(int(upgrades.get("miner_bay", 0)), int(count) + 1)
     game.player_stats.money = max(int(game.player_stats.money), 10000)
     if scripts_dir is not None:
         try:
@@ -176,16 +176,16 @@ def _setup_drones(window: MainWindow, game: Game, count: int, app: QApplication)
         except OSError:
             pass
     for _ in range(max(0, int(count))):
-        game.engine.spawn_drone()
+        game.engine.spawn_miner()
     offsets = ((2, 0), (-2, 0), (0, 2), (0, -2), (3, 2), (-3, -2), (2, -3), (-2, 3))
-    extra_ids = [drone_id for drone_id in sorted(game.engine.drones) if drone_id != 0]
-    for index, drone_id in enumerate(extra_ids):
+    extra_ids = [miner_id for miner_id in sorted(game.engine.miners) if miner_id != 0]
+    for index, miner_id in enumerate(extra_ids):
         dx, dy = offsets[index % len(offsets)]
-        drone = game.engine.drone(drone_id)
-        drone.x, drone.y = dx, dy
+        miner = game.engine.miner_by_id(miner_id)
+        miner.x, miner.y = dx, dy
         if manager is not None:
             try:
-                manager.start(drone_id, "worker.py", worker_source)
+                manager.start(miner_id, "worker.py", worker_source)
             except Exception:
                 pass
     for _ in range(500):
@@ -193,7 +193,7 @@ def _setup_drones(window: MainWindow, game: Game, count: int, app: QApplication)
         app.processEvents()
         if manager is None:
             break
-        if all(manager.console(drone_id) for drone_id in extra_ids):
+        if all(manager.console(miner_id) for miner_id in extra_ids):
             break
         time.sleep(0.002)
     window.game_loop.stop()
@@ -209,15 +209,15 @@ def _setup_drones(window: MainWindow, game: Game, count: int, app: QApplication)
             editor_panel.resize(636, 320)
         except Exception:
             pass
-    window.show_drones()
+    window.show_miners()
     try:
-        window.drones_panel.move(8, 44)
-        window.drones_panel.resize(350, 440)
+        window.miners_panel.move(8, 44)
+        window.miners_panel.resize(350, 440)
     except Exception:
         pass
     selected = extra_ids[0] if extra_ids else 0
     try:
-        window.drones_panel.select_drone(selected)
+        window.miners_panel.select_miner(selected)
         window.console_panel._reload_console()
     except Exception:
         pass
@@ -233,7 +233,7 @@ def build_window(
     skin: str | None = None,
     moving: bool = False,
     fleet: int = 0,
-    drones: int = 0,
+    miners: int = 0,
     panel: str | None = None,
     events: bool = False,
     locked: bool = False,
@@ -245,7 +245,7 @@ def build_window(
     if locked:
         from minesim.core.schemas import Feature
 
-        for feature_id in ("warehouse", "market", "refinery", "contracts", "drones"):
+        for feature_id in ("warehouse", "market", "refinery", "contracts", "miners"):
             feature = game.content.features.get(feature_id)
             if feature is None:
                 continue
@@ -257,31 +257,31 @@ def build_window(
             )
             game.progression_state.unlocked_features.discard(feature_id)
     scripts_dir: Path | None = None
-    if drones:
-        scripts_dir = Path(tempfile.mkdtemp(prefix="minesim_drones_"))
-        (scripts_dir / "worker.py").write_text(DRONE_SCRIPT, encoding="utf-8")
-    if panel or drones:
+    if miners:
+        scripts_dir = Path(tempfile.mkdtemp(prefix="minesim_miners_"))
+        (scripts_dir / "worker.py").write_text(MINER_SCRIPT, encoding="utf-8")
+    if panel or miners:
         unlock_everything(game)
     if panel:
         prepare_economy(game)
     if skin:
         game.select_skin(skin)
     for _ in range(max(0, int(fleet))):
-        game.engine.spawn_drone()
+        game.engine.spawn_miner()
     offsets = ((2, 0), (-2, 0), (0, 2), (0, -2))
-    for index, drone_id in enumerate(sorted(game.engine.drones)):
-        if drone_id == 0:
+    for index, miner_id in enumerate(sorted(game.engine.miners)):
+        if miner_id == 0:
             continue
         dx, dy = offsets[(index - 1) % len(offsets)]
-        game.engine.drone(drone_id).x = dx
-        game.engine.drone(drone_id).y = dy
+        game.engine.miner_by_id(miner_id).x = dx
+        game.engine.miner_by_id(miner_id).y = dy
     window = MainWindow(game, scripts_dir=scripts_dir) if scripts_dir else MainWindow(game)
     window.world_view.set_terrain_lighting(not flat, persist=False)
     window.resize(size[0], size[1])
     window.show()
-    if drones:
-        _setup_drones(window, game, int(drones), app)
-    if panel is None and not drones:
+    if miners:
+        _setup_miners(window, game, int(miners), app)
+    if panel is None and not miners:
         for command in COMMAND_SEQUENCE:
             game.submit(command)
         for _ in range(int(ticks)):
@@ -289,13 +289,13 @@ def build_window(
         if moving:
             game.submit(Move(Direction.EAST))
             game.engine.step()
-    if not drones:
+    if not miners:
         window.game_loop.stop()
         window.world_view.snap_visual_to_miner()
         window.world_view.center_on_miner()
     window.hud.refresh()
     editor_panel = getattr(window, "editor_panel", None)
-    if editor_panel is not None and panel is None and not drones:
+    if editor_panel is not None and panel is None and not miners:
         from minesim.ui.editor_panel import STARTER_SCRIPT
 
         editor = getattr(editor_panel, "editor", None) or getattr(editor_panel, "code_editor", None)
@@ -354,13 +354,13 @@ def main() -> int:
         "--fleet",
         type=int,
         default=0,
-        help="spawn N extra drones and save artifacts/ui_drones.png",
+        help="spawn N extra miners and save artifacts/ui_miners.png",
     )
     parser.add_argument(
-        "--drones",
+        "--miners",
         type=int,
         default=0,
-        help="spawn N worker drones and save artifacts/ui_drones.png",
+        help="spawn N worker miners and save artifacts/ui_miners.png",
     )
     parser.add_argument(
         "--achievements",
@@ -397,7 +397,7 @@ def main() -> int:
         skin=args.skin,
         moving=args.moving,
         fleet=args.fleet,
-        drones=args.drones,
+        miners=args.miners,
         panel=args.panel,
         events=args.events,
         locked=args.locked,
@@ -410,13 +410,13 @@ def main() -> int:
         "api_panel",
         "base_panel",
         "market_panel",
-        "drones_panel",
+        "miners_panel",
     ):
         if args.achievements and panel_name == "achievements_panel":
             continue
         if args.wardrobe and panel_name == "wardrobe_panel":
             continue
-        if args.drones and panel_name in ("drones_panel", "editor_panel"):
+        if args.miners and panel_name in ("miners_panel", "editor_panel"):
             continue
         panel = getattr(window, panel_name, None)
         if panel is not None:
@@ -466,8 +466,8 @@ def main() -> int:
         default_name = f"ui_{args.panel}.png"
     if args.events:
         default_name = "ui_events.png"
-    if args.drones:
-        default_name = "ui_drones.png"
+    if args.miners:
+        default_name = "ui_miners.png"
     if args.locked:
         default_name = "ui_locked.png"
     out = args.output or (Path(__file__).resolve().parents[1] / "artifacts" / default_name)

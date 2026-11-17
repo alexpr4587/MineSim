@@ -41,13 +41,13 @@ __all__ = [
     "RefineryStatus",
     "Contracts",
     "Deliver",
-    "DroneId",
-    "Drones",
-    "RemoveDrone",
+    "MinerId",
+    "Miners",
+    "RemoveMiner",
     "Scan",
     "Sell",
     "SellStock",
-    "SpawnDrone",
+    "SpawnMiner",
     "Stats",
     "Stock",
     "SubmitEstimate",
@@ -73,8 +73,8 @@ _ZERO_COST_NAMES = {
     "RefineryStatus",
     "Contracts",
     "Deliver",
-    "DroneId",
-    "Drones",
+    "MinerId",
+    "Miners",
     "Stats",
     "Stock",
     "SubmitEstimate",
@@ -129,15 +129,15 @@ def _tick(engine: Any) -> int:
     return int(_get(engine, "tick", 0) or 0)
 
 
-def _drone(engine: Any, drone: Any = None) -> Any:
-    """Return the acting drone (or drone 0 for legacy direct calls)."""
-    if drone is not None:
-        return drone
+def _miner(engine: Any, miner: Any = None) -> Any:
+    """Return the acting miner (or miner 0 for legacy direct calls)."""
+    if miner is not None:
+        return miner
     return _get(engine, "miner")
 
 
-def _drone_id(drone: Any) -> int:
-    return int(_get(drone, "id", 0) or 0)
+def _miner_id(miner: Any) -> int:
+    return int(_get(miner, "id", 0) or 0)
 
 
 def _seed(engine: Any, content: Any, world: Any) -> int:
@@ -269,10 +269,10 @@ def _round_price(value: float | None) -> float | None:
     return None if value is None else round(float(value), 2)
 
 
-def _mine_failure(engine: Any, drone: Any = None) -> dict[str, Any] | None:
+def _mine_failure(engine: Any, miner: Any = None) -> dict[str, Any] | None:
     """Return a failure result for Mine, or None if the mine can proceed."""
     ctx = _resolve_context(engine)
-    miner = _drone(engine, drone) if drone is not None else ctx["miner"]
+    miner = _miner(engine, miner) if miner is not None else ctx["miner"]
     world = ctx["world"]
     content = ctx["content"]
     if miner is None or world is None or content is None:
@@ -327,8 +327,8 @@ class Move:
                 return int(math.ceil(base * multiplier))
         return base
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
-        miner = _drone(engine, drone)
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        miner = _miner(engine, miner)
         events = _world_events(engine)
         in_slow_zone = False
         if events is not None:
@@ -350,7 +350,7 @@ class Move:
         _publish(
             engine,
             Moved(
-                drone_id=_drone_id(miner),
+                miner_id=_miner_id(miner),
                 x=miner.x,
                 y=miner.y,
                 direction=self.direction.name.lower(),
@@ -385,8 +385,8 @@ class Mine:
         power = max(1, int(miner.tool_power))
         return int(math.ceil(ore.hardness * content.config.mine_tick_base / power))
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
-        miner = _drone(engine, drone)
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        miner = _miner(engine, miner)
         world = engine.world
         content = engine.content
         failure = _mine_failure(engine, miner)
@@ -394,7 +394,7 @@ class Mine:
             _publish(
                 engine,
                 MineAttempted(
-                    drone_id=_drone_id(miner),
+                    miner_id=_miner_id(miner),
                     ore_id=failure.get("ore_id"),
                     success=False,
                     reason=str(failure.get("reason")),
@@ -406,9 +406,9 @@ class Mine:
         attempt_counter = int(_get(engine, "attempt_counter", 0) or 0)
         seed = _seed(engine, content, world)
         dice = (seed, _tick(engine), miner.x, miner.y, attempt_counter)
-        drone_id = _drone_id(miner)
-        if drone_id != 0:
-            dice = (*dice, drone_id)
+        miner_id = _miner_id(miner)
+        if miner_id != 0:
+            dice = (*dice, miner_id)
         roll = unit(mix64(*dice))
         try:
             engine.attempt_counter = attempt_counter + 1
@@ -427,7 +427,7 @@ class Mine:
         _publish(
             engine,
             MineAttempted(
-                drone_id=drone_id,
+                miner_id=miner_id,
                 ore_id=ore_id,
                 success=success,
                 reason=None if success else "miss",
@@ -454,7 +454,7 @@ class Mine:
         _publish(
             engine,
             OreMined(
-                drone_id=drone_id,
+                miner_id=miner_id,
                 ore_id=ore_id,
                 amount=amount,
                 in_rich_vein=in_rich_vein,
@@ -477,8 +477,8 @@ class Peek:
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
         return 0
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
-        miner = _drone(engine, drone)
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        miner = _miner(engine, miner)
         tile = engine.world.tile_at(miner.x, miner.y, _tick(engine))
         if tile.is_base or tile.depleted or tile.ore_id is None:
             value: str | None = None
@@ -506,8 +506,8 @@ class Scan:
         per_radius = int(content.config.scan_ticks_per_radius) if content is not None else 1
         return 1 + per_radius * effective
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
-        miner = _drone(engine, drone)
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        miner = _miner(engine, miner)
         effective = min(max(0, int(self.radius)), max(0, int(miner.scan_radius)))
         tiles: list[list[Any]] = []
         for dy in range(-effective, effective + 1):
@@ -546,8 +546,8 @@ class Sell:
             return int(content.config.sell_ticks)
         return 2
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
-        miner = _drone(engine, drone)
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        miner = _miner(engine, miner)
         if not _on_base(engine, miner):
             return {"ok": False, "reason": "not_on_base"}
         items = {item_id: int(count) for item_id, count in miner.inventory.items() if count > 0}
@@ -572,7 +572,7 @@ class Sell:
             _publish(
                 engine,
                 Sold(
-                    drone_id=_drone_id(miner),
+                    miner_id=_miner_id(miner),
                     money=gained,
                     items=dict(items),
                     avg_index=avg_index,
@@ -593,7 +593,7 @@ class Sell:
 
 @dataclass(frozen=True, slots=True)
 class Unload:
-    """Move the drone inventory into the base warehouse."""
+    """Move the miner inventory into the base warehouse."""
 
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
         ctx = _resolve_context(*args, **kwargs)
@@ -602,10 +602,10 @@ class Unload:
             return 1
         return 0
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
         if not _is_feature_unlocked(engine, "warehouse"):
             return _locked_feature("warehouse")
-        miner = _drone(engine, drone)
+        miner = _miner(engine, miner)
         if not _on_base(engine, miner):
             return {"ok": False, "reason": "not_on_base"}
         warehouse = _warehouse(engine)
@@ -653,10 +653,10 @@ class SellStock:
             return int(content.config.sell_ticks)
         return 2
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
         if not _is_feature_unlocked(engine, "market"):
             return _locked_feature("market")
-        miner = _drone(engine, drone)
+        miner = _miner(engine, miner)
         if not _on_base(engine, miner):
             return {"ok": False, "reason": "not_on_base"}
         warehouse = _warehouse(engine)
@@ -718,7 +718,7 @@ class Recipes:
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
         return 0
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
         content = _get(engine, "content")
         recipes = getattr(content, "recipes", {}) if content is not None else {}
         view = _get(engine, "progression_view") or _get(engine, "progression")
@@ -760,10 +760,10 @@ class Refine:
             return int(getattr(content.config, "refine_ticks", 2))
         return 2
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
         if not _is_feature_unlocked(engine, "refinery"):
             return _locked_feature("refinery")
-        miner = _drone(engine, drone)
+        miner = _miner(engine, miner)
         if not _on_base(engine, miner):
             return {"ok": False, "reason": "not_on_base"}
         refinery = _get(engine, "refinery")
@@ -800,7 +800,7 @@ class RefineryStatus:
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
         return 0
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
         refinery = _get(engine, "refinery")
         if refinery is None:
             return {"ok": True, "jobs": [], "slots": 0}
@@ -819,7 +819,7 @@ class Contracts:
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
         return 0
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
         board = _get(engine, "contracts")
         if board is None:
             return {"ok": True, "contracts": [], "slots": 0}
@@ -847,10 +847,10 @@ class Deliver:
             return int(getattr(content.config, "deliver_ticks", 2))
         return 2
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
         if not _is_feature_unlocked(engine, "contracts"):
             return _locked_feature("contracts")
-        miner = _drone(engine, drone)
+        miner = _miner(engine, miner)
         if not _on_base(engine, miner):
             return {"ok": False, "reason": "not_on_base"}
         board = _get(engine, "contracts")
@@ -888,7 +888,7 @@ class Stock:
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
         return 0
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
         warehouse = _warehouse(engine)
         if warehouse is None:
             return {"ok": False, "reason": "no_warehouse"}
@@ -917,7 +917,7 @@ class Price:
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
         return 0
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
         if not _item_unlocked(engine, self.item):
             return {"ok": True, "item": self.item, "price": None}
         price = _market_price(engine, self.item)
@@ -931,7 +931,7 @@ class Prices:
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
         return 0
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
         catalog = _catalog(engine)
         prices: dict[str, float | None] = {}
         if catalog is not None:
@@ -952,7 +952,7 @@ class PriceHistory:
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
         return 0
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
         if not _item_unlocked(engine, self.item):
             return {"ok": True, "item": self.item, "history": None}
         market = _market(engine)
@@ -978,8 +978,8 @@ class BuyUpgrade:
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
         return 0
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
-        miner = _drone(engine, drone)
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        miner = _miner(engine, miner)
         content = engine.content
         upgrades = getattr(miner, "upgrades", None)
         if upgrades is None:
@@ -1053,7 +1053,7 @@ class BuyUpgrade:
         _publish(
             engine,
             UpgradeBought(
-                drone_id=_drone_id(miner) if drone is not None else 0,
+                miner_id=_miner_id(miner) if miner is not None else 0,
                 id=self.id,
                 level=new_level,
             ),
@@ -1079,13 +1079,13 @@ class Wait:
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
         return max(0, int(self.ticks))
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
         return {"ok": True, "ticks": int(self.ticks), "waited": int(self.ticks)}
 
 
 @dataclass(frozen=True, slots=True)
-class SpawnDrone:
-    """Buy a new drone; costs ``drone_costs`` for the next extra drone."""
+class SpawnMiner:
+    """Buy a new miner; costs ``miner_costs`` for the next extra miner."""
 
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
         ctx = _resolve_context(*args, **kwargs)
@@ -1093,17 +1093,17 @@ class SpawnDrone:
         config = _get(content, "config")
         return int(_get(config, "spawn_ticks", 5) or 5)
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
-        if not _is_feature_unlocked(engine, "drones"):
-            return _locked_feature("drones")
-        drones = _get(engine, "drones") or {}
-        max_drones = int(_get(engine, "max_drones", 1) or 1)
-        if len(drones) >= max_drones:
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        if not _is_feature_unlocked(engine, "miners"):
+            return _locked_feature("miners")
+        miners = _get(engine, "miners") or {}
+        max_miners = int(_get(engine, "max_miners", 1) or 1)
+        if len(miners) >= max_miners:
             return {"ok": False, "reason": "no_slot"}
         content = _get(engine, "content")
         config = _get(content, "config")
-        costs = list(_get(config, "drone_costs", []) or [])
-        extra = max(0, len(drones) - 1)
+        costs = list(_get(config, "miner_costs", []) or [])
+        extra = max(0, len(miners) - 1)
         if extra >= len(costs):
             return {"ok": False, "reason": "no_slot"}
         cost = int(costs[extra])
@@ -1120,57 +1120,57 @@ class SpawnDrone:
             player.money = money - cost
         except Exception:
             pass
-        new_drone = engine.spawn_drone()
-        return {"ok": True, "drone_id": int(new_drone.id), "cost": cost}
+        new_miner = engine.spawn_miner()
+        return {"ok": True, "miner_id": int(new_miner.id), "cost": cost}
 
 
 @dataclass(frozen=True, slots=True)
-class RemoveDrone:
-    """Remove drone ``id`` from the fleet (never drone 0)."""
+class RemoveMiner:
+    """Remove miner ``id`` from the fleet (never miner 0)."""
 
     id: int = 0
 
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
         return 0
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
-        if not _is_feature_unlocked(engine, "drones"):
-            return _locked_feature("drones")
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        if not _is_feature_unlocked(engine, "miners"):
+            return _locked_feature("miners")
         target = int(self.id)
         if target == 0:
-            return {"ok": False, "reason": "cannot_remove_main", "drone_id": target}
-        removed = engine.remove_drone(target)
+            return {"ok": False, "reason": "cannot_remove_main", "miner_id": target}
+        removed = engine.remove_miner(target)
         if not removed:
-            return {"ok": False, "reason": "unknown_drone", "drone_id": target}
-        return {"ok": True, "drone_id": target}
+            return {"ok": False, "reason": "unknown_miner", "miner_id": target}
+        return {"ok": True, "miner_id": target}
 
 
 @dataclass(frozen=True, slots=True)
-class DroneId:
-    """Return the id of the acting drone."""
+class MinerId:
+    """Return the id of the acting miner."""
 
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
         return 0
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
-        return {"ok": True, "id": _drone_id(_drone(engine, drone))}
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        return {"ok": True, "id": _miner_id(_miner(engine, miner))}
 
 
 @dataclass(frozen=True, slots=True)
-class Drones:
-    """Return the fleet as a list of drone summaries."""
+class Miners:
+    """Return the fleet as a list of miner summaries."""
 
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
         return 0
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
-        drones = _get(engine, "drones") or {}
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        miners = _get(engine, "miners") or {}
         entries: list[dict[str, Any]] = []
-        for drone_id in sorted(int(key) for key in drones):
-            item = drones[drone_id]
+        for miner_id in sorted(int(key) for key in miners):
+            item = miners[miner_id]
             entries.append(
                 {
-                    "id": drone_id,
+                    "id": miner_id,
                     "x": int(_get(item, "x", 0) or 0),
                     "y": int(_get(item, "y", 0) or 0),
                     "state": "idle",
@@ -1180,7 +1180,7 @@ class Drones:
                     ),
                 }
             )
-        return {"ok": True, "drones": entries}
+        return {"ok": True, "miners": entries}
 
 
 @dataclass(frozen=True, slots=True)
@@ -1190,8 +1190,8 @@ class Position:
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
         return 0
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
-        miner = _drone(engine, drone)
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        miner = _miner(engine, miner)
         return {
             "ok": True,
             "x": miner.x,
@@ -1207,8 +1207,8 @@ class Inventory:
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
         return 0
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
-        miner = _drone(engine, drone)
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        miner = _miner(engine, miner)
         inventory = dict(miner.inventory)
         return {
             "ok": True,
@@ -1225,8 +1225,8 @@ class Stats:
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
         return 0
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
-        stats = _drone(engine, drone).stats
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        stats = _miner(engine, miner).stats
         attempts = dict(getattr(stats, "attempts", {}) or {})
         successes = dict(getattr(stats, "successes", {}) or {})
         per_ore: dict[str, Any] = {}
@@ -1261,7 +1261,7 @@ class Tick:
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
         return 0
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
         return {"ok": True, "tick": _tick(engine)}
 
 
@@ -1272,7 +1272,7 @@ class Events:
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
         return 0
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
         events = _world_events(engine)
         tick = _tick(engine)
         active: list[dict[str, Any]] = []
@@ -1305,8 +1305,8 @@ class Distance:
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
         return 0
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
-        miner = _drone(engine, drone)
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        miner = _miner(engine, miner)
         distance = max(abs(int(miner.x)), abs(int(miner.y)))
         return {"ok": True, "distance": distance}
 
@@ -1318,8 +1318,8 @@ class Biome:
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
         return 0
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
-        miner = _drone(engine, drone)
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        miner = _miner(engine, miner)
         tile = engine.world.tile_at(miner.x, miner.y, _tick(engine))
         return {"ok": True, "biome": tile.biome_id}
 
@@ -1333,7 +1333,7 @@ class OreInfo:
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
         return 0
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
         content = engine.content
         try:
             ore = _get_ore(content, self.ore_id)
@@ -1359,8 +1359,8 @@ class Inspect:
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
         return 0
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
-        miner = _drone(engine, drone)
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        miner = _miner(engine, miner)
         world = engine.world
         content = engine.content
         tick = _tick(engine)
@@ -1399,8 +1399,8 @@ class SubmitEstimate:
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
         return 0
 
-    def execute(self, engine: Any, drone: Any = None) -> dict[str, Any]:
-        miner = _drone(engine, drone)
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        miner = _miner(engine, miner)
         content = engine.content
         try:
             ore = _get_ore(content, self.ore_id)

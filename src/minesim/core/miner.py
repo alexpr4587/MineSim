@@ -1,4 +1,4 @@
-"""Drones and the player-wide stats shared by a fleet."""
+"""Miners and the player-wide stats shared by a fleet."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from typing import Any
 
 from minesim.core.direction import Direction
 
-__all__ = ["Drone", "Miner", "MinerStats", "PlayerStats"]
+__all__ = ["Miner", "MinerStats", "PlayerStats"]
 
 
 @dataclass(slots=True)
@@ -60,7 +60,7 @@ class MinerStats:
 
 @dataclass(slots=True)
 class PlayerStats:
-    """Money, upgrades and aggregate stats shared by every drone."""
+    """Money, upgrades and aggregate stats shared by every miner."""
 
     money: int = 0
     capacity: int = 10
@@ -136,8 +136,8 @@ class PlayerStats:
 
 
 @dataclass(slots=True)
-class Drone:
-    """One mining drone: position, inventory and its own command slot.
+class Miner:
+    """One mining miner: position, inventory and its own command slot.
 
     Money, upgrades and aggregate statistics live in the shared
     :class:`PlayerStats` referenced by :attr:`player_stats`.
@@ -167,7 +167,7 @@ class Drone:
 
     @property
     def money(self) -> int:
-        """Player money shared by all drones."""
+        """Player money shared by all miners."""
         return self.player_stats.money
 
     @money.setter
@@ -254,10 +254,10 @@ class Drone:
     # -- construction --------------------------------------------------------
 
     @classmethod
-    def from_config(cls, content: Any, x: int = 0, y: int = 0, drone_id: int = 0) -> Drone:
-        """Create a drone with the start values from ``content.config``."""
+    def from_config(cls, content: Any, x: int = 0, y: int = 0, miner_id: int = 0) -> Miner:
+        """Create a miner with the start values from ``content.config``."""
         return cls(
-            id=int(drone_id),
+            id=int(miner_id),
             x=x,
             y=y,
             facing=Direction.NORTH,
@@ -266,20 +266,20 @@ class Drone:
         )
 
     @classmethod
-    def new(cls, content: Any, x: int = 0, y: int = 0, drone_id: int = 0) -> Drone:
+    def new(cls, content: Any, x: int = 0, y: int = 0, miner_id: int = 0) -> Miner:
         """Alias for :meth:`from_config`."""
-        return cls.from_config(content, x=x, y=y, drone_id=drone_id)
+        return cls.from_config(content, x=x, y=y, miner_id=miner_id)
 
     @classmethod
-    def create(cls, content: Any, x: int = 0, y: int = 0, drone_id: int = 0) -> Drone:
+    def create(cls, content: Any, x: int = 0, y: int = 0, miner_id: int = 0) -> Miner:
         """Alias for :meth:`from_config`."""
-        return cls.from_config(content, x=x, y=y, drone_id=drone_id)
+        return cls.from_config(content, x=x, y=y, miner_id=miner_id)
 
     @classmethod
-    def from_fleet_dict(cls, data: Any, player_stats: PlayerStats | None = None) -> Drone:
-        """Rebuild a drone from a save ``fleet`` entry."""
+    def from_fleet_dict(cls, data: Any, player_stats: PlayerStats | None = None) -> Miner:
+        """Rebuild a miner from a save ``fleet`` entry."""
         if not isinstance(data, dict):
-            raise ValueError("drone data must be a mapping")
+            raise ValueError("miner data must be a mapping")
         facing_raw = data.get("facing", "north")
         facing = Direction.parse(facing_raw) if isinstance(facing_raw, str) else facing_raw
         return cls(
@@ -311,12 +311,12 @@ class Drone:
 
     @property
     def position(self) -> tuple[int, int]:
-        """The drone position as ``(x, y)``."""
+        """The miner position as ``(x, y)``."""
         return (self.x, self.y)
 
     @property
     def is_inventory_full(self) -> bool:
-        """Return True when the drone cannot carry another item."""
+        """Return True when the miner cannot carry another item."""
         return self.inventory_size >= self.capacity
 
     def can_carry(self, amount: int = 1) -> bool:
@@ -330,8 +330,8 @@ class Drone:
     # -- serialisation -------------------------------------------------------
 
     @classmethod
-    def from_dict(cls, data: Any) -> Drone:
-        """Rebuild a drone (with its player stats) from :meth:`to_dict`."""
+    def from_dict(cls, data: Any) -> Miner:
+        """Rebuild a miner (with its player stats) from :meth:`to_dict`."""
         if not isinstance(data, dict):
             raise ValueError("miner data must be a mapping")
         player_stats = PlayerStats.from_dict(data)
@@ -350,7 +350,7 @@ class Drone:
         )
 
     def to_dict(self) -> dict[str, Any]:
-        """Return a JSON-serialisable copy of the drone and player stats."""
+        """Return a JSON-serialisable copy of the miner and player stats."""
         return {
             "id": self.id,
             "x": self.x,
@@ -374,6 +374,3 @@ class Drone:
             "inventory": dict(self.inventory),
             "script": str(self.script),
         }
-
-
-Miner = Drone

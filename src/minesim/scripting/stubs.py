@@ -8,6 +8,8 @@ from importlib.resources import files
 from pathlib import Path
 from typing import Any
 
+from minesim.runner.aliases import DEPRECATED_ALIASES
+
 __all__ = ["generate_stub_text", "generate_stubs", "write_stubs"]
 
 logger = logging.getLogger(__name__)
@@ -42,10 +44,10 @@ _PRIMITIVE_NAMES: frozenset[str] = frozenset(
         "refinery",
         "contracts",
         "deliver",
-        "drone_id",
-        "drones",
-        "spawn_drone",
-        "kill_drone",
+        "miner_id",
+        "miners",
+        "spawn_miner",
+        "kill_miner",
         "assign",
         "shared_get",
         "shared_set",
@@ -80,7 +82,7 @@ _PARAM_TYPES: dict[str, str] = {
     "width": "int",
     "height": "int",
     "script_name": "str",
-    "drone_id": "int",
+    "miner_id": "int",
     "key": "str",
     "value": "Any",
     "default": "Any",
@@ -115,10 +117,10 @@ _RETURN_TYPES: dict[str, str] = {
     "ore_info": "dict | None",
     "inspect": "dict",
     "submit_estimate": "dict",
-    "drone_id": "int",
-    "drones": "list[dict]",
-    "spawn_drone": "int | dict",
-    "kill_drone": "bool",
+    "miner_id": "int",
+    "miners": "list[dict]",
+    "spawn_miner": "int | dict",
+    "kill_miner": "bool",
     "assign": "None",
     "shared_get": "Any",
     "shared_set": "None",
@@ -325,6 +327,11 @@ def generate_stub_text(content: Any = None) -> str:
         lines.append(_format_entry(entry))
     lines.append("")
     lines.append("class NotUnlockedError(Exception): ...")
+    lines.append("")
+    lines.append("# --- deprecated aliases ---")
+    for old_name, new_name in DEPRECATED_ALIASES.items():
+        lines.append(f"def {old_name}(*args: Any, **kwargs: Any) -> Any: ...")
+        lines.append(f'    """Deprecated alias for {new_name}()."""')
     lines.append("")
     lines.append("# --- minerlib ---")
     for entry in _minerlib_entries():

@@ -219,16 +219,16 @@ def test_warehouse_upgrade_increases_capacity(content):
     assert miner.money == 0
 
 
-def test_remove_drone_unloads_only_on_base(content):
+def test_remove_miner_unloads_only_on_base(content):
     engine, _, _ = _engine(content)
-    drone = engine.spawn_drone()
-    drone.inventory = {"stone": 3}
-    assert engine.remove_drone(drone.id)
+    miner = engine.spawn_miner()
+    miner.inventory = {"stone": 3}
+    assert engine.remove_miner(miner.id)
     assert engine.warehouse.count("stone") == 3
-    other = engine.spawn_drone()
+    other = engine.spawn_miner()
     other.x, other.y = 5, 5
     other.inventory = {"coal": 2}
-    assert engine.remove_drone(other.id)
+    assert engine.remove_miner(other.id)
     assert engine.warehouse.count("coal") == 0
 
 

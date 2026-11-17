@@ -55,7 +55,7 @@ class HUD(QWidget):
         self.money_label = QLabel("Money: 0", self)
         self.inventory_label = QLabel("Inventory: 0/10", self)
         self.warehouse_label = QLabel("Warehouse: 0/100", self)
-        self.drones_label = QLabel("Drones: 1 alive · 0 free", self)
+        self.miners_label = QLabel("Miners: 1 alive · 0 free", self)
         self.tick_label = QLabel("Tick: 0", self)
         self.position_label = QLabel("Pos: (0, 0)", self)
         self.events_label = QLabel("", self)
@@ -64,7 +64,7 @@ class HUD(QWidget):
             self.money_label,
             self.inventory_label,
             self.warehouse_label,
-            self.drones_label,
+            self.miners_label,
             self.tick_label,
             self.position_label,
             self.events_label,
@@ -154,9 +154,9 @@ class HUD(QWidget):
         try:
             from minesim.core.events import (
                 ContractDelivered,
-                DroneRemoved,
-                DroneSpawned,
                 MineAttempted,
+                MinerRemoved,
+                MinerSpawned,
                 Moved,
                 OreMined,
                 RefineFinished,
@@ -169,8 +169,8 @@ class HUD(QWidget):
             )
 
             bus.subscribe(TickAdvanced, lambda _event: self.refresh())
-            bus.subscribe(DroneSpawned, lambda _event: self.refresh())
-            bus.subscribe(DroneRemoved, lambda _event: self.refresh())
+            bus.subscribe(MinerSpawned, lambda _event: self.refresh())
+            bus.subscribe(MinerRemoved, lambda _event: self.refresh())
             bus.subscribe(WorldEventStarted, lambda _event: self.refresh())
             bus.subscribe(WorldEventEnded, lambda _event: self.refresh())
             bus.subscribe(Moved, lambda _event: self.refresh())
@@ -204,12 +204,12 @@ class HUD(QWidget):
         if position is None:
             position = (_get(miner, "x", 0) or 0, _get(miner, "y", 0) or 0)
         engine = _get(game, "engine")
-        drones = _get(game, "drones")
-        if not isinstance(drones, dict):
-            drones = _get(engine, "drones")
-        drone_count = len(drones) if isinstance(drones, dict) else 1
-        max_drones = int(_get(engine, "max_drones", 1) or 1)
-        free_slots = max(0, max_drones - drone_count)
+        miners = _get(game, "miners")
+        if not isinstance(miners, dict):
+            miners = _get(engine, "miners")
+        miner_count = len(miners) if isinstance(miners, dict) else 1
+        max_miners = int(_get(engine, "max_miners", 1) or 1)
+        free_slots = max(0, max_miners - miner_count)
         warehouse = _get(engine, "warehouse") or _get(game, "warehouse")
         warehouse_used = _get(warehouse, "used", None)
         if warehouse_used is None:
@@ -220,7 +220,7 @@ class HUD(QWidget):
         self.money_label.setText(f"Money: {int(money)}")
         self.inventory_label.setText(f"Inventory: {int(used)}/{int(capacity)}")
         self.warehouse_label.setText(f"Warehouse: {int(warehouse_used)}/{int(warehouse_capacity)}")
-        self.drones_label.setText(f"Drones: {int(drone_count)} alive · {free_slots} free")
+        self.miners_label.setText(f"Miners: {int(miner_count)} alive · {free_slots} free")
         self.tick_label.setText(f"Tick: {int(tick)}")
         self.position_label.setText(f"Pos: ({int(position[0])}, {int(position[1])})")
         self.events_label.setText(self._event_ticker(int(tick)))

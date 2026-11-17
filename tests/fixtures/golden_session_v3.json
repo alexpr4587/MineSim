@@ -128,7 +128,7 @@
     },
     {
       "type": "Moved",
-      "drone_id": 0,
+      "miner_id": 0,
       "x": 1,
       "y": 0,
       "direction": "east",
@@ -152,7 +152,7 @@
     },
     {
       "type": "Moved",
-      "drone_id": 0,
+      "miner_id": 0,
       "x": 2,
       "y": 0,
       "direction": "east",
@@ -172,91 +172,91 @@
     },
     {
       "type": "MineAttempted",
-      "drone_id": 0,
+      "miner_id": 0,
       "ore_id": "stone",
       "success": true,
       "reason": null
     },
     {
       "type": "OreMined",
-      "drone_id": 0,
+      "miner_id": 0,
       "ore_id": "stone",
       "amount": 1,
       "in_rich_vein": false
     },
     {
       "type": "MineAttempted",
-      "drone_id": 0,
+      "miner_id": 0,
       "ore_id": null,
       "success": false,
       "reason": "nothing_to_mine"
     },
     {
       "type": "MineAttempted",
-      "drone_id": 0,
+      "miner_id": 0,
       "ore_id": null,
       "success": false,
       "reason": "nothing_to_mine"
     },
     {
       "type": "MineAttempted",
-      "drone_id": 0,
+      "miner_id": 0,
       "ore_id": null,
       "success": false,
       "reason": "nothing_to_mine"
     },
     {
       "type": "MineAttempted",
-      "drone_id": 0,
+      "miner_id": 0,
       "ore_id": null,
       "success": false,
       "reason": "nothing_to_mine"
     },
     {
       "type": "MineAttempted",
-      "drone_id": 0,
+      "miner_id": 0,
       "ore_id": null,
       "success": false,
       "reason": "nothing_to_mine"
     },
     {
       "type": "MineAttempted",
-      "drone_id": 0,
+      "miner_id": 0,
       "ore_id": null,
       "success": false,
       "reason": "nothing_to_mine"
     },
     {
       "type": "MineAttempted",
-      "drone_id": 0,
+      "miner_id": 0,
       "ore_id": null,
       "success": false,
       "reason": "nothing_to_mine"
     },
     {
       "type": "MineAttempted",
-      "drone_id": 0,
+      "miner_id": 0,
       "ore_id": null,
       "success": false,
       "reason": "nothing_to_mine"
     },
     {
       "type": "MineAttempted",
-      "drone_id": 0,
+      "miner_id": 0,
       "ore_id": null,
       "success": false,
       "reason": "nothing_to_mine"
     },
     {
       "type": "MineAttempted",
-      "drone_id": 0,
+      "miner_id": 0,
       "ore_id": null,
       "success": false,
       "reason": "nothing_to_mine"
     },
     {
       "type": "MineAttempted",
-      "drone_id": 0,
+      "miner_id": 0,
       "ore_id": null,
       "success": false,
       "reason": "nothing_to_mine"
@@ -279,7 +279,7 @@
     },
     {
       "type": "Moved",
-      "drone_id": 0,
+      "miner_id": 0,
       "x": 1,
       "y": 0,
       "direction": "west",
@@ -303,7 +303,7 @@
     },
     {
       "type": "Moved",
-      "drone_id": 0,
+      "miner_id": 0,
       "x": 0,
       "y": 0,
       "direction": "west",
@@ -319,7 +319,7 @@
     },
     {
       "type": "Sold",
-      "drone_id": 0,
+      "miner_id": 0,
       "money": 1,
       "items": {
         "stone": 1
@@ -328,31 +328,31 @@
     },
     {
       "type": "UpgradeBought",
-      "drone_id": 0,
+      "miner_id": 0,
       "id": "backpack",
       "level": 1
     },
     {
       "type": "UpgradeBought",
-      "drone_id": 0,
+      "miner_id": 0,
       "id": "backpack",
       "level": 2
     },
     {
       "type": "UpgradeBought",
-      "drone_id": 0,
+      "miner_id": 0,
       "id": "pickaxe",
       "level": 1
     },
     {
       "type": "UpgradeBought",
-      "drone_id": 0,
+      "miner_id": 0,
       "id": "motor",
       "level": 1
     },
     {
       "type": "UpgradeBought",
-      "drone_id": 0,
+      "miner_id": 0,
       "id": "scanner",
       "level": 1
     },
@@ -370,7 +370,7 @@
     },
     {
       "type": "Moved",
-      "drone_id": 0,
+      "miner_id": 0,
       "x": 1,
       "y": 0,
       "direction": "east",
@@ -390,7 +390,7 @@
     },
     {
       "type": "Moved",
-      "drone_id": 0,
+      "miner_id": 0,
       "x": 2,
       "y": 0,
       "direction": "east",
@@ -398,21 +398,21 @@
     },
     {
       "type": "MineAttempted",
-      "drone_id": 0,
+      "miner_id": 0,
       "ore_id": null,
       "success": false,
       "reason": "nothing_to_mine"
     },
     {
       "type": "MineAttempted",
-      "drone_id": 0,
+      "miner_id": 0,
       "ore_id": null,
       "success": false,
       "reason": "nothing_to_mine"
     },
     {
       "type": "MineAttempted",
-      "drone_id": 0,
+      "miner_id": 0,
       "ore_id": null,
       "success": false,
       "reason": "nothing_to_mine"
@@ -431,7 +431,7 @@
     },
     {
       "type": "Moved",
-      "drone_id": 0,
+      "miner_id": 0,
       "x": 2,
       "y": -1,
       "direction": "north",
@@ -451,7 +451,7 @@
     },
     {
       "type": "Moved",
-      "drone_id": 0,
+      "miner_id": 0,
       "x": 2,
       "y": -2,
       "direction": "north",
@@ -467,14 +467,14 @@
     },
     {
       "type": "MineAttempted",
-      "drone_id": 0,
+      "miner_id": 0,
       "ore_id": "stone",
       "success": true,
       "reason": null
     },
     {
       "type": "OreMined",
-      "drone_id": 0,
+      "miner_id": 0,
       "ore_id": "stone",
       "amount": 1,
       "in_rich_vein": false
@@ -493,7 +493,7 @@
     },
     {
       "type": "Moved",
-      "drone_id": 0,
+      "miner_id": 0,
       "x": 2,
       "y": -1,
       "direction": "south",
@@ -513,7 +513,7 @@
     },
     {
       "type": "Moved",
-      "drone_id": 0,
+      "miner_id": 0,
       "x": 2,
       "y": 0,
       "direction": "south",
@@ -533,7 +533,7 @@
     },
     {
       "type": "Moved",
-      "drone_id": 0,
+      "miner_id": 0,
       "x": 2,
       "y": 1,
       "direction": "south",
@@ -549,14 +549,14 @@
     },
     {
       "type": "MineAttempted",
-      "drone_id": 0,
+      "miner_id": 0,
       "ore_id": "stone",
       "success": true,
       "reason": null
     },
     {
       "type": "OreMined",
-      "drone_id": 0,
+      "miner_id": 0,
       "ore_id": "stone",
       "amount": 1,
       "in_rich_vein": false
@@ -575,7 +575,7 @@
     },
     {
       "type": "Moved",
-      "drone_id": 0,
+      "miner_id": 0,
       "x": 1,
       "y": 1,
       "direction": "west",
@@ -595,7 +595,7 @@
     },
     {
       "type": "Moved",
-      "drone_id": 0,
+      "miner_id": 0,
       "x": 0,
       "y": 1,
       "direction": "west",
@@ -611,7 +611,7 @@
     },
     {
       "type": "Sold",
-      "drone_id": 0,
+      "miner_id": 0,
       "money": 1,
       "items": {
         "stone": 2
@@ -644,7 +644,7 @@
     },
     {
       "type": "Moved",
-      "drone_id": 0,
+      "miner_id": 0,
       "x": 0,
       "y": 2,
       "direction": "south",
@@ -664,7 +664,7 @@
     },
     {
       "type": "Moved",
-      "drone_id": 0,
+      "miner_id": 0,
       "x": 0,
       "y": 3,
       "direction": "south",
@@ -684,7 +684,7 @@
     },
     {
       "type": "Moved",
-      "drone_id": 0,
+      "miner_id": 0,
       "x": 1,
       "y": 3,
       "direction": "east",
@@ -704,7 +704,7 @@
     },
     {
       "type": "Moved",
-      "drone_id": 0,
+      "miner_id": 0,
       "x": 2,
       "y": 3,
       "direction": "east",
@@ -720,21 +720,21 @@
     },
     {
       "type": "MineAttempted",
-      "drone_id": 0,
+      "miner_id": 0,
       "ore_id": "stone",
       "success": true,
       "reason": null
     },
     {
       "type": "OreMined",
-      "drone_id": 0,
+      "miner_id": 0,
       "ore_id": "stone",
       "amount": 1,
       "in_rich_vein": false
     },
     {
       "type": "MineAttempted",
-      "drone_id": 0,
+      "miner_id": 0,
       "ore_id": null,
       "success": false,
       "reason": "nothing_to_mine"
@@ -753,7 +753,7 @@
     },
     {
       "type": "Moved",
-      "drone_id": 0,
+      "miner_id": 0,
       "x": 2,
       "y": 2,
       "direction": "north",
@@ -773,7 +773,7 @@
     },
     {
       "type": "Moved",
-      "drone_id": 0,
+      "miner_id": 0,
       "x": 2,
       "y": 1,
       "direction": "north",
@@ -793,7 +793,7 @@
     },
     {
       "type": "Moved",
-      "drone_id": 0,
+      "miner_id": 0,
       "x": 1,
       "y": 1,
       "direction": "west",
@@ -813,7 +813,7 @@
     },
     {
       "type": "Moved",
-      "drone_id": 0,
+      "miner_id": 0,
       "x": 0,
       "y": 1,
       "direction": "west",
@@ -829,13 +829,13 @@
     },
     {
       "type": "UpgradeBought",
-      "drone_id": 0,
+      "miner_id": 0,
       "id": "backpack",
       "level": 3
     },
     {
       "type": "MineAttempted",
-      "drone_id": 0,
+      "miner_id": 0,
       "ore_id": null,
       "success": false,
       "reason": "nothing_to_mine"

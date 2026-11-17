@@ -347,7 +347,7 @@ class BasePanel(FloatingPanel):
         inventory_layout.setContentsMargins(6, 4, 6, 4)
         inventory_layout.setSpacing(2)
         inventory_row = QHBoxLayout()
-        self.inventory_label = QLabel("Drone 0 inventory: empty", inventory)
+        self.inventory_label = QLabel("Miner 0 inventory: empty", inventory)
         self.inventory_label.setWordWrap(True)
         inventory_row.addWidget(self.inventory_label, 1)
         self.unload_button = QPushButton("Unload", inventory)
@@ -565,20 +565,20 @@ class BasePanel(FloatingPanel):
             parts.append(f"{count}× {name} @ {price:.2f}")
         return ", ".join(parts) if parts else "—"
 
-    def drone_zero(self) -> Any:
-        """Return drone 0."""
-        drones = _get(self.game, "drones")
-        if isinstance(drones, dict):
-            return drones.get(0)
+    def miner_zero(self) -> Any:
+        """Return miner 0."""
+        miners = _get(self.game, "miners")
+        if isinstance(miners, dict):
+            return miners.get(0)
         return _get(self.game, "miner")
 
-    def drone_on_base(self, drone: Any) -> bool:
-        """Return True when ``drone`` stands on the base tile."""
+    def miner_on_base(self, miner: Any) -> bool:
+        """Return True when ``miner`` stands on the base tile."""
         world = _get(_get(self.game, "engine"), "world") or _get(self.game, "world")
-        if world is None or drone is None:
+        if world is None or miner is None:
             return False
         try:
-            return bool(world.tile_at(drone.x, drone.y, int(_get(self.game, "tick", 0))).is_base)
+            return bool(world.tile_at(miner.x, miner.y, int(_get(self.game, "tick", 0))).is_base)
         except Exception:
             return False
 
@@ -635,26 +635,26 @@ class BasePanel(FloatingPanel):
         self.capacity_bar.setFormat(f"{used}/{capacity}")
         self.sell_everything_button.setEnabled(bool(items))
 
-        drone = self.drone_zero()
-        inventory = dict(_get(drone, "inventory", {}) or {}) if drone is not None else {}
+        miner = self.miner_zero()
+        inventory = dict(_get(miner, "inventory", {}) or {}) if miner is not None else {}
         catalog_name = lambda item: _item_name(catalog, item)  # noqa: E731
         inventory_text = ", ".join(
             f"{catalog_name(item)} ×{count}" for item, count in sorted(inventory.items())
         )
         self.inventory_label.setText(
-            f"Drone 0 inventory: {inventory_text}" if inventory_text else "Drone 0 inventory: empty"
+            f"Miner 0 inventory: {inventory_text}" if inventory_text else "Miner 0 inventory: empty"
         )
-        on_base = self.drone_on_base(drone)
+        on_base = self.miner_on_base(miner)
         has_items = any(int(count) > 0 for count in inventory.values())
         self.unload_button.setEnabled(on_base and has_items)
         if not on_base:
-            self.unload_hint.setText("Drone 0 is not on the base — move it to (0, 0) to unload.")
-            self.unload_button.setToolTip("The drone must stand on the base")
+            self.unload_hint.setText("Miner 0 is not on the base — move it to (0, 0) to unload.")
+            self.unload_button.setToolTip("The miner must stand on the base")
         elif not has_items:
-            self.unload_hint.setText("Drone 0 is on the base with an empty inventory.")
+            self.unload_hint.setText("Miner 0 is on the base with an empty inventory.")
             self.unload_button.setToolTip("Nothing to unload")
         else:
-            self.unload_hint.setText("Drone 0 is on the base and can unload.")
+            self.unload_hint.setText("Miner 0 is on the base and can unload.")
             self.unload_button.setToolTip("Move the inventory into the warehouse")
 
     def _refresh_refinery(self) -> None:

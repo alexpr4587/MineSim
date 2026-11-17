@@ -24,7 +24,7 @@ __all__ = [
     "CONSOLE_INFO",
     "CONSOLE_OUT",
     "DISABLED_TEXT",
-    "DRONE_ID_COLORS",
+    "MINER_ID_COLORS",
     "ERROR",
     "EVENT_LABEL",
     "FONT_FAMILY",
@@ -62,7 +62,7 @@ __all__ = [
     "TEXT_DIM",
     "apply_theme",
     "dark_palette",
-    "drone_badge_color",
+    "miner_badge_color",
     "get_stylesheet",
 ]
 
@@ -153,7 +153,7 @@ SLOW_ZONE = COLORS["slow_zone"]
 SLOW_ZONE_BORDER = COLORS["slow_zone_border"]
 EVENT_LABEL = COLORS["event_label"]
 
-DRONE_ID_COLORS: tuple[str, ...] = (
+MINER_ID_COLORS: tuple[str, ...] = (
     "#f2a541",
     "#7dcfff",
     "#c3e88d",
@@ -165,12 +165,12 @@ DRONE_ID_COLORS: tuple[str, ...] = (
 )
 
 
-def drone_badge_color(drone_id: int) -> str:
-    """Return the badge colour for ``drone_id`` (drone 0 has no badge)."""
-    drone_id = int(drone_id)
-    if drone_id <= 0:
+def miner_badge_color(miner_id: int) -> str:
+    """Return the badge colour for ``miner_id`` (miner 0 has no badge)."""
+    miner_id = int(miner_id)
+    if miner_id <= 0:
         return MINER_BODY
-    return DRONE_ID_COLORS[(drone_id - 1) % len(DRONE_ID_COLORS)]
+    return MINER_ID_COLORS[(miner_id - 1) % len(MINER_ID_COLORS)]
 
 
 MONOSPACE_FONT = "Consolas, 'DejaVu Sans Mono', 'Liberation Mono', monospace"

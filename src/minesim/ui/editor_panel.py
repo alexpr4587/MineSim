@@ -211,7 +211,7 @@ class EditorPanel(FloatingPanel):
         actions = QHBoxLayout()
         self.new_file_button = QPushButton("New file", self.content_widget)
         self.run_button = QPushButton("Run", self.content_widget)
-        self.run_on_new_button = QPushButton("Run on new drone", self.content_widget)
+        self.run_on_new_button = QPushButton("Run on new miner", self.content_widget)
         self.stop_button = QPushButton("Stop", self.content_widget)
         self.open_folder_button = QPushButton("Folder", self.content_widget)
         self.examples_button = QPushButton("Examples", self.content_widget)
@@ -223,7 +223,7 @@ class EditorPanel(FloatingPanel):
         self.open_button = self.open_folder_button
         self.new_file_button.clicked.connect(lambda: self.new_file())
         self.run_button.clicked.connect(self.run)
-        self.run_on_new_button.clicked.connect(self.run_on_new_drone)
+        self.run_on_new_button.clicked.connect(self.run_on_new_miner)
         self.stop_button.clicked.connect(self.stop)
         self.open_folder_button.clicked.connect(self.open_scripts_folder)
         self.open_folder_button.setToolTip("Open scripts folder")
@@ -245,10 +245,10 @@ class EditorPanel(FloatingPanel):
         self.status_label = self.state_label
         self.stateLabel = self.state_label
         status.addWidget(self.state_label)
-        self.drone_name_label = QLabel("No drone running this file", self.content_widget)
-        self.drone_name_label.setObjectName("editor_drone_name")
-        self.drone_name_label.setStyleSheet(f"color: {TEXT_DIM};")
-        status.addWidget(self.drone_name_label)
+        self.miner_name_label = QLabel("No miner running this file", self.content_widget)
+        self.miner_name_label.setObjectName("editor_miner_name")
+        self.miner_name_label.setStyleSheet(f"color: {TEXT_DIM};")
+        status.addWidget(self.miner_name_label)
         self.auto_reload_checkbox = QCheckBox("Auto-reload", self.content_widget)
         self.auto_reload_checkbox.setObjectName("auto_reload_checkbox")
         self.auto_reload_checkbox.setChecked(True)
@@ -309,7 +309,7 @@ class EditorPanel(FloatingPanel):
         self.set_host(host)
 
     def set_manager(self, manager: Any) -> None:
-        """Attach a ScriptManager and use its host for drone 0."""
+        """Attach a ScriptManager and use its host for miner 0."""
         self.manager = manager
         self.script_manager = manager
         host = None
@@ -408,41 +408,41 @@ class EditorPanel(FloatingPanel):
     def _sync_state(self, label: str | None = None) -> None:
         if label is not None:
             self.state_label.setText(label)
-            self._update_drone_label()
+            self._update_miner_label()
             return
         host = self.host
         if host is None:
             self.state_label.setText("Idle")
-            self._update_drone_label()
+            self._update_miner_label()
             return
         state = getattr(host, "state", None)
         self.state_label.setText(self.state_label_text(state if state is not None else "IDLE"))
         if str(state).upper().endswith("FAILED") or str(state) == "FAILED":
             self._on_script_failed(None)
-        self._update_drone_label()
+        self._update_miner_label()
 
-    def _drone_running_file(self, filename: str) -> int | None:
-        """Return the id of a drone whose active script is ``filename``."""
+    def _miner_running_file(self, filename: str) -> int | None:
+        """Return the id of a miner whose active script is ``filename``."""
         engine = self.engine or _get(self.game, "engine")
-        drones = _get(engine, "drones") or {}
-        if not isinstance(drones, dict):
+        miners = _get(engine, "miners") or {}
+        if not isinstance(miners, dict):
             return None
-        for drone_id in sorted(int(key) for key in drones):
-            script = Path(str(_get(drones[drone_id], "script", "") or "")).name
+        for miner_id in sorted(int(key) for key in miners):
+            script = Path(str(_get(miners[miner_id], "script", "") or "")).name
             if script == filename:
-                return drone_id
+                return miner_id
         return None
 
-    def _update_drone_label(self) -> None:
-        label = getattr(self, "drone_name_label", None)
+    def _update_miner_label(self) -> None:
+        label = getattr(self, "miner_name_label", None)
         if label is None:
             return
         filename = self.current_filename()
-        drone_id = self._drone_running_file(filename)
-        if drone_id is None:
-            label.setText("No drone running this file")
+        miner_id = self._miner_running_file(filename)
+        if miner_id is None:
+            label.setText("No miner running this file")
         else:
-            label.setText(f"Running on Drone {drone_id} · {filename}")
+            label.setText(f"Running on Miner {miner_id} · {filename}")
 
     # -- files / tabs -------------------------------------------------------------
 
@@ -530,7 +530,7 @@ class EditorPanel(FloatingPanel):
 
     def _on_tab_changed(self, _index: int) -> None:
         self._sync_current_editor()
-        self._update_drone_label()
+        self._update_miner_label()
 
     def current_filename(self) -> str:
         """Return the current tab file name (``main.py`` by default)."""
@@ -857,8 +857,8 @@ class EditorPanel(FloatingPanel):
             return
         self._sync_state("Running")
 
-    def _spawn_drone_with_file(self, filename: str) -> int | None:
-        """Spawn one drone and start ``filename`` on it; None on failure."""
+    def _spawn_miner_with_file(self, filename: str) -> int | None:
+        """Spawn one miner and start ``filename`` on it; None on failure."""
         engine = self.engine or _get(self.game, "engine")
         if engine is None:
             return None
@@ -878,47 +878,47 @@ class EditorPanel(FloatingPanel):
                 error = {"reason": "process_limit"}
             if error is not None:
                 return None
-        drones = _get(engine, "drones") or {}
-        max_drones = int(_get(engine, "max_drones", 1) or 1)
-        if len(drones) >= max_drones:
+        miners = _get(engine, "miners") or {}
+        max_miners = int(_get(engine, "max_miners", 1) or 1)
+        if len(miners) >= max_miners:
             return None
         config = _get(self.content_data, "config")
-        costs = list(_get(config, "drone_costs", []) or [])
-        extra = max(0, len(drones) - 1)
+        costs = list(_get(config, "miner_costs", []) or [])
+        extra = max(0, len(miners) - 1)
         if extra >= len(costs):
             return None
         player = _get(self.game, "player_stats") or _get(engine, "player_stats")
         if int(_get(player, "money", 0) or 0) < int(costs[extra]):
             return None
-        from minesim.core.commands import SpawnDrone
+        from minesim.core.commands import SpawnMiner
 
-        result = SpawnDrone().execute(engine)
+        result = SpawnMiner().execute(engine)
         if not result.get("ok"):
             return None
-        drone_id = int(result["drone_id"])
+        miner_id = int(result["miner_id"])
         if manager is not None:
             try:
-                manager.start_spawned(drone_id, filename)
+                manager.start_spawned(miner_id, filename)
             except Exception:
-                engine.remove_drone(drone_id)
+                engine.remove_miner(miner_id)
                 return None
         else:
-            engine.drone(drone_id).script = filename
-        return drone_id
+            engine.miner_by_id(miner_id).script = filename
+        return miner_id
 
-    def run_on_new_drone(self) -> bool:
-        """Save the current file and spawn a drone that runs it."""
+    def run_on_new_miner(self) -> bool:
+        """Save the current file and spawn a miner that runs it."""
         self.save()
         editor = self.editor
         if editor is None:
             return False
         filename = self.current_filename()
-        if self._spawn_drone_with_file(filename) is None:
-            self.state_label.setText("No free drone slot")
-            self._update_drone_label()
+        if self._spawn_miner_with_file(filename) is None:
+            self.state_label.setText("No free miner slot")
+            self._update_miner_label()
             return False
         self.state_label.setText("Running")
-        self._update_drone_label()
+        self._update_miner_label()
         return True
 
     def run_current(self) -> None:

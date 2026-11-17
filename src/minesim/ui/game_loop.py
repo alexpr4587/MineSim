@@ -166,7 +166,7 @@ class GameLoop(QObject):
                 append = _get(console, "append_events")
                 if callable(append):
                     append(events)
-                refresh = _get(console, "refresh_drones")
+                refresh = _get(console, "refresh_miners")
                 if callable(refresh):
                     refresh()
             if editor_panel is not None:

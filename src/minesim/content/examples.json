@@ -66,10 +66,10 @@
     "unlocked_by": "contract_runner"
   },
   {
-    "id": "12_two_drones",
-    "title": "Two Drones",
-    "file": "12_two_drones.py",
-    "unlocked_by": "first_drone"
+    "id": "12_two_miners",
+    "title": "Two Miners",
+    "file": "12_two_miners.py",
+    "unlocked_by": "first_miner"
   },
   {
     "id": "13_worker_classes",

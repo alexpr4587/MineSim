@@ -1,4 +1,4 @@
-"""Owner of one :class:`ScriptHost` per drone.
+"""Owner of one :class:`ScriptHost` per miner.
 
 The game process never executes player code. ``ScriptManager`` starts,
 pumps and stops the subprocess hosts, validates the shared JSON store
@@ -30,7 +30,7 @@ def _get(obj: Any, name: str, default: Any = None) -> Any:
 
 
 class ScriptManager:
-    """Own and coordinate one script subprocess per drone."""
+    """Own and coordinate one script subprocess per miner."""
 
     def __init__(
         self,
@@ -60,14 +60,14 @@ class ScriptManager:
         configured = _get(config, "max_script_processes", 8)
         self.max_processes = max(1, int(max_processes or configured or 8))
         self._hosts: dict[int, ScriptHost] = {}
-        for drone_id, host in (hosts or {}).items():
-            self.adopt_host(host, drone_id=drone_id)
+        for miner_id, host in (hosts or {}).items():
+            self.adopt_host(host, miner_id=miner_id)
 
     # -- properties -------------------------------------------------------
 
     @property
     def hosts(self) -> dict[int, ScriptHost]:
-        """The live hosts, keyed by drone id."""
+        """The live hosts, keyed by miner id."""
         return self._hosts
 
     @property
@@ -77,56 +77,56 @@ class ScriptManager:
 
     # -- host lifecycle ---------------------------------------------------
 
-    def host(self, drone_id: int = 0) -> ScriptHost | None:
-        """Return the host for ``drone_id`` if one was created."""
-        return self._hosts.get(int(drone_id))
+    def host(self, miner_id: int = 0) -> ScriptHost | None:
+        """Return the host for ``miner_id`` if one was created."""
+        return self._hosts.get(int(miner_id))
 
-    def ensure_host(self, drone_id: int = 0) -> ScriptHost:
-        """Return the host for ``drone_id``, creating it when needed."""
-        drone_id = int(drone_id)
-        host = self._hosts.get(drone_id)
+    def ensure_host(self, miner_id: int = 0) -> ScriptHost:
+        """Return the host for ``miner_id``, creating it when needed."""
+        miner_id = int(miner_id)
+        host = self._hosts.get(miner_id)
         if host is not None:
             return host
-        self._require_drone(drone_id)
+        self._require_miner(miner_id)
         host = ScriptHost(
             self.engine,
             self.content,
             self.progression,
             self.scripts_dir,
-            drone_id=drone_id,
+            miner_id=miner_id,
             manager=self,
         )
-        self._hosts[drone_id] = host
+        self._hosts[miner_id] = host
         return host
 
-    def adopt_host(self, host: ScriptHost, drone_id: int | None = None) -> ScriptHost:
+    def adopt_host(self, host: ScriptHost, miner_id: int | None = None) -> ScriptHost:
         """Register an existing host (used by the UI and tests)."""
-        if drone_id is None:
-            drone_id = int(getattr(host, "drone_id", 0) or 0)
-        host.drone_id = int(drone_id)
+        if miner_id is None:
+            miner_id = int(getattr(host, "miner_id", 0) or 0)
+        host.miner_id = int(miner_id)
         host.manager = self
-        self._hosts[int(drone_id)] = host
+        self._hosts[int(miner_id)] = host
         return host
 
-    def start(self, drone_id: int, filename: str, source: str) -> ScriptHost:
-        """Start ``source`` for ``drone_id``, respecting the process limit."""
-        drone_id = int(drone_id)
-        self._require_drone(drone_id)
-        existing = self._hosts.get(drone_id)
+    def start(self, miner_id: int, filename: str, source: str) -> ScriptHost:
+        """Start ``source`` for ``miner_id``, respecting the process limit."""
+        miner_id = int(miner_id)
+        self._require_miner(miner_id)
+        existing = self._hosts.get(miner_id)
         if existing is not None and existing.is_running:
             existing.stop()
         if self.running_count >= self.max_processes:
             raise RuntimeError(f"script process limit reached ({self.max_processes})")
-        host = self.ensure_host(drone_id)
+        host = self.ensure_host(miner_id)
         host.start(str(filename), source)
-        drone = self.engine.drone(drone_id)
-        drone.script = Path(str(filename)).name
+        miner = self.engine.miner_by_id(miner_id)
+        miner.script = Path(str(filename)).name
         return host
 
-    def start_script(self, drone_id: int, script_name: str) -> ScriptHost:
-        """Read ``scripts_dir/script_name`` and start it on ``drone_id``."""
+    def start_script(self, miner_id: int, script_name: str) -> ScriptHost:
+        """Read ``scripts_dir/script_name`` and start it on ``miner_id``."""
         name, source = self.resolve_script(script_name)
-        return self.start(drone_id, name, source)
+        return self.start(miner_id, name, source)
 
     def resolve_script(self, script_name: Any) -> tuple[str, str]:
         """Return ``(file name, source)`` for a script in ``scripts_dir``."""
@@ -145,9 +145,9 @@ class ScriptManager:
             ) from None
         return name, source
 
-    def stop(self, drone_id: int) -> bool:
-        """Stop the script of ``drone_id``; return True if a host existed."""
-        host = self._hosts.get(int(drone_id))
+    def stop(self, miner_id: int) -> bool:
+        """Stop the script of ``miner_id``; return True if a host existed."""
+        host = self._hosts.get(int(miner_id))
         if host is None:
             return False
         host.stop()
@@ -155,29 +155,29 @@ class ScriptManager:
 
     def stop_all(self) -> None:
         """Stop every running script."""
-        for drone_id in sorted(self._hosts):
-            self._hosts[drone_id].stop()
+        for miner_id in sorted(self._hosts):
+            self._hosts[miner_id].stop()
 
-    def discard_host(self, drone_id: int) -> bool:
-        """Stop and forget the host of ``drone_id``."""
-        host = self._hosts.pop(int(drone_id), None)
+    def discard_host(self, miner_id: int) -> bool:
+        """Stop and forget the host of ``miner_id``."""
+        host = self._hosts.pop(int(miner_id), None)
         if host is None:
             return False
         host.stop()
         return True
 
-    def assign(self, drone_id: int, script_name: str) -> ScriptHost:
-        """Replace the script of ``drone_id`` with ``script_name``."""
-        drone_id = int(drone_id)
-        self._require_drone(drone_id)
+    def assign(self, miner_id: int, script_name: str) -> ScriptHost:
+        """Replace the script of ``miner_id`` with ``script_name``."""
+        miner_id = int(miner_id)
+        self._require_miner(miner_id)
         name, source = self.resolve_script(script_name)
-        existing = self._hosts.get(drone_id)
+        existing = self._hosts.get(miner_id)
         if existing is not None and existing.is_running:
             existing.stop()
         if self.running_count >= self.max_processes:
             raise RuntimeError(f"script process limit reached ({self.max_processes})")
-        self.start(drone_id, name, source)
-        return self.ensure_host(drone_id)
+        self.start(miner_id, name, source)
+        return self.ensure_host(miner_id)
 
     # -- spawning support -------------------------------------------------
 
@@ -191,18 +191,18 @@ class ScriptManager:
             return {"ok": False, "reason": "process_limit"}
         return None
 
-    def start_spawned(self, drone_id: int, script_name: str) -> ScriptHost:
-        """Start the script of a newly spawned drone."""
-        return self.start_script(drone_id, script_name)
+    def start_spawned(self, miner_id: int, script_name: str) -> ScriptHost:
+        """Start the script of a newly spawned miner."""
+        return self.start_script(miner_id, script_name)
 
     # -- pumping and state ------------------------------------------------
 
     def pump(self) -> list[HostEvent]:
-        """Pump every host in drone-id order and return the new events."""
-        self._discard_removed_drones()
+        """Pump every host in miner-id order and return the new events."""
+        self._discard_removed_miners()
         events: list[HostEvent] = []
-        for drone_id in sorted(self._hosts):
-            host = self._hosts.get(drone_id)
+        for miner_id in sorted(self._hosts):
+            host = self._hosts.get(miner_id)
             if host is None:
                 continue
             try:
@@ -211,58 +211,58 @@ class ScriptManager:
                 logger.debug("script host pump failed", exc_info=True)
                 continue
             for event in new_events or []:
-                event.drone_id = int(drone_id)
+                event.miner_id = int(miner_id)
                 events.append(event)
         return events
 
-    def _discard_removed_drones(self) -> None:
+    def _discard_removed_miners(self) -> None:
         if self.engine is None:
             return
-        has_drone = getattr(self.engine, "has_drone", None)
-        if not callable(has_drone):
+        has_miner = getattr(self.engine, "has_miner", None)
+        if not callable(has_miner):
             return
-        for drone_id in list(self._hosts):
+        for miner_id in list(self._hosts):
             try:
-                exists = bool(has_drone(drone_id))
+                exists = bool(has_miner(miner_id))
             except Exception:
                 exists = True
             if not exists:
-                self.discard_host(drone_id)
+                self.discard_host(miner_id)
 
     def states(self) -> dict[int, ScriptState]:
-        """Return the script state of every drone."""
+        """Return the script state of every miner."""
         result: dict[int, ScriptState] = {}
-        drones = _get(self.engine, "drones") or {}
-        for drone_id in sorted(int(key) for key in drones):
-            host = self._hosts.get(drone_id)
-            result[drone_id] = host.state if host is not None else ScriptState.IDLE
+        miners = _get(self.engine, "miners") or {}
+        for miner_id in sorted(int(key) for key in miners):
+            host = self._hosts.get(miner_id)
+            result[miner_id] = host.state if host is not None else ScriptState.IDLE
         return result
 
-    def console(self, drone_id: int) -> list[HostEvent]:
-        """Return the console lines of ``drone_id``."""
-        host = self._hosts.get(int(drone_id))
+    def console(self, miner_id: int) -> list[HostEvent]:
+        """Return the console lines of ``miner_id``."""
+        host = self._hosts.get(int(miner_id))
         return list(host.console_lines) if host is not None else []
 
-    def decorate_drones(self, entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Add manager-known state/script data to ``drones()`` entries."""
+    def decorate_miners(self, entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Add manager-known state/script data to ``miners()`` entries."""
         states = self.states()
-        drones = _get(self.engine, "drones") or {}
+        miners = _get(self.engine, "miners") or {}
         decorated: list[dict[str, Any]] = []
         for entry in entries:
             item = dict(entry)
-            drone_id = int(item.get("id", 0) or 0)
-            state = states.get(drone_id, ScriptState.IDLE)
+            miner_id = int(item.get("id", 0) or 0)
+            state = states.get(miner_id, ScriptState.IDLE)
             item["state"] = str(state).lower()
-            drone = drones.get(drone_id)
-            if drone is not None:
-                item["script"] = str(getattr(drone, "script", "") or "")
-                item["inventory_used"] = int(getattr(drone, "inventory_size", 0) or 0)
+            miner = miners.get(miner_id)
+            if miner is not None:
+                item["script"] = str(getattr(miner, "script", "") or "")
+                item["inventory_used"] = int(getattr(miner, "inventory_size", 0) or 0)
             decorated.append(item)
         return decorated
 
     # -- API events -------------------------------------------------------
 
-    def publish_api_called(self, function: str, drone_id: int = 0) -> None:
+    def publish_api_called(self, function: str, miner_id: int = 0) -> None:
         """Publish :class:`ApiCalled` for a successful script API call."""
         bus = (
             _get(self.game, "events")
@@ -272,7 +272,7 @@ class ScriptManager:
         )
         if bus is None or not hasattr(bus, "publish"):
             return
-        bus.publish(ApiCalled(function=str(function), drone_id=int(drone_id)))
+        bus.publish(ApiCalled(function=str(function), miner_id=int(miner_id)))
 
     # -- shared memory ----------------------------------------------------
 
@@ -375,10 +375,10 @@ class ScriptManager:
 
     # -- helpers ----------------------------------------------------------
 
-    def _require_drone(self, drone_id: int) -> Any:
+    def _require_miner(self, miner_id: int) -> Any:
         if self.engine is None:
             raise RuntimeError("no engine attached to script manager")
         try:
-            return self.engine.drone(int(drone_id))
+            return self.engine.miner_by_id(int(miner_id))
         except Exception:
-            raise KeyError(f"unknown drone id {drone_id}") from None
+            raise KeyError(f"unknown miner id {miner_id}") from None

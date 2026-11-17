@@ -8,11 +8,11 @@ from minesim.core.events import (
     AchievementUnlocked,
     ApiCalled,
     ContractDelivered,
-    DroneRemoved,
-    DroneSpawned,
     EstimateSubmitted,
     EventBus,
     MineAttempted,
+    MinerRemoved,
+    MinerSpawned,
     Moved,
     OreMined,
     RefineFinished,
@@ -304,8 +304,8 @@ class ProgressionService:
             bus.subscribe(StockSold, self._on_stock_sold)
             bus.subscribe(RefineFinished, self._on_refine_finished)
             bus.subscribe(ContractDelivered, self._on_contract_delivered)
-            bus.subscribe(DroneSpawned, self._on_drone_spawned)
-            bus.subscribe(DroneRemoved, self._on_drone_removed)
+            bus.subscribe(MinerSpawned, self._on_miner_spawned)
+            bus.subscribe(MinerRemoved, self._on_miner_removed)
             bus.subscribe(WorldEventStarted, self._on_world_event_started)
             bus.subscribe(ApiCalled, self._on_api_called)
         except Exception:
@@ -460,10 +460,10 @@ class ProgressionService:
         if peak > self._state.get_counter("warehouse_peak"):
             self._state.counters["warehouse_peak"] = peak
 
-    def _drone_count(self) -> int:
-        drones = _get(self._engine, "drones") if self._engine is not None else None
-        if isinstance(drones, dict):
-            return len(drones)
+    def _miner_count(self) -> int:
+        miners = _get(self._engine, "miners") if self._engine is not None else None
+        if isinstance(miners, dict):
+            return len(miners)
         return 0
 
     def _on_unloaded(self, event: Any) -> None:
@@ -498,17 +498,17 @@ class ProgressionService:
             self._state.add_counter("contract_reward_total", reward)
         self._check_achievements()
 
-    def _on_drone_spawned(self, event: Any) -> None:
-        self._state.add_counter("drones_spawned", 1)
-        alive = self._drone_count()
-        if alive > self._state.get_counter("max_drones_alive"):
-            self._state.counters["max_drones_alive"] = alive
+    def _on_miner_spawned(self, event: Any) -> None:
+        self._state.add_counter("miners_spawned", 1)
+        alive = self._miner_count()
+        if alive > self._state.get_counter("max_miners_alive"):
+            self._state.counters["max_miners_alive"] = alive
         self._check_achievements()
 
-    def _on_drone_removed(self, event: Any) -> None:
-        alive = self._drone_count()
-        if alive > self._state.get_counter("max_drones_alive"):
-            self._state.counters["max_drones_alive"] = alive
+    def _on_miner_removed(self, event: Any) -> None:
+        alive = self._miner_count()
+        if alive > self._state.get_counter("max_miners_alive"):
+            self._state.counters["max_miners_alive"] = alive
         self._check_achievements()
 
     def _on_world_event_started(self, event: Any) -> None:
@@ -564,10 +564,10 @@ class ProgressionService:
             self._on_refine_finished(event)
         elif isinstance(event, ContractDelivered):
             self._on_contract_delivered(event)
-        elif isinstance(event, DroneSpawned):
-            self._on_drone_spawned(event)
-        elif isinstance(event, DroneRemoved):
-            self._on_drone_removed(event)
+        elif isinstance(event, MinerSpawned):
+            self._on_miner_spawned(event)
+        elif isinstance(event, MinerRemoved):
+            self._on_miner_removed(event)
         elif isinstance(event, WorldEventStarted):
             self._on_world_event_started(event)
         elif isinstance(event, ApiCalled):
@@ -602,10 +602,10 @@ class ProgressionService:
                 self._on_refine_finished(event)
             elif name == "ContractDelivered":
                 self._on_contract_delivered(event)
-            elif name == "DroneSpawned":
-                self._on_drone_spawned(event)
-            elif name == "DroneRemoved":
-                self._on_drone_removed(event)
+            elif name == "MinerSpawned":
+                self._on_miner_spawned(event)
+            elif name == "MinerRemoved":
+                self._on_miner_removed(event)
             elif name == "WorldEventStarted":
                 self._on_world_event_started(event)
             elif name == "ApiCalled":

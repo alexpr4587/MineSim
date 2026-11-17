@@ -218,6 +218,19 @@ def generate_api_md(output: str | Path | None = None) -> Path:
         lines.append(f"| `{name}` | {_unlocked_by_label(unlocked_by, titles)} |")
     lines.append("")
 
+    from minesim.runner.aliases import DEPRECATED_ALIASES
+
+    lines.append("## Deprecated")
+    lines.append("")
+    lines.append(
+        "These old function names still work as aliases, print one console "
+        "notice per script run and will be removed in a future release."
+    )
+    lines.append("")
+    for old_name, new_name in DEPRECATED_ALIASES.items():
+        lines.append(f"- `{old_name}` -> `{new_name}`")
+    lines.append("")
+
     lines.append("## Safety")
     lines.append("")
     lines.append(

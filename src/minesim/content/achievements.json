@@ -833,7 +833,7 @@
     "tab": "trading",
     "parent": "storage_unit",
     "title": "Market Watcher",
-    "description": "Unload a drone into the warehouse three times.",
+    "description": "Unload a miner into the warehouse three times.",
     "criteria": {
       "type": "counter",
       "counter": "unloads",
@@ -1218,23 +1218,23 @@
     "rewards": [
       {
         "type": "unlock_feature",
-        "id": "drones"
+        "id": "miners"
       },
       {
         "type": "unlock_function",
-        "id": "drone_id"
+        "id": "miner_id"
       },
       {
         "type": "unlock_function",
-        "id": "drones"
+        "id": "miners"
       },
       {
         "type": "unlock_function",
-        "id": "spawn_drone"
+        "id": "spawn_miner"
       },
       {
         "type": "unlock_function",
-        "id": "kill_drone"
+        "id": "kill_miner"
       },
       {
         "type": "unlock_function",
@@ -1242,19 +1242,19 @@
       },
       {
         "type": "unlock_upgrade",
-        "id": "drone_bay"
+        "id": "miner_bay"
       }
     ]
   },
   {
-    "id": "first_drone",
+    "id": "first_miner",
     "tab": "fleet",
     "parent": "second_pair_of_hands",
     "title": "Teamwork",
-    "description": "Spawn your first drone.",
+    "description": "Spawn your first miner.",
     "criteria": {
       "type": "counter",
-      "counter": "drones_spawned",
+      "counter": "miners_spawned",
       "target": 1
     },
     "rewards": [
@@ -1268,19 +1268,19 @@
       },
       {
         "type": "unlock_example",
-        "id": "12_two_drones"
+        "id": "12_two_miners"
       }
     ]
   },
   {
     "id": "small_fleet",
     "tab": "fleet",
-    "parent": "first_drone",
+    "parent": "first_miner",
     "title": "Small Fleet",
-    "description": "Have three drones alive at once.",
+    "description": "Have three miners alive at once.",
     "criteria": {
       "type": "counter",
-      "counter": "max_drones_alive",
+      "counter": "max_miners_alive",
       "target": 3
     },
     "rewards": [
@@ -1295,10 +1295,10 @@
     "tab": "fleet",
     "parent": "small_fleet",
     "title": "Swarm",
-    "description": "Have five drones alive at once.",
+    "description": "Have five miners alive at once.",
     "criteria": {
       "type": "counter",
-      "counter": "max_drones_alive",
+      "counter": "max_miners_alive",
       "target": 5
     },
     "rewards": [
@@ -1311,7 +1311,7 @@
   {
     "id": "message_board",
     "tab": "fleet",
-    "parent": "first_drone",
+    "parent": "first_miner",
     "title": "Message Board",
     "description": "Write to the shared store 50 times.",
     "criteria": {
@@ -1329,7 +1329,7 @@
   {
     "id": "inheritance",
     "tab": "fleet",
-    "parent": "first_drone",
+    "parent": "first_miner",
     "title": "Inheritance",
     "description": "Write a script that uses inheritance.",
     "criteria": {

@@ -13,7 +13,7 @@ Functions are called directly, e.g. `move(East)`, `mine()`, `sell()`. Locked fun
 | `peek` | `peek()` | Return the ore on the current tile, None if empty, or 'unknown' if the ore is locked. | 0 ticks | `ore = peek()` | available from the start |
 | `position` | `position()` | Return the miner position as (x, y). | 0 ticks | `x, y = position()` | available from the start |
 | `sell` | `sell()` | Sell the whole inventory at the base and return the money gained. | 2 ticks at the base | `earned = sell()` | unlocks with the **First Dig** achievement |
-| `unload` | `unload()` | Move the drone inventory into the base warehouse and return {moved, left}. | 1 tick at the base | `result = unload()` | unlocks with the **Storage Unit** achievement |
+| `unload` | `unload()` | Move the miner inventory into the base warehouse and return {moved, left}. | 1 tick at the base | `result = unload()` | unlocks with the **Storage Unit** achievement |
 | `stock` | `stock()` | Return the warehouse contents and capacity as {items, capacity, used, free}. | 0 ticks | `stock()['items']` | unlocks with the **Storage Unit** achievement |
 | `sell_stock` | `sell_stock(item, amount=None)` | Sell items from the warehouse at market prices and return the money gained. | 2 ticks at the base | `earned = sell_stock('stone', 10)` | unlocks with the **Storage Unit** achievement |
 | `price` | `price(item)` | Return the current market price of an unlocked item, or None. | 0 ticks | `price('stone')` | unlocks with the **Market Watcher** achievement |
@@ -36,11 +36,11 @@ Functions are called directly, e.g. `move(East)`, `mine()`, `sell()`. Locked fun
 | `refinery` | `refinery()` | Return the running refinery jobs as a list of {recipe, times, ticks_left, progress, blocked, outputs}. | 0 ticks | `jobs = refinery()` | unlocks with the **Smelter** achievement |
 | `contracts` | `contracts()` | Return the open delivery contracts as a list of {id, item, quantity, reward, deadline, ticks_left}. | 0 ticks | `board = contracts()` | unlocks with the **First Order** achievement |
 | `deliver` | `deliver(contract_id)` | Deliver a contract from the warehouse at the base and return the reward money. | 2 ticks | `paid = deliver(cid)` | unlocks with the **First Order** achievement |
-| `drone_id` | `drone_id()` | Return the id of the drone running this script. | 0 ticks | `me = drone_id()` | unlocks with the **Second Pair of Hands** achievement |
-| `drones` | `drones()` | Return the fleet as a list of {id, x, y, state, script, inventory_used} dicts. | 0 ticks | `for drone in drones(): print(drone['id'], drone['state'])` | unlocks with the **Second Pair of Hands** achievement |
-| `spawn_drone` | `spawn_drone(script_name)` | Buy a drone on the base and start script_name (a .py file in the scripts folder). Returns the new drone id or {ok: False, reason}. | 5 ticks plus the next drone cost | `worker = spawn_drone('worker.py')` | unlocks with the **Second Pair of Hands** achievement |
-| `kill_drone` | `kill_drone(drone_id)` | Stop the script of drone_id and remove that drone. Never removes drone 0. Returns True on success. | 0 ticks | `kill_drone(worker)` | unlocks with the **Second Pair of Hands** achievement |
-| `assign` | `assign(drone_id, script_name)` | Stop the current script of drone_id and start script_name instead. | 0 ticks | `assign(1, 'hauler.py')` | unlocks with the **Second Pair of Hands** achievement |
+| `miner_id` | `miner_id()` | Return the id of the miner running this script. | 0 ticks | `me = miner_id()` | unlocks with the **Second Pair of Hands** achievement |
+| `miners` | `miners()` | Return the fleet as a list of {id, x, y, state, script, inventory_used} dicts. | 0 ticks | `for miner in miners(): print(miner['id'], miner['state'])` | unlocks with the **Second Pair of Hands** achievement |
+| `spawn_miner` | `spawn_miner(script_name)` | Buy a miner on the base and start script_name (a .py file in the scripts folder). Returns the new miner id or {ok: False, reason}. | 5 ticks plus the next miner cost | `worker = spawn_miner('worker.py')` | unlocks with the **Second Pair of Hands** achievement |
+| `kill_miner` | `kill_miner(miner_id)` | Stop the script of miner_id and remove that miner. Never removes miner 0. Returns True on success. | 0 ticks | `kill_miner(worker)` | unlocks with the **Second Pair of Hands** achievement |
+| `assign` | `assign(miner_id, script_name)` | Stop the current script of miner_id and start script_name instead. | 0 ticks | `assign(1, 'hauler.py')` | unlocks with the **Second Pair of Hands** achievement |
 | `shared_get` | `shared_get(key, default=None)` | Return the JSON value stored under key in the fleet-wide shared store, or default. | 0 ticks | `goal = shared_get('goal', 0)` | unlocks with the **Teamwork** achievement |
 | `shared_set` | `shared_set(key, value)` | Store a JSON value under key in the fleet-wide shared store (max 64 keys, 40-character keys, 4 KB values). | 0 ticks | `shared_set('goal', 20)` | unlocks with the **Teamwork** achievement |
 
@@ -140,7 +140,7 @@ earned = sell()
 
 **Category:** business
 
-**Description:** Move the drone inventory into the base warehouse and return {moved, left}.
+**Description:** Move the miner inventory into the base warehouse and return {moved, left}.
 
 **Cost:** 1 tick at the base
 
@@ -548,27 +548,27 @@ paid = deliver(cid)
 
 **Unlocked by:** unlocks with the **First Order** achievement
 
-### `drone_id`
+### `miner_id`
 
-**Signature:** `drone_id()`
+**Signature:** `miner_id()`
 
 **Category:** fleet
 
-**Description:** Return the id of the drone running this script.
+**Description:** Return the id of the miner running this script.
 
 **Cost:** 0 ticks
 
 **Example:**
 
 ```python
-me = drone_id()
+me = miner_id()
 ```
 
 **Unlocked by:** unlocks with the **Second Pair of Hands** achievement
 
-### `drones`
+### `miners`
 
-**Signature:** `drones()`
+**Signature:** `miners()`
 
 **Category:** fleet
 
@@ -579,54 +579,54 @@ me = drone_id()
 **Example:**
 
 ```python
-for drone in drones(): print(drone['id'], drone['state'])
+for miner in miners(): print(miner['id'], miner['state'])
 ```
 
 **Unlocked by:** unlocks with the **Second Pair of Hands** achievement
 
-### `spawn_drone`
+### `spawn_miner`
 
-**Signature:** `spawn_drone(script_name)`
+**Signature:** `spawn_miner(script_name)`
 
 **Category:** fleet
 
-**Description:** Buy a drone on the base and start script_name (a .py file in the scripts folder). Returns the new drone id or {ok: False, reason}.
+**Description:** Buy a miner on the base and start script_name (a .py file in the scripts folder). Returns the new miner id or {ok: False, reason}.
 
-**Cost:** 5 ticks plus the next drone cost
+**Cost:** 5 ticks plus the next miner cost
 
 **Example:**
 
 ```python
-worker = spawn_drone('worker.py')
+worker = spawn_miner('worker.py')
 ```
 
 **Unlocked by:** unlocks with the **Second Pair of Hands** achievement
 
-### `kill_drone`
+### `kill_miner`
 
-**Signature:** `kill_drone(drone_id)`
+**Signature:** `kill_miner(miner_id)`
 
 **Category:** fleet
 
-**Description:** Stop the script of drone_id and remove that drone. Never removes drone 0. Returns True on success.
+**Description:** Stop the script of miner_id and remove that miner. Never removes miner 0. Returns True on success.
 
 **Cost:** 0 ticks
 
 **Example:**
 
 ```python
-kill_drone(worker)
+kill_miner(worker)
 ```
 
 **Unlocked by:** unlocks with the **Second Pair of Hands** achievement
 
 ### `assign`
 
-**Signature:** `assign(drone_id, script_name)`
+**Signature:** `assign(miner_id, script_name)`
 
 **Category:** fleet
 
-**Description:** Stop the current script of drone_id and start script_name instead.
+**Description:** Stop the current script of miner_id and start script_name instead.
 
 **Cost:** 0 ticks
 
@@ -1081,6 +1081,15 @@ Player scripts may import the standard-library modules below once the required a
 | `enum` | unlocks with the **Inheritance** achievement |
 | `bisect` | unlocks with the **Chartist** achievement |
 | `operator` | unlocks with the **Trend Follower** achievement |
+
+## Deprecated
+
+These old function names still work as aliases, print one console notice per script run and will be removed in a future release.
+
+- `drone_id` -> `miner_id`
+- `drones` -> `miners`
+- `spawn_drone` -> `spawn_miner`
+- `kill_drone` -> `kill_miner`
 
 ## Safety
 

@@ -4,10 +4,10 @@
 
 ### Added
 
-- A fleet of drones: every drone runs its own script and the fleet shares a
-  typed key/value memory (`spawn_drone`, `assign`, `kill_drone`, `drones`,
-  `drone_id`, `shared_get` and `shared_set`).
-- A base warehouse with per-drone unloading, capacity and warehouse stock
+- A fleet of miners: every miner runs its own script and the fleet shares a
+  typed key/value memory (`spawn_miner`, `assign`, `kill_miner`, `miners`,
+  `miner_id`, `shared_get` and `shared_set`).
+- A base warehouse with per-miner unloading, capacity and warehouse stock
   (`unload`, `stock`, `sell_stock`).
 - A dynamic market with an index, per-item prices and price history
   (`price`, `prices`, `price_history`), plus the market chart panel (`M`).
@@ -16,13 +16,13 @@
 - Delivery contracts generated at the base (`contracts`, `deliver`).
 - World events: rich veins, slow zones and market news.
 - The new `minerlib` library with route, trading, data and OOP helpers.
-- Eight new example scripts: market watching, refining, contracts, two drones,
+- Eight new example scripts: market watching, refining, contracts, two miners,
   worker classes, event hunting, price forecasting and fleet management.
 - 28 new achievements across three new tabs (Trading, Industry and Fleet), for
   69 achievements in eight tabs in total.
-- Drones panel and fleet view (`D`), with per-drone scripts and consoles.
+- Miners panel and fleet view (`T`), with per-miner scripts and consoles.
 - Save format version 8, with automatic migration of v0.1.0, v0.2.0 and later
-  saves; the fleet, per-drone scripts, shared memory, warehouse, market,
+  saves; the fleet, per-miner scripts, shared memory, warehouse, market,
   refinery and contracts are persisted.
 
 ## [0.2.0] - 2026-11-12
@@ -61,4 +61,7 @@
 
 ## [Unreleased]
 
+- Renamed drones to miners throughout the game: UI text, player API, content
+  ids and save data. The old API names remain as deprecated aliases, and old
+  saves migrate automatically.
 - Bootstrap repository.

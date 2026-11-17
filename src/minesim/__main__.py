@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 
 _SELFTEST_MAIN = """\
-worker = spawn_drone("selftest_worker.py")
+worker = spawn_miner("selftest_worker.py")
 if not isinstance(worker, int):
     raise RuntimeError(f"spawn failed: {worker}")
 shared_set("main_ready", True)
@@ -35,7 +35,7 @@ shared_set("worker_done", True)
 
 
 def _run_selftest() -> int:
-    """Run two cooperating drone scripts through the real runner."""
+    """Run two cooperating miner scripts through the real runner."""
     from minesim.core.content import load_content
     from minesim.core.engine import AllUnlocked, GameEngine
     from minesim.core.events import EventBus
@@ -51,7 +51,7 @@ def _run_selftest() -> int:
     bus = EventBus()
     engine = GameEngine(world, miner, content, bus, AllUnlocked())
     engine.player_stats.money = 1000
-    engine.player_stats.upgrades["drone_bay"] = 1
+    engine.player_stats.upgrades["miner_bay"] = 1
     with tempfile.TemporaryDirectory(prefix="minesim-selftest-") as tmp:
         scripts_dir = Path(tmp)
         (scripts_dir / "selftest_worker.py").write_text(_SELFTEST_WORKER, encoding="utf-8")
@@ -67,21 +67,21 @@ def _run_selftest() -> int:
             else:
                 raise RuntimeError("selftest timed out")
             states = manager.states()
-            for drone_id in (0, 1):
-                state = states.get(drone_id)
+            for miner_id in (0, 1):
+                state = states.get(miner_id)
                 if state is not ScriptState.FINISHED:
-                    error = getattr(manager.host(drone_id), "last_error", None) or {}
+                    error = getattr(manager.host(miner_id), "last_error", None) or {}
                     raise RuntimeError(
-                        f"selftest drone {drone_id} failed: {error.get('message', state)}"
+                        f"selftest miner {miner_id} failed: {error.get('message', state)}"
                     )
-            if (engine.drone(0).x, engine.drone(0).y) != (2, 0):
+            if (engine.miner_by_id(0).x, engine.miner_by_id(0).y) != (2, 0):
                 raise RuntimeError(
-                    f"selftest: drone 0 at {(engine.drone(0).x, engine.drone(0).y)}, "
+                    f"selftest: miner 0 at {(engine.miner_by_id(0).x, engine.miner_by_id(0).y)}, "
                     "expected (2, 0)"
                 )
-            if (engine.drone(1).x, engine.drone(1).y) != (0, 1):
+            if (engine.miner_by_id(1).x, engine.miner_by_id(1).y) != (0, 1):
                 raise RuntimeError(
-                    f"selftest: drone 1 at {(engine.drone(1).x, engine.drone(1).y)}, "
+                    f"selftest: miner 1 at {(engine.miner_by_id(1).x, engine.miner_by_id(1).y)}, "
                     "expected (0, 1)"
                 )
             shared = engine.shared_memory

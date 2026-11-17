@@ -4,7 +4,7 @@
 script events. Achievement criteria of type `counter` read the counter
 named by `counter`; `script_feature` criteria read the internal
 `script_feature:<feature>` counters. All counters are stored in the
-save file (save version 8) and default to `0` when a save predates them.
+save file (save version 9) and default to `0` when a save predates them.
 
 | Counter | Event | Meaning |
 |---|---|---|
@@ -37,8 +37,8 @@ save file (save version 8) and default to `0` when a save predates them.
 | `bars_made` | `RefineFinished` | Refined output items produced. |
 | `contracts_done` | `ContractDelivered` | Delivery contracts completed. |
 | `contract_reward_total` | `ContractDelivered` | Total money earned from completed contracts. |
-| `drones_spawned` | `DroneSpawned` | Drones added to the fleet. |
-| `max_drones_alive` | `DroneSpawned`, `DroneRemoved` | Largest fleet size ever reached. |
+| `miners_spawned` | `MinerSpawned` | Miners added to the fleet. |
+| `max_miners_alive` | `MinerSpawned`, `MinerRemoved` | Largest fleet size ever reached. |
 | `events_started` | `WorldEventStarted` | Random world events that started. |
 | `rich_vein_mined` | `OreMined` | Ore items mined while a rich vein was active. |
 | `slow_zone_moves` | `Moved` | Moves made into or inside a slow zone. |
@@ -47,7 +47,7 @@ save file (save version 8) and default to `0` when a save predates them.
 ## Features and recipe unlocks
 
 `features.json` names every gated game feature (`warehouse`, `market`,
-`refinery`, `contracts`, `drones`). A feature or recipe with
+`refinery`, `contracts`, `miners`). A feature or recipe with
 `unlocked_by: null` starts unlocked; otherwise the achievement named
 there grants it with an `unlock_feature` or `unlock_recipe` reward.
 The UI shows an overlay with `Unlocks with: <achievement title>` while

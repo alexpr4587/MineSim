@@ -16,17 +16,17 @@ Market chart with live prices and price history:
 
 ![MineSim market chart](docs/screenshot-market.png)
 
-Drone fleet with a script and console per drone:
+Miner fleet with a script and console per miner:
 
-![MineSim drones](docs/screenshot-drones.png)
+![MineSim miners](docs/screenshot-miners.png)
 
 ## Features
 
 - Infinite, procedurally generated and regenerating world with biomes and
   per-ore mining probabilities.
-- A fleet of drones, each running its own Python script and sharing a typed
+- A fleet of miners, each running its own Python script and sharing a typed
   key/value memory with the rest of the fleet.
-- Base warehouse with per-drone unloading and stock, a dynamic market with
+- Base warehouse with per-miner unloading and stock, a dynamic market with
   price history and a chart, a refinery with six recipes and delivery
   contracts.
 - World events: rich veins, slow zones and market news.
@@ -39,9 +39,9 @@ Drone fleet with a script and console per drone:
   API reference, console, HUD, fleet consoles and achievement toasts.
 - 35 player API functions, the `minerlib` helper module (including route,
   trading, data and OOP helpers) and 16 example scripts.
-- Data-driven content, deterministic seeded worlds and save format v8 with
+- Data-driven content, deterministic seeded worlds and save format v9 with
   autosave and migration of v0.1.0, v0.2.0 and later saves.
-- One-dir PyInstaller builds for Windows and Linux, with multi-drone scripts
+- One-dir PyInstaller builds for Windows and Linux, with multi-miner scripts
   supported in the frozen build.
 
 ## Documentation
@@ -53,7 +53,7 @@ Drone fleet with a script and console per drone:
 
 ## Controls
 
-Single-letter keys (`E F L U K B M D H C G Space 1-5`) work while the world
+Single-letter keys (`E F L U K B M T H C G Space 1-5`) work while the world
 view has focus. While the code editor has focus, letters are typed as code —
 press `Esc` (or click the world) first, or use the **View** menu, which works
 from anywhere.
@@ -67,7 +67,7 @@ from anywhere.
 | `K` / `Ctrl+K` or View menu | Toggle the wardrobe panel |
 | `B` / `Ctrl+B` or View menu | Toggle the base panel (warehouse, refinery, contracts) |
 | `M` / `Ctrl+M` or View menu | Toggle the market panel and price chart |
-| `D` / `Ctrl+D` or View menu | Toggle the drones panel and fleet view |
+| `T` / `Ctrl+T` or View menu | Toggle the miners panel and fleet view |
 | `H` or View menu | Toggle lit 2.5D terrain lighting |
 | `C` | Recenter the world on the miner |
 | `G` | Toggle the world grid |

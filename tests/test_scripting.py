@@ -293,25 +293,25 @@ def _write_script(tmp_path, name, source):
 def test_manager_spawn_assign_and_kill(content, tmp_path):
     engine, manager, _content = _manager_setup(content, tmp_path)
     engine.player_stats.money = 1000
-    engine.player_stats.upgrades["drone_bay"] = 1
+    engine.player_stats.upgrades["miner_bay"] = 1
     _write_script(
         tmp_path,
         "worker.py",
-        "shared_set('worker', drone_id())\nshared_set('worker_done', True)\n",
+        "shared_set('worker', miner_id())\nshared_set('worker_done', True)\n",
     )
     _write_script(
         tmp_path,
         "idle.py",
-        "shared_set('idle', drone_id())\n",
+        "shared_set('idle', miner_id())\n",
     )
     manager.start(
         0,
         "main.py",
-        'new_drone = spawn_drone("worker.py")\nshared_set("spawned", new_drone)\n',
+        'new_miner = spawn_miner("worker.py")\nshared_set("spawned", new_miner)\n',
     )
     _run_manager(manager)
-    assert engine.has_drone(1)
-    assert engine.drone(1).script == "worker.py"
+    assert engine.has_miner(1)
+    assert engine.miner_by_id(1).script == "worker.py"
     assert manager.states()[1] is ScriptState.FINISHED
     assert engine.shared_memory["spawned"] == 1
     assert engine.shared_memory["worker"] == 1
@@ -325,15 +325,15 @@ def test_manager_spawn_assign_and_kill(content, tmp_path):
     _run_manager(manager)
     assert engine.shared_memory["assigned"] is True
     assert engine.shared_memory["idle"] == 1
-    assert engine.drone(1).script == "idle.py"
+    assert engine.miner_by_id(1).script == "idle.py"
 
     manager.start(
         0,
         "main.py",
-        'removed = kill_drone(1)\nshared_set("removed", removed)\n',
+        'removed = kill_miner(1)\nshared_set("removed", removed)\n',
     )
     _run_manager(manager)
-    assert engine.has_drone(1) is False
+    assert engine.has_miner(1) is False
     assert manager.host(1) is None
     assert engine.shared_memory["removed"] is True
 
@@ -345,43 +345,43 @@ def test_manager_spawn_limits_slot_money_and_processes(content, tmp_path):
     manager.start(
         0,
         "main.py",
-        'result = spawn_drone("worker.py")\nshared_set("result", result)\n',
+        'result = spawn_miner("worker.py")\nshared_set("result", result)\n',
     )
     _run_manager(manager)
     assert engine.shared_memory["result"] == {"ok": False, "reason": "no_slot"}
-    assert sorted(engine.drones) == [0]
+    assert sorted(engine.miners) == [0]
 
     engine, manager, _content = _manager_setup(content, tmp_path)
-    engine.player_stats.upgrades["drone_bay"] = 1
+    engine.player_stats.upgrades["miner_bay"] = 1
     engine.player_stats.money = 0
     manager.start(
         0,
         "main.py",
-        'result = spawn_drone("worker.py")\nshared_set("result", result)\n',
+        'result = spawn_miner("worker.py")\nshared_set("result", result)\n',
     )
     _run_manager(manager)
     result = engine.shared_memory["result"]
     assert result["ok"] is False
     assert result["reason"] == "not_enough_money"
-    assert sorted(engine.drones) == [0]
+    assert sorted(engine.miners) == [0]
 
     engine, manager, _content = _manager_setup(content, tmp_path, max_processes=1)
-    engine.player_stats.upgrades["drone_bay"] = 1
+    engine.player_stats.upgrades["miner_bay"] = 1
     engine.player_stats.money = 1000
     manager.start(
         0,
         "main.py",
-        'result = spawn_drone("worker.py")\nshared_set("result", result)\n',
+        'result = spawn_miner("worker.py")\nshared_set("result", result)\n',
     )
     _run_manager(manager)
     assert engine.shared_memory["result"] == {"ok": False, "reason": "process_limit"}
-    assert sorted(engine.drones) == [0]
+    assert sorted(engine.miners) == [0]
 
 
-def test_manager_shared_memory_between_two_drones(content, tmp_path):
+def test_manager_shared_memory_between_two_miners(content, tmp_path):
     engine, manager, _content = _manager_setup(content, tmp_path)
     engine.player_stats.money = 1000
-    engine.player_stats.upgrades["drone_bay"] = 1
+    engine.player_stats.upgrades["miner_bay"] = 1
     _write_script(
         tmp_path,
         "worker.py",
@@ -393,7 +393,7 @@ def test_manager_shared_memory_between_two_drones(content, tmp_path):
     manager.start(
         0,
         "main.py",
-        'new_drone = spawn_drone("worker.py")\n'
+        'new_miner = spawn_miner("worker.py")\n'
         "while not shared_get('worker_ready', False):\n"
         "    wait(1)\n"
         "shared_set('main_go', True)\n"
@@ -419,9 +419,9 @@ def test_shared_memory_limits_raise_clear_errors(content, tmp_path):
     assert engine.shared_memory == {}
 
 
-def test_failing_drone_does_not_stop_the_others(content, tmp_path):
+def test_failing_miner_does_not_stop_the_others(content, tmp_path):
     engine, manager, _content = _manager_setup(content, tmp_path)
-    engine.spawn_drone()
+    engine.spawn_miner()
     manager.start(0, "main.py", "shared_set('main_done', True)\n")
     manager.start(1, "bad.py", "raise ValueError('boom')\n")
     _run_manager(manager)
@@ -429,14 +429,14 @@ def test_failing_drone_does_not_stop_the_others(content, tmp_path):
     assert states[0] is ScriptState.FINISHED
     assert states[1] is ScriptState.FAILED
     assert engine.shared_memory["main_done"] is True
-    assert engine.has_drone(1) is True
+    assert engine.has_miner(1) is True
 
 
 def _lockstep_snapshot(content, tmp_path):
     tmp_path.mkdir(parents=True, exist_ok=True)
     engine, manager, _content = _manager_setup(content, tmp_path)
     engine.player_stats.money = 1000
-    engine.player_stats.upgrades["drone_bay"] = 1
+    engine.player_stats.upgrades["miner_bay"] = 1
     _write_script(
         tmp_path,
         "worker.py",
@@ -445,7 +445,7 @@ def _lockstep_snapshot(content, tmp_path):
     manager.start(
         0,
         "main.py",
-        'new_drone = spawn_drone("worker.py")\nshared_set("worker_id", new_drone)\nmove(East)\n',
+        'new_miner = spawn_miner("worker.py")\nshared_set("worker_id", new_miner)\nmove(East)\n',
     )
     _run_manager(manager)
     return {
@@ -454,7 +454,8 @@ def _lockstep_snapshot(content, tmp_path):
         "world": engine.world.to_dict(),
         "shared": dict(engine.shared_memory),
         "fleet": {
-            drone_id: engine.drone(drone_id).to_fleet_dict() for drone_id in sorted(engine.drones)
+            miner_id: engine.miner_by_id(miner_id).to_fleet_dict()
+            for miner_id in sorted(engine.miners)
         },
     }
 
@@ -465,7 +466,7 @@ def test_identical_lockstep_runs_are_deterministic(content, tmp_path):
     assert first == second
 
 
-def test_manager_watchdog_kills_runaway_drone_script(content, tmp_path):
+def test_manager_watchdog_kills_runaway_miner_script(content, tmp_path):
     engine, manager, _content = _manager_setup(content, tmp_path, idle_timeout=0.5)
     manager.start(0, "main.py", "while True:\n    pass\n")
     started = time.monotonic()
@@ -476,3 +477,47 @@ def test_manager_watchdog_kills_runaway_drone_script(content, tmp_path):
     assert host is not None and host.last_error is not None
     assert "without calling the game API" in host.last_error["message"]
     assert engine.tick == 0
+
+
+def test_deprecated_drone_aliases_still_run_old_scripts(content, tmp_path):
+    engine, manager, _content = _manager_setup(content, tmp_path)
+    engine.player_stats.money = 1000
+    engine.player_stats.upgrades["miner_bay"] = 1
+    _write_script(
+        tmp_path,
+        "worker.py",
+        "shared_set('old_worker', drone_id())\n",
+    )
+    _write_script(
+        tmp_path,
+        "idle.py",
+        "shared_set('old_assigned', miner_id())\n",
+    )
+    manager.start(
+        0,
+        "main.py",
+        'new_miner = spawn_drone("worker.py")\n'
+        'shared_set("old_spawned", new_miner)\n'
+        'shared_set("old_fleet", len(drones()))\n',
+    )
+    _run_manager(manager)
+    assert engine.shared_memory["old_spawned"] == 1
+    assert engine.shared_memory["old_fleet"] == 2
+    texts = [event.text for event in manager.console(0)]
+
+    manager.start(
+        0,
+        "main.py",
+        'assign(drone_id=1, script_name="idle.py")\n',
+    )
+    _run_manager(manager)
+    assert engine.shared_memory["old_assigned"] == 1
+
+    manager.start(0, "main.py", "removed = kill_drone(1)\nshared_set('old_removed', removed)\n")
+    _run_manager(manager)
+    assert engine.shared_memory["old_removed"] is True
+    assert engine.has_miner(1) is False
+    texts += [event.text for event in manager.console(0)]
+    assert "spawn_drone is now spawn_miner" in texts
+    assert "kill_drone is now kill_miner" in texts
+    assert "drones is now miners" in texts

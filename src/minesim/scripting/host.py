@@ -31,12 +31,12 @@ from minesim.core.commands import (
     Contracts,
     Deliver,
     Distance,
-    DroneId,
-    Drones,
     Events,
     Inspect,
     Inventory,
     Mine,
+    MinerId,
+    Miners,
     Move,
     OreInfo,
     Peek,
@@ -47,11 +47,11 @@ from minesim.core.commands import (
     Recipes,
     Refine,
     RefineryStatus,
-    RemoveDrone,
+    RemoveMiner,
     Scan,
     Sell,
     SellStock,
-    SpawnDrone,
+    SpawnMiner,
     Stats,
     Stock,
     SubmitEstimate,
@@ -152,7 +152,7 @@ class HostEvent:
     message: str = ""
     error_type: str = ""
     line_number: int | None = None
-    drone_id: int = 0
+    miner_id: int = 0
 
     def __post_init__(self) -> None:
         if self.message and not self.text:
@@ -435,37 +435,37 @@ _DEFAULT_FUNCTIONS: tuple[dict[str, Any], ...] = (
         "unlocked_by": None,
     },
     {
-        "name": "drone_id",
-        "signature": "drone_id()",
-        "doc": "Return the own drone id.",
+        "name": "miner_id",
+        "signature": "miner_id()",
+        "doc": "Return the own miner id.",
         "category": "fleet",
         "unlocked_by": None,
     },
     {
-        "name": "drones",
-        "signature": "drones()",
+        "name": "miners",
+        "signature": "miners()",
         "doc": "Return the fleet.",
         "category": "fleet",
         "unlocked_by": None,
     },
     {
-        "name": "spawn_drone",
-        "signature": "spawn_drone(script_name)",
-        "doc": "Buy a drone and start its script.",
+        "name": "spawn_miner",
+        "signature": "spawn_miner(script_name)",
+        "doc": "Buy a miner and start its script.",
         "category": "fleet",
         "unlocked_by": None,
     },
     {
-        "name": "kill_drone",
-        "signature": "kill_drone(drone_id)",
-        "doc": "Remove a drone.",
+        "name": "kill_miner",
+        "signature": "kill_miner(miner_id)",
+        "doc": "Remove a miner.",
         "category": "fleet",
         "unlocked_by": None,
     },
     {
         "name": "assign",
-        "signature": "assign(drone_id, script_name)",
-        "doc": "Assign a script to a drone.",
+        "signature": "assign(miner_id, script_name)",
+        "doc": "Assign a script to a miner.",
         "category": "fleet",
         "unlocked_by": None,
     },
@@ -543,10 +543,10 @@ def _event_bus(engine: Any, override: Any = None) -> Any:
 
 _MANAGER_FUNCTIONS = {
     "assign",
-    "kill_drone",
+    "kill_miner",
     "shared_get",
     "shared_set",
-    "spawn_drone",
+    "spawn_miner",
 }
 
 
@@ -571,7 +571,7 @@ class ScriptHost:
         content: Any = None,
         progression_view: Any = None,
         scripts_dir: Any = None,
-        drone_id: int = 0,
+        miner_id: int = 0,
         **kwargs: Any,
     ) -> None:
         if engine is None:
@@ -597,9 +597,9 @@ class ScriptHost:
         self.progression_view = progression_view
         self.progression = progression_view
         self.scripts_dir = Path(scripts_dir)
-        if drone_id is None:
-            drone_id = kwargs.get("drone_id", 0)
-        self.drone_id: int = int(drone_id or 0)
+        if miner_id is None:
+            miner_id = kwargs.get("miner_id", 0)
+        self.miner_id: int = int(miner_id or 0)
         self.manager = kwargs.get("manager")
         self._bus = _event_bus(
             engine, kwargs.get("events") or kwargs.get("event_bus") or kwargs.get("bus")
@@ -923,13 +923,13 @@ class ScriptHost:
         publisher = getattr(manager, "publish_api_called", None)
         if callable(publisher):
             try:
-                publisher(str(name), self.drone_id)
+                publisher(str(name), self.miner_id)
                 return
             except Exception:
                 pass
         if self._bus is not None and hasattr(self._bus, "publish"):
             try:
-                self._bus.publish(ApiCalled(function=str(name), drone_id=int(self.drone_id)))
+                self._bus.publish(ApiCalled(function=str(name), miner_id=int(self.miner_id)))
             except Exception:
                 pass
 
@@ -938,21 +938,21 @@ class ScriptHost:
 
     # -- request translation ----------------------------------------------
 
-    def _acting_drone(self) -> Any:
+    def _acting_miner(self) -> Any:
         if self.engine is None:
             return None
-        getter = getattr(self.engine, "drone", None)
+        getter = getattr(self.engine, "miner_by_id", None)
         if callable(getter):
             try:
-                return getter(self.drone_id)
+                return getter(self.miner_id)
             except KeyError:
                 return None
         return getattr(self.engine, "miner", None)
 
     def _submit(self, command: Any) -> Any:
-        """Submit ``command`` to this host's drone."""
+        """Submit ``command`` to this host's miner."""
         try:
-            return self.engine.submit(command, drone_id=self.drone_id)
+            return self.engine.submit(command, miner_id=self.miner_id)
         except TypeError:
             return self.engine.submit(command)
 
@@ -979,14 +979,14 @@ class ScriptHost:
             if args or kwargs:
                 raise TypeError("position() takes no arguments")
             return Position()
-        if name == "drone_id":
+        if name == "miner_id":
             if args or kwargs:
-                raise TypeError("drone_id() takes no arguments")
-            return DroneId()
-        if name == "drones":
+                raise TypeError("miner_id() takes no arguments")
+            return MinerId()
+        if name == "miners":
             if args or kwargs:
-                raise TypeError("drones() takes no arguments")
-            return Drones()
+                raise TypeError("miners() takes no arguments")
+            return Miners()
         if name == "inventory":
             if args or kwargs:
                 raise TypeError("inventory() takes no arguments")
@@ -1130,13 +1130,13 @@ class ScriptHost:
         if name == "position":
             pos = result.get("position") or [result.get("x", 0), result.get("y", 0)]
             return list(pos)
-        if name == "drone_id":
-            return int(result.get("id", self.drone_id) or 0)
-        if name == "drones":
-            entries = [dict(entry) for entry in (result.get("drones") or [])]
+        if name == "miner_id":
+            return int(result.get("id", self.miner_id) or 0)
+        if name == "miners":
+            entries = [dict(entry) for entry in (result.get("miners") or [])]
             if self.manager is not None:
                 try:
-                    entries = self.manager.decorate_drones(entries)
+                    entries = self.manager.decorate_miners(entries)
                 except Exception:
                     pass
             return entries
@@ -1204,7 +1204,7 @@ class ScriptHost:
         if name == "buy_upgrade":
             if result.get("ok"):
                 return int(result.get("level", 0) or 0)
-            miner = self._acting_drone()
+            miner = self._acting_miner()
             upgrades = getattr(miner, "upgrades", {}) if miner is not None else {}
             upgrade_id = result.get("id") or result.get("upgrade")
             if upgrade_id and isinstance(upgrades, dict):
@@ -1273,7 +1273,7 @@ class ScriptHost:
             self._reply_error(request_id, type(exc).__name__, str(exc))
             return
         try:
-            cost = int(command.cost_ticks(self.engine, self._acting_drone()))
+            cost = int(command.cost_ticks(self.engine, self._acting_miner()))
         except Exception:
             cost = 0
         if cost > 0:
@@ -1308,7 +1308,7 @@ class ScriptHost:
     # -- manager-backed API ------------------------------------------------
 
     def _manager_api_cost(self, name: str) -> int:
-        if name != "spawn_drone":
+        if name != "spawn_miner":
             return 0
         config = getattr(self.content, "config", None)
         return int(getattr(config, "spawn_ticks", 5) or 5)
@@ -1346,9 +1346,9 @@ class ScriptHost:
                     )
                     return
         try:
-            if name == "spawn_drone":
+            if name == "spawn_miner":
                 self._manager_spawn(request_id, args, kwargs)
-            elif name == "kill_drone":
+            elif name == "kill_miner":
                 self._manager_kill(request_id, args, kwargs)
             elif name == "assign":
                 self._manager_assign(request_id, args, kwargs)
@@ -1372,7 +1372,7 @@ class ScriptHost:
         script_name = args[0] if args else kwargs.get("script_name", kwargs.get("name"))
         if script_name is None:
             self._reply_error(
-                request_id, "TypeError", "spawn_drone() missing required argument 'script_name'"
+                request_id, "TypeError", "spawn_miner() missing required argument 'script_name'"
             )
             return
         manager = self.manager
@@ -1380,64 +1380,64 @@ class ScriptHost:
         if error is not None:
             self._reply(request_id, result=error)
             return
-        command = SpawnDrone()
+        command = SpawnMiner()
         ticket = self._submit(command)
         if ticket.done:
             self._reply(
                 request_id,
                 result=self._finish_spawn(ticket.result, script_name),
-                api_name="spawn_drone",
+                api_name="spawn_miner",
             )
         else:
             self._pending = _Pending(
                 request_id=request_id,
-                name="spawn_drone",
+                name="spawn_miner",
                 command=command,
                 ticket=ticket,
                 extra=("spawn", str(script_name)),
             )
 
     def _manager_kill(self, request_id: Any, args: list[Any], kwargs: dict[str, Any]) -> None:
-        target = args[0] if args else kwargs.get("drone_id", kwargs.get("id"))
+        target = args[0] if args else kwargs.get("miner_id", kwargs.get("id"))
         if target is None:
             self._reply_error(
-                request_id, "TypeError", "kill_drone() missing required argument 'drone_id'"
+                request_id, "TypeError", "kill_miner() missing required argument 'miner_id'"
             )
             return
         target = int(target)
-        if target == self.drone_id:
+        if target == self.miner_id:
             self._reply_error(
                 request_id,
                 "ValueError",
-                "cannot kill the drone that is running this script",
+                "cannot kill the miner that is running this script",
             )
             return
-        if target == 0 or not bool(self.engine.has_drone(target)):
-            self._reply(request_id, result=False, api_name="kill_drone")
+        if target == 0 or not bool(self.engine.has_miner(target)):
+            self._reply(request_id, result=False, api_name="kill_miner")
             return
-        command = RemoveDrone(target)
+        command = RemoveMiner(target)
         ticket = self._submit(command)
         if ticket.done:
             self._reply(
                 request_id,
                 result=self._finish_kill(ticket.result, target),
-                api_name="kill_drone",
+                api_name="kill_miner",
             )
         else:
             self._pending = _Pending(
                 request_id=request_id,
-                name="kill_drone",
+                name="kill_miner",
                 command=command,
                 ticket=ticket,
                 extra=("kill", target),
             )
 
     def _manager_assign(self, request_id: Any, args: list[Any], kwargs: dict[str, Any]) -> None:
-        target = args[0] if args else kwargs.get("drone_id", kwargs.get("id"))
+        target = args[0] if args else kwargs.get("miner_id", kwargs.get("id"))
         script_name = args[1] if len(args) > 1 else kwargs.get("script_name", kwargs.get("name"))
         if target is None:
             self._reply_error(
-                request_id, "TypeError", "assign() missing required argument 'drone_id'"
+                request_id, "TypeError", "assign() missing required argument 'miner_id'"
             )
             return
         if script_name is None:
@@ -1446,11 +1446,11 @@ class ScriptHost:
             )
             return
         target = int(target)
-        if target == self.drone_id:
+        if target == self.miner_id:
             self._reply_error(
                 request_id,
                 "ValueError",
-                "cannot reassign the drone that is running this script",
+                "cannot reassign the miner that is running this script",
             )
             return
         self.manager.assign(target, script_name)
@@ -1479,21 +1479,21 @@ class ScriptHost:
             else:
                 cleaned["reason"] = "spawn_failed"
             return cleaned
-        drone_id = int(result.get("drone_id", -1))
+        miner_id = int(result.get("miner_id", -1))
         try:
-            self.manager.start_spawned(drone_id, str(script_name))
+            self.manager.start_spawned(miner_id, str(script_name))
         except Exception as exc:  # noqa: BLE001 - reported to the player script
             try:
-                self.engine.remove_drone(drone_id)
+                self.engine.remove_miner(miner_id)
             except Exception:
                 pass
             try:
-                self.manager.discard_host(drone_id)
+                self.manager.discard_host(miner_id)
             except Exception:
                 pass
             reason = "process_limit" if "process limit" in str(exc) else "script_failed"
             return {"ok": False, "reason": reason}
-        return drone_id
+        return miner_id
 
     def _finish_kill(self, result: Any, target: int) -> bool:
         if not isinstance(result, dict) or not result.get("ok"):
@@ -1537,14 +1537,14 @@ class ScriptHost:
                 self._reply(
                     pending.request_id,
                     result=self._finish_spawn(ticket.result, extra[1]),
-                    api_name="spawn_drone",
+                    api_name="spawn_miner",
                 )
                 return
             if extra and extra[0] == "kill":
                 self._reply(
                     pending.request_id,
                     result=self._finish_kill(ticket.result, int(extra[1])),
-                    api_name="kill_drone",
+                    api_name="kill_miner",
                 )
                 return
             self._reply(

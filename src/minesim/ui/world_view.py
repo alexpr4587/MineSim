@@ -45,7 +45,7 @@ from minesim.ui.theme import (
     RICH_VEIN_BORDER,
     SLOW_ZONE,
     SLOW_ZONE_BORDER,
-    drone_badge_color,
+    miner_badge_color,
 )
 
 __all__ = ["CACHE_SIZE", "DEFAULT_TILE_PX", "MAX_TILE_PX", "MIN_TILE_PX", "WorldView"]
@@ -143,7 +143,7 @@ class WorldView(QWidget):
     """Draws the tiles around a camera center with QPainter only."""
 
     terrain_lighting_changed = Signal(bool)
-    selected_drone_changed = Signal(int)
+    selected_miner_changed = Signal(int)
     follow_selected_changed = Signal(bool)
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -165,7 +165,7 @@ class WorldView(QWidget):
         self.tile_px = max(MIN_TILE_PX, min(MAX_TILE_PX, int(self.tile_px)))
         self.follow_miner: bool = True
         self.follow_selected: bool = True
-        self.selected_drone_id: int = 0
+        self.selected_miner_id: int = 0
         self.show_grid: bool = False
         self.terrain_lighting: bool = self._load_terrain_lighting()
         self._pixmap_cache: OrderedDict[tuple[Any, ...], QPixmap] = OrderedDict()
@@ -211,13 +211,13 @@ class WorldView(QWidget):
         self.follow_miner = bool(value)
 
     @property
-    def selected_drone(self) -> int:
-        """The id of the selected drone."""
-        return self.selected_drone_id
+    def selected_miner(self) -> int:
+        """The id of the selected miner."""
+        return self.selected_miner_id
 
-    @selected_drone.setter
-    def selected_drone(self, drone_id: int) -> None:
-        self.select_drone(drone_id)
+    @selected_miner.setter
+    def selected_miner(self, miner_id: int) -> None:
+        self.select_miner(miner_id)
 
     @property
     def grid_visible(self) -> bool:
@@ -280,77 +280,77 @@ class WorldView(QWidget):
             return (0.5, 0.5)
         return (float(self.miner.x) + 0.5, float(self.miner.y) + 0.5)
 
-    def _drones(self) -> list[Any]:
-        """Every drone in the fleet, in increasing id order."""
+    def _miners(self) -> list[Any]:
+        """Every miner in the fleet, in increasing id order."""
         engine = self.engine
-        drones = _get(engine, "drones")
-        if isinstance(drones, dict) and drones:
-            return [drones[drone_id] for drone_id in sorted(drones)]
+        miners = _get(engine, "miners")
+        if isinstance(miners, dict) and miners:
+            return [miners[miner_id] for miner_id in sorted(miners)]
         return [self.miner] if self.miner is not None else []
 
     @property
-    def drones(self) -> list[Any]:
-        """The drones this view draws."""
-        return self._drones()
+    def miners(self) -> list[Any]:
+        """The miners this view draws."""
+        return self._miners()
 
-    def _drone_by_id(self, drone_id: int) -> Any:
-        for drone in self._drones():
-            if int(_get(drone, "id", 0) or 0) == int(drone_id):
-                return drone
+    def _miner_by_id(self, miner_id: int) -> Any:
+        for miner in self._miners():
+            if int(_get(miner, "id", 0) or 0) == int(miner_id):
+                return miner
         return None
 
-    def _drone_center(self, drone: Any) -> tuple[float, float]:
-        drone_id = int(_get(drone, "id", 0) or 0)
-        if drone_id == 0:
+    def _miner_center(self, miner: Any) -> tuple[float, float]:
+        miner_id = int(_get(miner, "id", 0) or 0)
+        if miner_id == 0:
             return (self._visual_x, self._visual_y)
-        return (float(_get(drone, "x", 0) or 0) + 0.5, float(_get(drone, "y", 0) or 0) + 0.5)
+        return (float(_get(miner, "x", 0) or 0) + 0.5, float(_get(miner, "y", 0) or 0) + 0.5)
 
-    def select_drone(self, drone_id: int) -> None:
-        """Select ``drone_id`` and optionally move the camera onto it."""
-        drone_id = int(drone_id)
-        drone = self._drone_by_id(drone_id)
-        if drone is None:
+    def select_miner(self, miner_id: int) -> None:
+        """Select ``miner_id`` and optionally move the camera onto it."""
+        miner_id = int(miner_id)
+        miner = self._miner_by_id(miner_id)
+        if miner is None:
             return
-        changed = drone_id != self.selected_drone_id
-        self.selected_drone_id = drone_id
+        changed = miner_id != self.selected_miner_id
+        self.selected_miner_id = miner_id
         if self.follow_selected:
-            center_x, center_y = self._drone_center(drone)
-            if drone_id == 0:
+            center_x, center_y = self._miner_center(miner)
+            if miner_id == 0:
                 self._visual_x, self._visual_y = center_x, center_y
             if self.follow_miner:
                 self.camera_x, self.camera_y = center_x, center_y
                 self._update_recenter_visibility()
         if changed:
-            self.selected_drone_changed.emit(drone_id)
+            self.selected_miner_changed.emit(miner_id)
         self.update()
 
     def set_follow_selected(self, enabled: bool) -> None:
-        """Enable or disable the camera following the selected drone."""
+        """Enable or disable the camera following the selected miner."""
         enabled = bool(enabled)
         changed = enabled != self.follow_selected
         self.follow_selected = enabled
         if enabled:
-            drone = self._drone_by_id(self.selected_drone_id)
-            if drone is not None:
-                self.select_drone(self.selected_drone_id)
+            miner = self._miner_by_id(self.selected_miner_id)
+            if miner is not None:
+                self.select_miner(self.selected_miner_id)
         if changed:
             self.follow_selected_changed.emit(enabled)
         self.update()
 
-    def drone_at_screen(self, sx: float, sy: float) -> int | None:
-        """Return the id of the drone under a widget pixel, if any."""
-        if not self._drones():
+    def miner_at_screen(self, sx: float, sy: float) -> int | None:
+        """Return the id of the miner under a widget pixel, if any."""
+        if not self._miners():
             return None
         threshold = max(8.0, self.tile_px * 0.6)
         best_id: int | None = None
         best_distance = threshold
-        for drone in reversed(self._drones()):
-            center_x, center_y = self._drone_center(drone)
+        for miner in reversed(self._miners()):
+            center_x, center_y = self._miner_center(miner)
             px, py = self.world_to_screen(center_x, center_y)
             distance = math.hypot(float(sx) - px, float(sy) - py)
             if distance <= best_distance:
                 best_distance = distance
-                best_id = int(_get(drone, "id", 0) or 0)
+                best_id = int(_get(miner, "id", 0) or 0)
         return best_id
 
     def set_game(self, game: Any) -> None:
@@ -364,8 +364,8 @@ class WorldView(QWidget):
         self.sprite_book = SpriteBook(self.content) if self.content is not None else None
         self.clear_cache()
         self.snap_visual_to_miner()
-        if self._drone_by_id(self.selected_drone_id) is None:
-            self.selected_drone_id = 0
+        if self._miner_by_id(self.selected_miner_id) is None:
+            self.selected_miner_id = 0
         self.update()
 
     def _selected_skin(self) -> str:
@@ -374,8 +374,8 @@ class WorldView(QWidget):
             return str(skin)
         return DEFAULT_SKIN
 
-    def _sprite_direction(self, drone: Any = None) -> str:
-        facing = _get(drone if drone is not None else self.miner, "facing")
+    def _sprite_direction(self, miner: Any = None) -> str:
+        facing = _get(miner if miner is not None else self.miner, "facing")
         name = getattr(facing, "name", None)
         key = str(name or facing or "north").lower()
         return {
@@ -385,8 +385,8 @@ class WorldView(QWidget):
             "east": "right",
         }.get(key, "down")
 
-    def _active_command(self, drone: Any = None) -> Any:
-        target = drone if drone is not None else self.miner
+    def _active_command(self, miner: Any = None) -> Any:
+        target = miner if miner is not None else self.miner
         entry = _get(target, "active")
         command = _get(entry, "command")
         if command is not None:
@@ -398,9 +398,9 @@ class WorldView(QWidget):
         entry = _get(engine, "_active")
         return _get(entry, "command")
 
-    def _animation_state(self, drone: Any = None) -> tuple[str, int, bool]:
+    def _animation_state(self, miner: Any = None) -> tuple[str, int, bool]:
         """Return ``(animation, frame, is_active)`` for the current situtation."""
-        command = self._active_command(drone)
+        command = self._active_command(miner)
         name = type(command).__name__ if command is not None else ""
         tick = self._tick()
         if name == "Move":
@@ -409,14 +409,14 @@ class WorldView(QWidget):
             return ("mine", (tick // 2) % 2, True)
         return ("walk", 0, False)
 
-    def miner_pixmap(self, drone: Any = None) -> QPixmap | None:
-        """Return the pixmap for ``drone`` (drone 0 by default)."""
+    def miner_pixmap(self, miner: Any = None) -> QPixmap | None:
+        """Return the pixmap for ``miner`` (miner 0 by default)."""
         if self.sprite_book is None:
             return None
-        animation, frame, _ = self._animation_state(drone)
+        animation, frame, _ = self._animation_state(miner)
         return self.sprite_book.miner_pixmap(
             self._selected_skin(),
-            self._sprite_direction(drone),
+            self._sprite_direction(miner),
             animation,
             frame,
             self.tile_px,
@@ -534,11 +534,11 @@ class WorldView(QWidget):
         self.pan_by(dx_tiles, dy_tiles)
 
     def center_on_miner(self) -> None:
-        """Center the camera on drone 0 and resume following the selection."""
+        """Center the camera on miner 0 and resume following the selection."""
         self.follow_miner = True
-        if self.selected_drone_id != 0:
-            self.selected_drone_id = 0
-            self.selected_drone_changed.emit(0)
+        if self.selected_miner_id != 0:
+            self.selected_miner_id = 0
+            self.selected_miner_changed.emit(0)
         if not self.follow_selected:
             self.follow_selected = True
             self.follow_selected_changed.emit(True)
@@ -788,9 +788,9 @@ class WorldView(QWidget):
         if abs(target_y - self._visual_y) < 0.001:
             self._visual_y = target_y
         if self.follow_miner:
-            drone = self._drone_by_id(self.selected_drone_id)
-            if self.follow_selected and drone is not None and self.selected_drone_id != 0:
-                target_x, target_y = self._drone_center(drone)
+            miner = self._miner_by_id(self.selected_miner_id)
+            if self.follow_selected and miner is not None and self.selected_miner_id != 0:
+                target_x, target_y = self._miner_center(miner)
             else:
                 target_x, target_y = self._visual_x, self._visual_y
             self.camera_x = target_x
@@ -923,9 +923,9 @@ class WorldView(QWidget):
                 int(height * 2),
             )
 
-    def _draw_drone_badge(self, painter: QPainter, sx: float, sy: float, drone_id: int) -> None:
-        """Draw a small coloured id badge next to a secondary drone."""
-        color = QColor(drone_badge_color(int(drone_id)))
+    def _draw_miner_badge(self, painter: QPainter, sx: float, sy: float, miner_id: int) -> None:
+        """Draw a small coloured id badge next to a secondary miner."""
+        color = QColor(miner_badge_color(int(miner_id)))
         radius = max(6.0, self.tile_px * 0.23)
         cx = sx + self.tile_px * 0.34
         cy = sy - self.tile_px * 0.34
@@ -942,7 +942,7 @@ class WorldView(QWidget):
         font.setPointSize(max(6, int(radius)))
         painter.setFont(font)
         painter.setPen(QPen(QColor(MINER_DETAIL)))
-        text = str(int(drone_id))
+        text = str(int(miner_id))
         metrics = painter.fontMetrics()
         text_width = metrics.horizontalAdvance(text)
         text_height = metrics.ascent()
@@ -952,14 +952,14 @@ class WorldView(QWidget):
             text,
         )
 
-    def _draw_one_drone(
-        self, painter: QPainter, drone: Any, sx: float, sy: float, *, badge: bool
+    def _draw_one_miner(
+        self, painter: QPainter, miner: Any, sx: float, sy: float, *, badge: bool
     ) -> None:
         radius = max(4.0, self.tile_px * 0.36)
         self._draw_miner_shadow(painter, sx, sy, radius)
-        pixmap = self.miner_pixmap(drone)
+        pixmap = self.miner_pixmap(miner)
         if pixmap is not None:
-            _, _, is_active = self._animation_state(drone)
+            _, _, is_active = self._animation_state(miner)
             bob = 0 if is_active else (self._tick() // 5) % 2
             painter.drawPixmap(
                 int(round(sx - self.tile_px / 2.0)),
@@ -967,7 +967,7 @@ class WorldView(QWidget):
                 pixmap,
             )
         else:
-            facing = _get(drone, "facing")
+            facing = _get(miner, "facing")
             dx = float(_get(facing, "dx", 0) or 0)
             dy = float(_get(facing, "dy", -1) if _get(facing, "dy") is not None else -1)
             if dx == 0 and dy == 0:
@@ -992,13 +992,13 @@ class WorldView(QWidget):
             painter.setBrush(QColor(MINER_DETAIL))
             painter.drawEllipse(int(sx - 2), int(sy - 2), 4, 4)
         if badge:
-            self._draw_drone_badge(painter, sx, sy, int(_get(drone, "id", 0) or 0))
+            self._draw_miner_badge(painter, sx, sy, int(_get(miner, "id", 0) or 0))
 
-    def _draw_selection_ring(self, painter: QPainter, sx: float, sy: float, drone_id: int) -> None:
-        """Draw a coloured ring around the selected drone."""
+    def _draw_selection_ring(self, painter: QPainter, sx: float, sy: float, miner_id: int) -> None:
+        """Draw a coloured ring around the selected miner."""
         painter.save()
         try:
-            color = QColor(drone_badge_color(int(drone_id)))
+            color = QColor(miner_badge_color(int(miner_id)))
             color.setAlpha(230)
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.setPen(QPen(color, 2))
@@ -1013,18 +1013,18 @@ class WorldView(QWidget):
             painter.restore()
 
     def _draw_miner(self, painter: QPainter) -> None:
-        for drone in self._drones():
-            drone_id = int(_get(drone, "id", 0) or 0)
-            if drone_id == 0:
+        for miner in self._miners():
+            miner_id = int(_get(miner, "id", 0) or 0)
+            if miner_id == 0:
                 sx, sy = self.world_to_screen(self._visual_x, self._visual_y)
-                self._draw_one_drone(painter, drone, sx, sy, badge=False)
+                self._draw_one_miner(painter, miner, sx, sy, badge=False)
             else:
-                center_x = float(_get(drone, "x", 0) or 0) + 0.5
-                center_y = float(_get(drone, "y", 0) or 0) + 0.5
+                center_x = float(_get(miner, "x", 0) or 0) + 0.5
+                center_y = float(_get(miner, "y", 0) or 0) + 0.5
                 sx, sy = self.world_to_screen(center_x, center_y)
-                self._draw_one_drone(painter, drone, sx, sy, badge=True)
-            if drone_id == self.selected_drone_id:
-                self._draw_selection_ring(painter, sx, sy, drone_id)
+                self._draw_one_miner(painter, miner, sx, sy, badge=True)
+            if miner_id == self.selected_miner_id:
+                self._draw_selection_ring(painter, sx, sy, miner_id)
 
     def paintEvent(self, event: Any) -> None:  # noqa: N802 - Qt override name
         """Draw visible chunk pixmaps, grid, base and the miner."""
@@ -1070,7 +1070,7 @@ class WorldView(QWidget):
         event.accept()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:  # noqa: N802 - Qt override name
-        """Select a drone with the left button; middle/right starts panning."""
+        """Select a miner with the left button; middle/right starts panning."""
         self.setFocus()
         if event.button() in (Qt.MouseButton.MiddleButton, Qt.MouseButton.RightButton):
             self._panning = True
@@ -1078,9 +1078,9 @@ class WorldView(QWidget):
             event.accept()
         elif event.button() == Qt.MouseButton.LeftButton:
             position = event.position()
-            drone_id = self.drone_at_screen(position.x(), position.y())
-            if drone_id is not None:
-                self.select_drone(drone_id)
+            miner_id = self.miner_at_screen(position.x(), position.y())
+            if miner_id is not None:
+                self.select_miner(miner_id)
             event.accept()
         else:
             super().mousePressEvent(event)

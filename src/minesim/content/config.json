@@ -27,7 +27,7 @@
   "pit_depth": 0.8,
   "ore_bump_per_hardness": 0.12,
   "terrain_noise_scale": 12,
-  "drone_costs": [
+  "miner_costs": [
     300,
     800,
     2000,
