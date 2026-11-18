@@ -146,6 +146,7 @@ class Miner:
     id: int = 0
     x: int = 0
     y: int = 0
+    layer: int = 0
     facing: Direction = Direction.NORTH
     inventory: dict[str, int] = field(default_factory=dict)
     player_stats: PlayerStats = field(default_factory=PlayerStats)
@@ -156,6 +157,7 @@ class Miner:
 
     def __post_init__(self) -> None:
         self.id = int(self.id)
+        self.layer = int(self.layer)
         if isinstance(self.facing, str):
             self.facing = Direction.parse(self.facing)
         if self.inventory is None:
@@ -254,12 +256,15 @@ class Miner:
     # -- construction --------------------------------------------------------
 
     @classmethod
-    def from_config(cls, content: Any, x: int = 0, y: int = 0, miner_id: int = 0) -> Miner:
+    def from_config(
+        cls, content: Any, x: int = 0, y: int = 0, miner_id: int = 0, layer: int = 0
+    ) -> Miner:
         """Create a miner with the start values from ``content.config``."""
         return cls(
             id=int(miner_id),
             x=x,
             y=y,
+            layer=int(layer),
             facing=Direction.NORTH,
             inventory={},
             player_stats=PlayerStats.from_config(content),
@@ -286,6 +291,7 @@ class Miner:
             id=int(data.get("id", 0)),
             x=int(data.get("x", 0)),
             y=int(data.get("y", 0)),
+            layer=int(data.get("layer", 0)),
             facing=facing,
             inventory={str(k): int(v) for k, v in dict(data.get("inventory", {})).items()},
             player_stats=player_stats if player_stats is not None else PlayerStats(),
@@ -344,6 +350,7 @@ class Miner:
             id=int(data.get("id", 0)),
             x=int(data.get("x", 0)),
             y=int(data.get("y", 0)),
+            layer=int(data.get("layer", 0)),
             facing=facing,
             inventory={str(k): int(v) for k, v in dict(data.get("inventory", {})).items()},
             player_stats=player_stats,
@@ -355,6 +362,7 @@ class Miner:
             "id": self.id,
             "x": self.x,
             "y": self.y,
+            "layer": self.layer,
             "facing": self.facing.name.lower()
             if isinstance(self.facing, Direction)
             else self.facing,
@@ -368,6 +376,7 @@ class Miner:
             "id": self.id,
             "x": self.x,
             "y": self.y,
+            "layer": self.layer,
             "facing": self.facing.name.lower()
             if isinstance(self.facing, Direction)
             else self.facing,

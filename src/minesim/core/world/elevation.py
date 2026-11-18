@@ -41,12 +41,20 @@ def _smoothstep(t: float) -> float:
     return t * t * (3.0 - 2.0 * t)
 
 
+def _elevation_hash(seed: int, octave: int, ix: int, iy: int, layer: int) -> int:
+    """Hash one lattice corner, mixing the layer only underground."""
+    if layer == 0:
+        return mix64(seed, octave, ix, iy, _ELEVATION_SALT)
+    return mix64(seed, octave, ix, iy, _ELEVATION_SALT, layer)
+
+
 def _corner(
     seed: int,
     octave: int,
     ix: int,
     iy: int,
-    cache: dict[tuple[int, int, int], float] | None = None,
+    cache: dict[tuple[int, int, int, int], float] | None = None,
+    layer: int = 0,
 ) -> float:
     """Hash one lattice corner to a value in ``[0, 1)``.
 
@@ -54,11 +62,11 @@ def _corner(
     corner hashes within one pass.
     """
     if cache is None:
-        return unit(mix64(seed, octave, ix, iy, _ELEVATION_SALT))
-    key = (octave, ix, iy)
+        return unit(_elevation_hash(seed, octave, ix, iy, layer))
+    key = (layer, octave, ix, iy)
     value = cache.get(key)
     if value is None:
-        value = unit(mix64(seed, octave, ix, iy, _ELEVATION_SALT))
+        value = unit(_elevation_hash(seed, octave, ix, iy, layer))
         cache[key] = value
     return value
 
@@ -70,7 +78,8 @@ def value_noise(
     scale: float,
     octave: int = 0,
     *,
-    cache: dict[tuple[int, int, int], float] | None = None,
+    cache: dict[tuple[int, int, int, int], float] | None = None,
+    layer: int = 0,
 ) -> float:
     """Return one octave of smooth value noise in ``[0, 1]``.
 
@@ -84,10 +93,10 @@ def value_noise(
     iy = math.floor(fy)
     tx = _smoothstep(fx - ix)
     ty = _smoothstep(fy - iy)
-    n00 = _corner(seed, octave, ix, iy, cache)
-    n10 = _corner(seed, octave, ix + 1, iy, cache)
-    n01 = _corner(seed, octave, ix, iy + 1, cache)
-    n11 = _corner(seed, octave, ix + 1, iy + 1, cache)
+    n00 = _corner(seed, octave, ix, iy, cache, layer)
+    n10 = _corner(seed, octave, ix + 1, iy, cache, layer)
+    n01 = _corner(seed, octave, ix, iy + 1, cache, layer)
+    n11 = _corner(seed, octave, ix + 1, iy + 1, cache, layer)
     top = n00 + (n10 - n00) * tx
     bottom = n01 + (n11 - n01) * tx
     return top + (bottom - top) * ty
@@ -99,14 +108,15 @@ def elevation_at(
     y: int,
     *,
     noise_scale: float = DEFAULT_TERRAIN_NOISE_SCALE,
-    cache: dict[tuple[int, int, int], float] | None = None,
+    cache: dict[tuple[int, int, int, int], float] | None = None,
+    layer: int = 0,
 ) -> float:
-    """Return the terrain elevation at tile ``(x, y)`` in ``[0, 1]``."""
+    """Return the terrain elevation at tile ``(x, y, layer)`` in ``[0, 1]``."""
     total = 0.0
     amplitude_sum = 0.0
     scale = float(noise_scale)
     for octave, amplitude in enumerate(_OCTAVE_AMPLITUDES):
-        total += amplitude * value_noise(seed, x, y, scale, octave, cache=cache)
+        total += amplitude * value_noise(seed, x, y, scale, octave, cache=cache, layer=layer)
         amplitude_sum += amplitude
         scale *= 0.5
     return total / amplitude_sum
@@ -119,7 +129,8 @@ def tile_height(
     tick: int = 0,
     *,
     tile: Any | None = None,
-    noise_cache: dict[tuple[int, int, int], float] | None = None,
+    noise_cache: dict[tuple[int, int, int, int], float] | None = None,
+    layer: int = 0,
 ) -> float:
     """Return the render height of tile ``(x, y)``.
 
@@ -131,7 +142,7 @@ def tile_height(
     content = world.content
     config = content.config
     if tile is None:
-        tile = world.tile_at(x, y, tick)
+        tile = world.tile_at(x, y, tick, layer=layer)
     if tile.is_base:
         return BASE_TILE_HEIGHT
     biome = content.get_biome(tile.biome_id)
@@ -142,6 +153,7 @@ def tile_height(
             y,
             noise_scale=float(config.terrain_noise_scale),
             cache=noise_cache,
+            layer=layer,
         )
         * float(biome.relief)
         * float(config.height_scale)

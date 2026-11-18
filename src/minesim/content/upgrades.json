@@ -123,5 +123,19 @@
       1500
     ],
     "unlocked_by": "first_order"
+  },
+  {
+    "id": "shaft",
+    "name": "Shaft",
+    "description": "Reach one more underground layer: the maximum layer equals the shaft level.",
+    "stat": "shaft",
+    "per_level": 1,
+    "max_level": 3,
+    "costs": [
+      500,
+      3000,
+      12000
+    ],
+    "unlocked_by": null
   }
 ]

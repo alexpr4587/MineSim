@@ -1,14 +1,14 @@
-"""World storage: generated layer plus a small delta of mined tiles.
+"""World storage: generated layers plus a small delta of mined tiles.
 
-The generated layer is never stored -- tiles are computed on demand
-by :class:`~minesim.core.world.generator.WorldGenerator`. Only
-mined tiles are recorded, in ``delta``: ``{(x, y): (epoch, regen_at)}``
+The generated layers are never stored -- tiles are computed on demand
+by :class:`~minesim.core.world.generator.WorldGenerator`. Only mined
+tiles are recorded, per layer, in ``delta``: ``{(x, y): (epoch, regen_at)}``
 where ``regen_at`` is the tick at which the tile regenerates (or
 ``None`` once it has regenerated). The tile is re-rolled with
 ``epoch + 1`` after regeneration.
 
-Generated chunks are kept in an LRU cache (default 256 chunks) for
-the UI; evicting a chunk never changes any result.
+Generated chunks are kept in a per-layer LRU cache (default 256 chunks
+per layer) for the UI; evicting a chunk never changes any result.
 """
 
 from __future__ import annotations
@@ -80,6 +80,29 @@ def _parse_delta(data: Any) -> Delta:
     return delta
 
 
+def _serialise_delta(delta: Delta) -> dict[str, list[int | None]]:
+    return {f"{x},{y}": [epoch, regen_at] for (x, y), (epoch, regen_at) in sorted(delta.items())}
+
+
+@dataclass(slots=True)
+class _LayerState:
+    """The mutable mined-tile state and caches of one layer."""
+
+    delta: Delta
+    chunk_cache: OrderedDict[tuple[int, int], tuple[tuple[Tile, ...], ...]]
+    chunk_versions: dict[tuple[int, int], int]
+    regen_heap: list[tuple[int, int, int]]
+
+    @classmethod
+    def empty(cls) -> _LayerState:
+        return cls(
+            delta={},
+            chunk_cache=OrderedDict(),
+            chunk_versions={},
+            regen_heap=[],
+        )
+
+
 class _dualmethod:
     """Descriptor allowing from_dict() as classmethod and instance method."""
 
@@ -124,7 +147,7 @@ def _world_from_dict_instance(self: World, data: Any = None, *args: Any, **kwarg
 
 
 class World:
-    """An infinite, deterministic, regenerating world."""
+    """An infinite, deterministic, regenerating multi-layer world."""
 
     def __init__(
         self,
@@ -145,16 +168,8 @@ class World:
         self.content = content
         size = chunk_cache_size if chunk_cache_size is not None else cache_size
         self._cache_size = max(1, int(size))
-        self.delta: Delta = {}
         self.version: int = 0
-        self._chunk_cache: OrderedDict[tuple[int, int], tuple[tuple[Tile, ...], ...]] = (
-            OrderedDict()
-        )
-        self._chunk_versions: dict[tuple[int, int], int] = {}
-        # Min-heap of (regen_at_tick, x, y) for depleted tiles.
-        # Entries may be stale (already regenerated lazily via
-        # tile_at); stale entries are skipped when popped.
-        self._regen_heap: list[tuple[int, int, int]] = []
+        self._layers: dict[int, _LayerState] = {0: _LayerState.empty()}
 
     # -- basic properties -------------------------------------------------
 
@@ -165,7 +180,7 @@ class World:
 
     @property
     def cache_size(self) -> int:
-        """Maximum number of cached chunks."""
+        """Maximum number of cached chunks per layer."""
         return self._cache_size
 
     @property
@@ -174,86 +189,117 @@ class World:
         return self.content.config.chunk_size
 
     @property
-    def chunk_cache(self) -> OrderedDict[tuple[int, int], tuple[tuple[Tile, ...], ...]]:
-        """The live LRU chunk cache (exposed for tests/debugging)."""
-        return self._chunk_cache
+    def delta(self) -> Delta:
+        """The layer-0 mined delta (kept for backwards compatibility)."""
+        return self._layers[0].delta
 
-    def chunk_version(self, cx: int, cy: int) -> int:
-        """Per-chunk counter, bumped when a tile of the chunk changes."""
-        return self._chunk_versions.get((cx, cy), 0)
+    @property
+    def deltas(self) -> dict[int, Delta]:
+        """The mined deltas of every touched layer."""
+        return {layer: state.delta for layer, state in sorted(self._layers.items())}
+
+    @property
+    def chunk_cache(self) -> OrderedDict[tuple[int, int], tuple[tuple[Tile, ...], ...]]:
+        """The layer-0 LRU chunk cache (exposed for tests/debugging)."""
+        return self._layers[0].chunk_cache
+
+    def chunk_cache_for(
+        self, layer: int = 0
+    ) -> OrderedDict[tuple[int, int], tuple[tuple[Tile, ...], ...]]:
+        """Return the live LRU chunk cache of ``layer``."""
+        return self._layer_state(layer).chunk_cache
+
+    def chunk_version(self, cx: int, cy: int, layer: int = 0) -> int:
+        """Per-chunk counter of ``layer``, bumped when a tile changes."""
+        return self._layer_state(layer).chunk_versions.get((cx, cy), 0)
 
     # -- internal helpers --------------------------------------------------
+
+    def _layer_state(self, layer: int) -> _LayerState:
+        layer = int(layer)
+        state = self._layers.get(layer)
+        if state is None:
+            state = _LayerState.empty()
+            self._layers[layer] = state
+        return state
 
     def _chunk_of(self, x: int, y: int) -> tuple[int, int]:
         size = self.chunk_size
         return (x // size, y // size)
 
-    def _bump_chunk(self, x: int, y: int) -> None:
+    def _bump_chunk(self, x: int, y: int, layer: int) -> None:
+        state = self._layer_state(layer)
         chunk = self._chunk_of(x, y)
-        self._chunk_versions[chunk] = self._chunk_versions.get(chunk, 0) + 1
-        self._chunk_cache.pop(chunk, None)
+        state.chunk_versions[chunk] = state.chunk_versions.get(chunk, 0) + 1
+        state.chunk_cache.pop(chunk, None)
 
-    def _advance_tile_if_due(self, x: int, y: int, tick: int) -> bool:
+    def _advance_tile_if_due(self, x: int, y: int, tick: int, layer: int = 0) -> bool:
         """Regenerate a depleted tile whose regen tick has been reached.
 
         Returns True if the tile regenerated. The matching heap entry
         (if any) becomes stale and is skipped by :meth:`advance`.
         """
-        entry = self.delta.get((x, y))
+        state = self._layer_state(layer)
+        entry = state.delta.get((x, y))
         if entry is None:
             return False
         epoch, regen_at = entry
         if regen_at is None or tick < regen_at:
             return False
-        self.delta[(x, y)] = (epoch + 1, None)
+        state.delta[(x, y)] = (epoch + 1, None)
         self.version += 1
-        self._bump_chunk(x, y)
+        self._bump_chunk(x, y, layer)
         return True
 
-    def _advance_chunk_if_due(self, cx: int, cy: int, tick: int) -> None:
+    def _advance_chunk_if_due(self, cx: int, cy: int, tick: int, layer: int = 0) -> None:
         size = self.chunk_size
         x0, y0 = cx * size, cy * size
-        for x, y in list(self.delta):
+        state = self._layer_state(layer)
+        for x, y in list(state.delta):
             if x0 <= x < x0 + size and y0 <= y < y0 + size:
-                self._advance_tile_if_due(x, y, tick)
+                self._advance_tile_if_due(x, y, tick, layer)
 
     # -- public API --------------------------------------------------------
 
-    def tile_at(self, x: int, y: int, tick: int = 0) -> Tile:
-        """Return the tile at ``(x, y)`` as of ``tick``."""
-        if self.generator.is_base(x, y):
-            biome_id = self.generator.biome_id_at(x, y)
+    def tile_at(self, x: int, y: int, tick: int = 0, layer: int = 0) -> Tile:
+        """Return the tile at ``(x, y)`` on ``layer`` as of ``tick``."""
+        layer = int(layer)
+        if self.generator.is_base(x, y, layer):
+            biome_id = self.generator.biome_id_at(x, y, layer)
             return Tile(ore_id=None, biome_id=biome_id, is_base=True, depleted=False)
-        biome = self.generator.biome_at(x, y)
-        self._advance_tile_if_due(x, y, tick)
-        epoch, regen_at = self.delta.get((x, y), (0, None))
+        biome = self.generator.biome_at(x, y, layer)
+        self._advance_tile_if_due(x, y, tick, layer)
+        state = self._layer_state(layer)
+        epoch, regen_at = state.delta.get((x, y), (0, None))
         if regen_at is not None:
             return Tile(ore_id=None, biome_id=biome.id, is_base=False, depleted=True)
-        ore_id = self.generator.ore_at(x, y, epoch=epoch, biome=biome)
+        ore_id = self.generator.ore_at(x, y, epoch=epoch, biome=biome, layer=layer)
         return Tile(ore_id=ore_id, biome_id=biome.id, is_base=False, depleted=False)
 
-    def mine_tile(self, x: int, y: int, tick: int = 0) -> str | None:
-        """Mark the tile at ``(x, y)`` depleted until it regenerates.
+    def mine_tile(self, x: int, y: int, tick: int = 0, layer: int = 0) -> str | None:
+        """Mark the tile at ``(x, y)`` on ``layer`` depleted until it regenerates.
 
         Returns the mined ore id, or ``None`` if the tile is base,
         already depleted, or has no ore. The tile regenerates at
         ``tick + ore.regen_ticks`` and is then re-rolled with the
         next epoch.
         """
-        tile = self.tile_at(x, y, tick)
+        layer = int(layer)
+        tile = self.tile_at(x, y, tick, layer)
         if tile.is_base or tile.depleted or tile.ore_id is None:
             return None
         ore = self.content.get_ore(tile.ore_id)
-        epoch = self.delta.get((x, y), (0, None))[0]
+        state = self._layer_state(layer)
+        epoch = state.delta.get((x, y), (0, None))[0]
         regen_at = tick + ore.regen_ticks
-        self.delta[(x, y)] = (epoch, regen_at)
-        heapq.heappush(self._regen_heap, (regen_at, x, y))
+        state.delta[(x, y)] = (epoch, regen_at)
+        heapq.heappush(state.regen_heap, (regen_at, x, y))
         self.version += 1
-        self._bump_chunk(x, y)
+        self._bump_chunk(x, y, layer)
         return tile.ore_id
 
-    def advance(self, tick: int) -> list[tuple[int, int]]:
-        """Process all regenerations due at ``tick``.
+    def advance(self, tick: int, layer: int = 0) -> list[tuple[int, int]]:
+        """Process all regenerations due at ``tick`` on ``layer``.
 
         Pops due entries from the min-heap of ``(regen_at_tick, x, y)``
         so each depleted tile regenerates exactly once, at its regen
@@ -267,66 +313,96 @@ class World:
         Returns the coordinates of the tiles that regenerated during
         this call, in regeneration order.
         """
+        state = self._layer_state(layer)
         regenerated: list[tuple[int, int]] = []
-        heap = self._regen_heap
+        heap = state.regen_heap
         while heap and heap[0][0] <= tick:
             regen_at, x, y = heapq.heappop(heap)
-            entry = self.delta.get((x, y))
+            entry = state.delta.get((x, y))
             if entry is None or entry[1] != regen_at:
                 continue
-            if self._advance_tile_if_due(x, y, tick):
+            if self._advance_tile_if_due(x, y, tick, layer):
                 regenerated.append((x, y))
         return regenerated
 
-    def chunk_tiles(self, cx: int, cy: int, tick: int = 0) -> tuple[tuple[Tile, ...], ...]:
-        """Return the tiles of chunk ``(cx, cy)`` as rows of tiles.
+    def advance_all(self, tick: int) -> list[tuple[int, int, int]]:
+        """Advance every touched layer and return ``(layer, x, y)`` entries."""
+        regenerated: list[tuple[int, int, int]] = []
+        for layer in sorted(self._layers):
+            for x, y in self.advance(tick, layer):
+                regenerated.append((layer, x, y))
+        return regenerated
+
+    def chunk_tiles(
+        self, cx: int, cy: int, tick: int = 0, layer: int = 0
+    ) -> tuple[tuple[Tile, ...], ...]:
+        """Return the tiles of chunk ``(cx, cy)`` on ``layer`` as rows of tiles.
 
         Row 0 is the smallest y in the chunk, column 0 the smallest
         x. Results are served from an LRU cache; a cached chunk is
         rebuilt whenever a tile in it is mined or regenerates.
         """
+        layer = int(layer)
         key = (cx, cy)
-        self._advance_chunk_if_due(cx, cy, tick)
-        cached = self._chunk_cache.get(key)
+        state = self._layer_state(layer)
+        self._advance_chunk_if_due(cx, cy, tick, layer)
+        cached = state.chunk_cache.get(key)
         if cached is not None:
-            self._chunk_cache.move_to_end(key)
+            state.chunk_cache.move_to_end(key)
             return cached
         size = self.chunk_size
         x0, y0 = cx * size, cy * size
         rows = tuple(
-            tuple(self.tile_at(x0 + dx, y0 + dy, tick) for dx in range(size)) for dy in range(size)
+            tuple(self.tile_at(x0 + dx, y0 + dy, tick, layer) for dx in range(size))
+            for dy in range(size)
         )
-        self._chunk_cache[key] = rows
-        self._chunk_cache.move_to_end(key)
-        while len(self._chunk_cache) > self._cache_size:
-            self._chunk_cache.popitem(last=False)
+        state.chunk_cache[key] = rows
+        state.chunk_cache.move_to_end(key)
+        while len(state.chunk_cache) > self._cache_size:
+            state.chunk_cache.popitem(last=False)
         return rows
 
-    # -- serialisation (delta only) ---------------------------------------
+    # -- serialisation (deltas only) --------------------------------------
 
     def to_dict(self) -> dict[str, Any]:
-        """Return a JSON-serialisable dict holding only the delta."""
-        return {
-            "delta": {
-                f"{x},{y}": [epoch, regen_at]
-                for (x, y), (epoch, regen_at) in sorted(self.delta.items())
-            }
+        """Return a JSON-serialisable dict holding the per-layer deltas."""
+        data: dict[str, Any] = {"delta": _serialise_delta(self._layers[0].delta)}
+        layer_deltas = {
+            str(layer): _serialise_delta(state.delta)
+            for layer, state in sorted(self._layers.items())
+            if layer != 0 and state.delta
         }
+        if layer_deltas:
+            data["layer_deltas"] = layer_deltas
+        return data
 
     def _load_delta(self, data: Any) -> None:
-        self.delta = _parse_delta(data)
-        self._chunk_cache.clear()
-        self._chunk_versions.clear()
-        self._regen_heap = [
-            (regen_at, x, y)
-            for (x, y), (_epoch, regen_at) in self.delta.items()
-            if regen_at is not None
-        ]
-        heapq.heapify(self._regen_heap)
+        layers: dict[int, _LayerState] = {0: _LayerState.empty()}
+        layers[0].delta = _parse_delta(data)
+        raw_layers: Any = None
+        if isinstance(data, Mapping):
+            raw_layers = data.get("layer_deltas")
+        if isinstance(raw_layers, Mapping):
+            for key, payload in raw_layers.items():
+                layer = int(key)
+                if layer == 0:
+                    layers[0].delta = _parse_delta(payload)
+                    continue
+                state = _LayerState.empty()
+                state.delta = _parse_delta(payload)
+                layers[layer] = state
+        for state in layers.values():
+            state.regen_heap = [
+                (regen_at, x, y)
+                for (x, y), (_epoch, regen_at) in state.delta.items()
+                if regen_at is not None
+            ]
+            heapq.heapify(state.regen_heap)
+        self._layers = layers
         self.version += 1
 
     def load_dict(self, data: Any) -> None:
-        """Replace the delta from a :meth:`to_dict` payload."""
+        """Replace the deltas from a :meth:`to_dict` payload."""
         self._load_delta(data)
 
     def load_delta(self, data: Any) -> None:

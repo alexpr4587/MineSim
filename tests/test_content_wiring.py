@@ -106,9 +106,18 @@ def test_every_unlockable_thing_has_exactly_one_unlocking_achievement(content):
 def test_initial_unlock_sets(content):
     state = ProgressionState(content)
     assert state.unlocked_ores == {"stone"}
-    assert state.unlocked_functions == {"move", "mine", "peek", "position"}
+    assert state.unlocked_functions == {
+        "move",
+        "mine",
+        "peek",
+        "position",
+        "layer",
+        "layers",
+        "descend",
+        "ascend",
+    }
     assert state.unlocked_modules == {"math"}
-    assert state.unlocked_upgrades == set()
+    assert state.unlocked_upgrades == {"shaft"}
     assert state.unlocked_recipes == set()
     assert state.unlocked_features == set()
     assert state.unlocked_skins == {"rusty_bot"}

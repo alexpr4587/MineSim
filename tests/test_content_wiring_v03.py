@@ -97,10 +97,19 @@ def test_v03_initial_unlock_sets(content):
     state = ProgressionState(content)
     assert state.unlocked_recipes == set()
     assert state.unlocked_features == set()
-    assert state.unlocked_upgrades == set()
+    assert state.unlocked_upgrades == {"shaft"}
     assert state.unlocked_modules == {"math"}
     assert state.unlocked_examples == {"01_hello"}
-    assert state.unlocked_functions == {"move", "mine", "peek", "position"}
+    assert state.unlocked_functions == {
+        "move",
+        "mine",
+        "peek",
+        "position",
+        "layer",
+        "layers",
+        "descend",
+        "ascend",
+    }
 
 
 def test_scripted_headless_session_unlocks_a_chain_across_tabs():

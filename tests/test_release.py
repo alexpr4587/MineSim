@@ -131,11 +131,11 @@ def test_v0_2_0_save_fixture_migrates() -> None:
     assert raw["version"] == 3
 
     migrated = migrate(raw)
-    assert CURRENT_VERSION == 9
+    assert CURRENT_VERSION == 10
     assert migrated["version"] == CURRENT_VERSION
     assert migrated["player_stats"]["money"] == 43
     assert migrated["fleet"] == [
-        {"id": 0, "x": 0, "y": 0, "facing": "west", "inventory": {}, "script": ""}
+        {"id": 0, "x": 0, "y": 0, "layer": 0, "facing": "west", "inventory": {}, "script": ""}
     ]
     assert migrated["warehouse"] == {}
     assert migrated["market"] == {}

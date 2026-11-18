@@ -1,0 +1,38 @@
+[
+  {
+    "index": 0,
+    "id": "surface",
+    "name": "Surface",
+    "energy_multiplier": 1.0,
+    "heat": 0,
+    "floor_tint": "#4a4a42",
+    "light_ambient": 1.0
+  },
+  {
+    "index": 1,
+    "id": "galleries",
+    "name": "Old Galleries",
+    "energy_multiplier": 1.2,
+    "heat": 0,
+    "floor_tint": "#4a4438",
+    "light_ambient": 0.7
+  },
+  {
+    "index": 2,
+    "id": "deep",
+    "name": "Deep Level",
+    "energy_multiplier": 1.5,
+    "heat": 1,
+    "floor_tint": "#3a2e3e",
+    "light_ambient": 0.5
+  },
+  {
+    "index": 3,
+    "id": "abyss",
+    "name": "Abyssal Rock",
+    "energy_multiplier": 2.0,
+    "heat": 2,
+    "floor_tint": "#2b1e2a",
+    "light_ambient": 0.3
+  }
+]

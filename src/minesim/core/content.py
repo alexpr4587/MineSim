@@ -25,6 +25,7 @@ from minesim.core.schemas import (
     Example,
     Feature,
     FunctionSpec,
+    Layer,
     MarketEntry,
     ModuleSpec,
     Ore,
@@ -57,6 +58,7 @@ class Content:
     market: dict[str, MarketEntry] = field(default_factory=dict)
     events: dict[str, WorldEventDefinition] = field(default_factory=dict)
     biomes: dict[str, Biome] = field(default_factory=dict)
+    layers: dict[int, Layer] = field(default_factory=dict)
     upgrades: dict[str, Upgrade] = field(default_factory=dict)
     functions: dict[str, FunctionSpec] = field(default_factory=dict)
     modules: dict[str, ModuleSpec] = field(default_factory=dict)
@@ -211,6 +213,34 @@ class Content:
             return self.biomes[biome_id]
         except KeyError:
             raise ContentError(f"biomes.json: $.id: unknown biome id '{biome_id}'") from None
+
+    def get_layer(self, index: int) -> Layer:
+        """Return the layer with ``index`` or raise ContentError."""
+        try:
+            return self.layers[int(index)]
+        except (KeyError, TypeError, ValueError):
+            raise ContentError(f"layers.json: $.index: unknown layer index '{index}'") from None
+
+    def layer(self, index: int) -> Layer:
+        """Alias for :meth:`get_layer`."""
+        return self.get_layer(index)
+
+    def get_layer_by_id(self, layer_id: str) -> Layer:
+        """Return the layer with ``layer_id`` or raise ContentError."""
+        for layer in self.layers.values():
+            if layer.id == str(layer_id):
+                return layer
+        raise ContentError(f"layers.json: $.id: unknown layer id '{layer_id}'")
+
+    @property
+    def layer_list(self) -> list[Layer]:
+        """All layers ordered by index."""
+        return [self.layers[index] for index in sorted(self.layers)]
+
+    @property
+    def layers_by_index(self) -> dict[int, Layer]:
+        """Alias for :attr:`layers`."""
+        return self.layers
 
     def get_upgrade(self, upgrade_id: str) -> Upgrade:
         """Return the upgrade with ``upgrade_id`` or raise ContentError."""
@@ -428,6 +458,7 @@ _KNOWN_SCRIPT_FEATURES = {
 def _cross_validate(
     ores: dict[str, Ore],
     biomes: dict[str, Biome],
+    layers: dict[int, Layer] | None = None,
     achievements: dict[str, Achievement] | None = None,
     upgrades: dict[str, Upgrade] | None = None,
     functions: dict[str, FunctionSpec] | None = None,
@@ -439,6 +470,7 @@ def _cross_validate(
     recipes: dict[str, Recipe] | None = None,
     features: dict[str, Feature] | None = None,
 ) -> None:
+    layers = layers or {}
     products = products or {}
     market = market or {}
     recipes = recipes or {}
@@ -463,6 +495,11 @@ def _cross_validate(
                         f"unknown item id '{item_id}' in recipe '{recipe.id}'"
                     )
     for biome_index, biome in enumerate(biomes.values()):
+        if layers and biome.layer not in layers:
+            raise ContentError(
+                f"biomes.json: $.{biome_index}.layer: "
+                f"unknown layer index '{biome.layer}' in biome '{biome.id}'"
+            )
         for ore_id in biome.ore_weights:
             if ore_id not in ores:
                 raise ContentError(
@@ -722,6 +759,23 @@ def load_content(content_dir: str | Path | None = None) -> Content:
     biomes_list = _validate(biomes_data, TypeAdapter(list[Biome]), "biomes.json")
     biomes = _index_by_id(biomes_list, "biomes.json", "biome")
 
+    layers: dict[int, Layer] = {}
+    try:
+        layers_data = _read_json(base_path, "layers.json")
+    except ContentError as exc:
+        if "file not found" not in str(exc):
+            raise
+    else:
+        if isinstance(layers_data, dict):
+            layers_data = layers_data.get("layers", layers_data)
+        layers_list = _validate(layers_data, TypeAdapter(list[Layer]), "layers.json")
+        for index, layer in enumerate(layers_list):
+            if layer.index in layers:
+                raise ContentError(
+                    f"layers.json: $.{index}.index: duplicate layer index '{layer.index}'"
+                )
+            layers[layer.index] = layer
+
     upgrades: dict[str, Upgrade] = {}
     try:
         upgrades_data = _read_json(base_path, "upgrades.json")
@@ -805,6 +859,7 @@ def load_content(content_dir: str | Path | None = None) -> Content:
     _cross_validate(
         ores,
         biomes,
+        layers,
         achievements,
         upgrades,
         functions,
@@ -843,6 +898,7 @@ def load_content(content_dir: str | Path | None = None) -> Content:
         market=market,
         events=events,
         biomes=biomes,
+        layers=layers,
         upgrades=upgrades,
         functions=functions,
         modules=modules,

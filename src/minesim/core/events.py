@@ -16,6 +16,7 @@ __all__ = [
     "MinerSpawned",
     "EstimateSubmitted",
     "EventBus",
+    "LayerChanged",
     "MineAttempted",
     "Moved",
     "OreMined",
@@ -42,6 +43,7 @@ class Moved:
     miner_id: int = 0
     x: int = 0
     y: int = 0
+    layer: int = 0
     direction: str | None = None
     in_slow_zone: bool = False
 
@@ -58,6 +60,7 @@ class MineAttempted:
 
     miner_id: int = 0
     ore_id: str | None = None
+    layer: int = 0
     success: bool = False
     reason: str | None = None
 
@@ -69,6 +72,7 @@ class OreMined:
     miner_id: int = 0
     ore_id: str | None = None
     amount: int = 1
+    layer: int = 0
     in_rich_vein: bool = False
 
 
@@ -143,6 +147,7 @@ class TileRegenerated:
 
     x: int = 0
     y: int = 0
+    layer: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -177,6 +182,15 @@ class MinerRemoved:
     """A miner was removed from the fleet."""
 
     id: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class LayerChanged:
+    """A miner descended to or ascended from a layer."""
+
+    miner_id: int = 0
+    from_layer: int = 0
+    to_layer: int = 0
 
 
 @dataclass(frozen=True, slots=True)

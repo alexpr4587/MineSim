@@ -232,10 +232,18 @@ class WorldEvents:
         active.sort(key=lambda event: event.id)
         return active
 
-    def modifiers_at(self, x: int, y: int, tick: int) -> dict[str, int]:
-        """Return the yield and move multipliers at tile ``(x, y)``."""
+    def modifiers_at(self, x: int, y: int, tick: int, layer: int = 0) -> dict[str, int]:
+        """Return the yield and move multipliers at tile ``(x, y, layer)``.
+
+        World events only affect the surface; underground layers are neutral.
+        """
         yield_multiplier = 1
         move_multiplier = 1
+        if int(layer) != 0:
+            return {
+                "yield_multiplier": yield_multiplier,
+                "move_multiplier": move_multiplier,
+            }
         for event in self.active_at(tick):
             if event.x is None or event.y is None:
                 continue

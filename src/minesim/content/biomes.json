@@ -2,6 +2,7 @@
   {
     "id": "quarry",
     "name": "Quarry",
+    "layer": 0,
     "min_distance": 0,
     "weight": 10,
     "floor_color": "#4a4a42",
@@ -16,6 +17,7 @@
   {
     "id": "deep_vein",
     "name": "Deep Vein",
+    "layer": 0,
     "min_distance": 40,
     "weight": 5,
     "floor_color": "#3a3348",
@@ -32,6 +34,7 @@
   {
     "id": "crystal_caverns",
     "name": "Crystal Caverns",
+    "layer": 0,
     "min_distance": 100,
     "weight": 2,
     "floor_color": "#2f2440",
@@ -44,5 +47,55 @@
     },
     "relief": 1.4,
     "shadow_color": "#1c1530"
+  },
+  {
+    "id": "gallery",
+    "name": "Old Galleries",
+    "layer": 1,
+    "min_distance": 0,
+    "weight": 1,
+    "floor_color": "#4a4438",
+    "ore_weights": {
+      "stone": 35,
+      "coal": 15,
+      "copper": 20,
+      "iron": 20,
+      "silver": 10
+    },
+    "relief": 0.8,
+    "shadow_color": "#2a241e"
+  },
+  {
+    "id": "deep_seam",
+    "name": "Deep Level",
+    "layer": 2,
+    "min_distance": 0,
+    "weight": 1,
+    "floor_color": "#3a2e3e",
+    "ore_weights": {
+      "stone": 25,
+      "iron": 20,
+      "silver": 25,
+      "gold": 20,
+      "ruby": 10
+    },
+    "relief": 1.1,
+    "shadow_color": "#211a26"
+  },
+  {
+    "id": "abyssal_vein",
+    "name": "Abyssal Rock",
+    "layer": 3,
+    "min_distance": 0,
+    "weight": 1,
+    "floor_color": "#2b1e2a",
+    "ore_weights": {
+      "stone": 15,
+      "silver": 20,
+      "gold": 35,
+      "ruby": 30
+    },
+    "relief": 1.5,
+    "shadow_color": "#150d14"
   }
 ]

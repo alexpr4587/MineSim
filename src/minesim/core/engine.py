@@ -31,6 +31,8 @@ _ZERO_COST_NAMES = {
     "Biome",
     "Distance",
     "Events",
+    "Layer",
+    "Layers",
     "Inspect",
     "Inventory",
     "OreInfo",
@@ -374,10 +376,16 @@ class GameEngine:
             return False
         miner = self._miners.pop(miner_id)
         try:
-            tile = self.world.tile_at(miner.x, miner.y, self.tick)
+            tile = self.world.tile_at(
+                miner.x, miner.y, self.tick, layer=int(getattr(miner, "layer", 0) or 0)
+            )
         except Exception:
             tile = None
-        if tile is not None and getattr(tile, "is_base", False):
+        if (
+            tile is not None
+            and getattr(tile, "is_base", False)
+            and int(getattr(miner, "layer", 0) or 0) == 0
+        ):
             for item_id, count in sorted(dict(miner.inventory).items()):
                 accepted = self.warehouse.add(item_id, int(count))
                 if accepted >= int(count):
@@ -498,15 +506,25 @@ class GameEngine:
         """Advance the engine by one tick, processing miners by id."""
         self.tick += 1
         self._events.publish(TickAdvanced(tick=self.tick))
-        advance = getattr(self.world, "advance", None)
-        if callable(advance):
+        advance_all = getattr(self.world, "advance_all", None)
+        if callable(advance_all):
             try:
-                regenerated = advance(self.tick)
+                regenerated = advance_all(self.tick)
             except Exception:
                 regenerated = None
             if regenerated:
-                for x, y in regenerated:
-                    self._events.publish(TileRegenerated(x=x, y=y))
+                for layer, x, y in regenerated:
+                    self._events.publish(TileRegenerated(x=x, y=y, layer=layer))
+        else:
+            advance = getattr(self.world, "advance", None)
+            if callable(advance):
+                try:
+                    regenerated = advance(self.tick)
+                except Exception:
+                    regenerated = None
+                if regenerated:
+                    for x, y in regenerated:
+                        self._events.publish(TileRegenerated(x=x, y=y))
         self._sync_world_events()
         if self.market is not None:
             self.market.advance(self.tick)

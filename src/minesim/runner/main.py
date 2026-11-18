@@ -67,6 +67,15 @@ _DEFAULT_FUNCTIONS: tuple[dict[str, Any], ...] = (
     {"name": "mine", "signature": "mine()", "doc": "Mine the current tile.", "category": ""},
     {"name": "peek", "signature": "peek()", "doc": "Look at the current tile.", "category": ""},
     {"name": "position", "signature": "position()", "doc": "Return (x, y).", "category": ""},
+    {"name": "layer", "signature": "layer()", "doc": "Return the current layer.", "category": ""},
+    {
+        "name": "layers",
+        "signature": "layers()",
+        "doc": "Return the underground layers.",
+        "category": "",
+    },
+    {"name": "descend", "signature": "descend()", "doc": "Descend one layer.", "category": ""},
+    {"name": "ascend", "signature": "ascend()", "doc": "Ascend one layer.", "category": ""},
     {"name": "sell", "signature": "sell()", "doc": "Sell the inventory.", "category": ""},
     {
         "name": "unload",

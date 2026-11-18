@@ -3,6 +3,8 @@
   "chunk_size": 16,
   "region_size_chunks": 2,
   "base_half_size": 1,
+  "station_half_size": 1,
+  "shaft_ticks": 20,
   "tick_hz": 10,
   "move_ticks": 4,
   "mine_tick_base": 3,

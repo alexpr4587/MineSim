@@ -10,6 +10,7 @@ from minesim.core.direction import Direction
 from minesim.core.events import (
     ContractDelivered,
     EstimateSubmitted,
+    LayerChanged,
     MineAttempted,
     Moved,
     OreMined,
@@ -22,12 +23,16 @@ from minesim.core.events import (
 from minesim.core.rng import mix64, unit
 
 __all__ = [
+    "Ascend",
     "Biome",
     "BuyUpgrade",
+    "Descend",
     "Distance",
     "Events",
     "Inspect",
     "Inventory",
+    "Layer",
+    "Layers",
     "Mine",
     "Move",
     "OreInfo",
@@ -59,6 +64,8 @@ __all__ = [
 _ZERO_COST_NAMES = {
     "Biome",
     "Distance",
+    "Layer",
+    "Layers",
     "Events",
     "Inspect",
     "Inventory",
@@ -225,14 +232,63 @@ def _catalog(engine: Any) -> Any:
     return _get(engine, "catalog")
 
 
+def _miner_layer(miner: Any) -> int:
+    """Return the layer of ``miner`` (0 when it has no layer)."""
+    return int(_get(miner, "layer", 0) or 0)
+
+
+def _is_surface_base(engine: Any, miner: Any) -> bool:
+    """Return True when ``miner`` stands on the surface base."""
+    world = _get(engine, "world")
+    if miner is None or world is None or _miner_layer(miner) != 0:
+        return False
+    try:
+        return bool(world.tile_at(miner.x, miner.y, _tick(engine), layer=0).is_base)
+    except Exception:
+        return False
+
+
 def _on_base(engine: Any, miner: Any) -> bool:
+    """Backwards-compatible alias for :func:`_is_surface_base`."""
+    return _is_surface_base(engine, miner)
+
+
+def _is_station(engine: Any, miner: Any) -> bool:
+    """Return True when ``miner`` stands on a station of its layer."""
     world = _get(engine, "world")
     if miner is None or world is None:
         return False
     try:
-        return bool(world.tile_at(miner.x, miner.y, _tick(engine)).is_base)
+        tile = world.tile_at(miner.x, miner.y, _tick(engine), layer=_miner_layer(miner))
     except Exception:
         return False
+    return bool(tile.is_base)
+
+
+def _shaft_level(engine: Any) -> int:
+    """Return the bought shaft upgrade level (the deepest reachable layer)."""
+    levels = _get(engine, "upgrade_levels")
+    if isinstance(levels, dict):
+        return int(levels.get("shaft", 0) or 0)
+    player = _get(engine, "player_stats")
+    levels = _get(player, "upgrades", {})
+    if isinstance(levels, dict):
+        return int(levels.get("shaft", 0) or 0)
+    return 0
+
+
+def _has_layer(engine: Any, layer: int) -> bool:
+    content = _get(engine, "content")
+    layers = _get(content, "layers", None)
+    return not layers or int(layer) in layers
+
+
+def _delta_for(world: Any, layer: int) -> Any:
+    deltas = _get(world, "deltas", None)
+    if isinstance(deltas, dict):
+        return deltas.get(int(layer), {})
+    delta = _get(world, "delta", None)
+    return delta if int(layer) == 0 and isinstance(delta, dict) else {}
 
 
 def _item_unlocked(engine: Any, item_id: str) -> bool:
@@ -277,7 +333,8 @@ def _mine_failure(engine: Any, miner: Any = None) -> dict[str, Any] | None:
     content = ctx["content"]
     if miner is None or world is None or content is None:
         return {"ok": False, "reason": "nothing_to_mine", "ore_id": None}
-    tile = world.tile_at(miner.x, miner.y, _tick(engine))
+    layer = _miner_layer(miner)
+    tile = world.tile_at(miner.x, miner.y, _tick(engine), layer=layer)
     if tile.is_base or tile.depleted or tile.ore_id is None:
         return {"ok": False, "reason": "nothing_to_mine", "ore_id": None}
     ore_id = tile.ore_id
@@ -314,13 +371,15 @@ class Move:
         events = _world_events(ctx["engine"])
         if events is not None and miner is not None:
             tick = _tick(ctx["engine"])
+            layer = _miner_layer(miner)
             multiplier = int(
-                events.modifiers_at(miner.x, miner.y, tick).get("move_multiplier", 1) or 1
+                events.modifiers_at(miner.x, miner.y, tick, layer).get("move_multiplier", 1) or 1
             )
             destination = events.modifiers_at(
                 miner.x + self.direction.dx,
                 miner.y + self.direction.dy,
                 tick,
+                layer,
             )
             multiplier = max(multiplier, int(destination.get("move_multiplier", 1) or 1))
             if multiplier > 1:
@@ -331,13 +390,15 @@ class Move:
         miner = _miner(engine, miner)
         events = _world_events(engine)
         in_slow_zone = False
+        layer = _miner_layer(miner)
         if events is not None:
             tick = _tick(engine)
-            current = events.modifiers_at(miner.x, miner.y, tick)
+            current = events.modifiers_at(miner.x, miner.y, tick, layer)
             destination = events.modifiers_at(
                 miner.x + self.direction.dx,
                 miner.y + self.direction.dy,
                 tick,
+                layer,
             )
             in_slow_zone = (
                 int(current.get("move_multiplier", 1) or 1) > 1
@@ -353,6 +414,7 @@ class Move:
                 miner_id=_miner_id(miner),
                 x=miner.x,
                 y=miner.y,
+                layer=layer,
                 direction=self.direction.name.lower(),
                 in_slow_zone=in_slow_zone,
             ),
@@ -365,6 +427,84 @@ class Move:
             "direction": self.direction.name.lower(),
             "facing": self.direction.name.lower(),
         }
+
+
+def _shaft_target(engine: Any, miner: Any) -> int | None:
+    """Return the shaft target layer of a descend, or None if not allowed."""
+    layer = _miner_layer(miner)
+    target = layer + 1
+    if target > _shaft_level(engine) or not _has_layer(engine, target):
+        return None
+    return target
+
+
+def _change_layer(engine: Any, miner: Any, target: int, from_layer: int) -> dict[str, Any]:
+    miner.layer = int(target)
+    miner.x = 0
+    miner.y = 0
+    _publish(
+        engine,
+        LayerChanged(
+            miner_id=_miner_id(miner),
+            from_layer=int(from_layer),
+            to_layer=int(target),
+        ),
+    )
+    return {"ok": True, "layer": int(target), "reason": None}
+
+
+@dataclass(frozen=True, slots=True)
+class Descend:
+    """Use a shaft station to travel one layer deeper."""
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        ctx = _resolve_context(*args, **kwargs)
+        engine = ctx["engine"]
+        miner = ctx["miner"]
+        if miner is None or not _is_station(engine, miner):
+            return 0
+        if _shaft_target(engine, miner) is None:
+            return 0
+        content = ctx["content"]
+        return int(getattr(content.config, "shaft_ticks", 20))
+
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        miner = _miner(engine, miner)
+        layer = _miner_layer(miner)
+        if not _is_station(engine, miner):
+            return {"ok": False, "layer": layer, "reason": "not_on_station"}
+        target = _shaft_target(engine, miner)
+        if target is None:
+            return {"ok": False, "layer": layer, "reason": "shaft_too_shallow"}
+        return _change_layer(engine, miner, target, layer)
+
+
+@dataclass(frozen=True, slots=True)
+class Ascend:
+    """Use a shaft station to travel one layer towards the surface."""
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        ctx = _resolve_context(*args, **kwargs)
+        engine = ctx["engine"]
+        miner = ctx["miner"]
+        if miner is None or not _is_station(engine, miner):
+            return 0
+        if _miner_layer(miner) == 0:
+            return 0
+        content = ctx["content"]
+        return int(getattr(content.config, "shaft_ticks", 20))
+
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        miner = _miner(engine, miner)
+        layer = _miner_layer(miner)
+        if not _is_station(engine, miner):
+            return {"ok": False, "layer": layer, "reason": "not_on_station"}
+        if layer == 0:
+            return {"ok": False, "layer": 0, "reason": "already_surface"}
+        target = layer - 1
+        if not _has_layer(engine, target):
+            return {"ok": False, "layer": layer, "reason": "unknown_layer"}
+        return _change_layer(engine, miner, target, layer)
 
 
 @dataclass(frozen=True, slots=True)
@@ -381,7 +521,8 @@ class Mine:
             return 0
         if _mine_failure(engine, miner) is not None:
             return 0
-        ore = _get_ore(content, world.tile_at(miner.x, miner.y, _tick(engine)).ore_id)
+        layer = _miner_layer(miner)
+        ore = _get_ore(content, world.tile_at(miner.x, miner.y, _tick(engine), layer=layer).ore_id)
         power = max(1, int(miner.tool_power))
         return int(math.ceil(ore.hardness * content.config.mine_tick_base / power))
 
@@ -396,16 +537,20 @@ class Mine:
                 MineAttempted(
                     miner_id=_miner_id(miner),
                     ore_id=failure.get("ore_id"),
+                    layer=_miner_layer(miner),
                     success=False,
                     reason=str(failure.get("reason")),
                 ),
             )
             return failure
-        ore_id = world.tile_at(miner.x, miner.y, _tick(engine)).ore_id
+        layer = _miner_layer(miner)
+        ore_id = world.tile_at(miner.x, miner.y, _tick(engine), layer=layer).ore_id
         ore = _get_ore(content, ore_id)
         attempt_counter = int(_get(engine, "attempt_counter", 0) or 0)
         seed = _seed(engine, content, world)
         dice = (seed, _tick(engine), miner.x, miner.y, attempt_counter)
+        if layer != 0:
+            dice = (*dice, layer)
         miner_id = _miner_id(miner)
         if miner_id != 0:
             dice = (*dice, miner_id)
@@ -429,6 +574,7 @@ class Mine:
             MineAttempted(
                 miner_id=miner_id,
                 ore_id=ore_id,
+                layer=layer,
                 success=success,
                 reason=None if success else "miss",
             ),
@@ -444,19 +590,20 @@ class Mine:
         events = _world_events(engine)
         yield_multiplier = 1
         if events is not None:
-            modifiers = events.modifiers_at(miner.x, miner.y, _tick(engine))
+            modifiers = events.modifiers_at(miner.x, miner.y, _tick(engine), layer)
             yield_multiplier = max(1, int(modifiers.get("yield_multiplier", 1) or 1))
         free = max(0, int(miner.capacity) - int(miner.inventory_size))
         amount = max(1, min(yield_multiplier, free))
         in_rich_vein = yield_multiplier > 1
         miner.add_item(ore_id, amount)
-        world.mine_tile(miner.x, miner.y, _tick(engine))
+        world.mine_tile(miner.x, miner.y, _tick(engine), layer=layer)
         _publish(
             engine,
             OreMined(
                 miner_id=miner_id,
                 ore_id=ore_id,
                 amount=amount,
+                layer=layer,
                 in_rich_vein=in_rich_vein,
             ),
         )
@@ -479,7 +626,8 @@ class Peek:
 
     def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
         miner = _miner(engine, miner)
-        tile = engine.world.tile_at(miner.x, miner.y, _tick(engine))
+        layer = _miner_layer(miner)
+        tile = engine.world.tile_at(miner.x, miner.y, _tick(engine), layer=layer)
         if tile.is_base or tile.depleted or tile.ore_id is None:
             value: str | None = None
         elif not _is_unlocked(engine, engine.content, tile.ore_id):
@@ -509,10 +657,11 @@ class Scan:
     def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
         miner = _miner(engine, miner)
         effective = min(max(0, int(self.radius)), max(0, int(miner.scan_radius)))
+        layer = _miner_layer(miner)
         tiles: list[list[Any]] = []
         for dy in range(-effective, effective + 1):
             for dx in range(-effective, effective + 1):
-                tile = engine.world.tile_at(miner.x + dx, miner.y + dy, _tick(engine))
+                tile = engine.world.tile_at(miner.x + dx, miner.y + dy, _tick(engine), layer=layer)
                 if tile.ore_id is None:
                     continue
                 label = (
@@ -539,8 +688,7 @@ class Sell:
         world = ctx["world"]
         content = ctx["content"]
         if miner is not None and world is not None:
-            tile = world.tile_at(miner.x, miner.y, _tick(ctx["engine"]))
-            if not tile.is_base:
+            if not _is_surface_base(ctx["engine"], miner):
                 return 0
         if content is not None:
             return int(content.config.sell_ticks)
@@ -548,8 +696,8 @@ class Sell:
 
     def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
         miner = _miner(engine, miner)
-        if not _on_base(engine, miner):
-            return {"ok": False, "reason": "not_on_base"}
+        if not _is_surface_base(engine, miner):
+            return {"ok": False, "reason": "not_on_surface_base"}
         items = {item_id: int(count) for item_id, count in miner.inventory.items() if count > 0}
         market = _market(engine)
         catalog = _catalog(engine)
@@ -598,16 +746,16 @@ class Unload:
     def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
         ctx = _resolve_context(*args, **kwargs)
         miner = ctx["miner"]
-        if miner is not None and _on_base(ctx["engine"], miner):
+        if miner is not None and _is_surface_base(ctx["engine"], miner):
             return 1
         return 0
 
     def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        miner = _miner(engine, miner)
+        if not _is_surface_base(engine, miner):
+            return {"ok": False, "reason": "not_on_surface_base"}
         if not _is_feature_unlocked(engine, "warehouse"):
             return _locked_feature("warehouse")
-        miner = _miner(engine, miner)
-        if not _on_base(engine, miner):
-            return {"ok": False, "reason": "not_on_base"}
         warehouse = _warehouse(engine)
         if warehouse is None:
             return {"ok": False, "reason": "no_warehouse"}
@@ -647,18 +795,18 @@ class SellStock:
         ctx = _resolve_context(*args, **kwargs)
         miner = ctx["miner"]
         content = ctx["content"]
-        if miner is None or not _on_base(ctx["engine"], miner):
+        if miner is None or not _is_surface_base(ctx["engine"], miner):
             return 0
         if content is not None:
             return int(content.config.sell_ticks)
         return 2
 
     def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        miner = _miner(engine, miner)
+        if not _is_surface_base(engine, miner):
+            return {"ok": False, "reason": "not_on_surface_base"}
         if not _is_feature_unlocked(engine, "market"):
             return _locked_feature("market")
-        miner = _miner(engine, miner)
-        if not _on_base(engine, miner):
-            return {"ok": False, "reason": "not_on_base"}
         warehouse = _warehouse(engine)
         if warehouse is None:
             return {"ok": False, "reason": "no_warehouse"}
@@ -754,18 +902,18 @@ class Refine:
         ctx = _resolve_context(*args, **kwargs)
         miner = ctx["miner"]
         content = ctx["content"]
-        if miner is None or not _on_base(ctx["engine"], miner):
+        if miner is None or not _is_surface_base(ctx["engine"], miner):
             return 0
         if content is not None:
             return int(getattr(content.config, "refine_ticks", 2))
         return 2
 
     def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        miner = _miner(engine, miner)
+        if not _is_surface_base(engine, miner):
+            return {"ok": False, "reason": "not_on_surface_base"}
         if not _is_feature_unlocked(engine, "refinery"):
             return _locked_feature("refinery")
-        miner = _miner(engine, miner)
-        if not _on_base(engine, miner):
-            return {"ok": False, "reason": "not_on_base"}
         refinery = _get(engine, "refinery")
         if refinery is None:
             return {"ok": False, "reason": "no_refinery"}
@@ -820,6 +968,8 @@ class Contracts:
         return 0
 
     def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        if not _is_surface_base(engine, _miner(engine, miner)):
+            return {"ok": False, "reason": "not_on_surface_base"}
         board = _get(engine, "contracts")
         if board is None:
             return {"ok": True, "contracts": [], "slots": 0}
@@ -841,18 +991,18 @@ class Deliver:
         ctx = _resolve_context(*args, **kwargs)
         miner = ctx["miner"]
         content = ctx["content"]
-        if miner is None or not _on_base(ctx["engine"], miner):
+        if miner is None or not _is_surface_base(ctx["engine"], miner):
             return 0
         if content is not None:
             return int(getattr(content.config, "deliver_ticks", 2))
         return 2
 
     def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        miner = _miner(engine, miner)
+        if not _is_surface_base(engine, miner):
+            return {"ok": False, "reason": "not_on_surface_base"}
         if not _is_feature_unlocked(engine, "contracts"):
             return _locked_feature("contracts")
-        miner = _miner(engine, miner)
-        if not _on_base(engine, miner):
-            return {"ok": False, "reason": "not_on_base"}
         board = _get(engine, "contracts")
         if board is None:
             return {"ok": False, "reason": "no_contracts"}
@@ -889,6 +1039,8 @@ class Stock:
         return 0
 
     def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        if not _is_surface_base(engine, _miner(engine, miner)):
+            return {"ok": False, "reason": "not_on_surface_base"}
         warehouse = _warehouse(engine)
         if warehouse is None:
             return {"ok": False, "reason": "no_warehouse"}
@@ -918,6 +1070,8 @@ class Price:
         return 0
 
     def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        if not _is_surface_base(engine, _miner(engine, miner)):
+            return {"ok": False, "reason": "not_on_surface_base"}
         if not _item_unlocked(engine, self.item):
             return {"ok": True, "item": self.item, "price": None}
         price = _market_price(engine, self.item)
@@ -932,6 +1086,8 @@ class Prices:
         return 0
 
     def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        if not _is_surface_base(engine, _miner(engine, miner)):
+            return {"ok": False, "reason": "not_on_surface_base"}
         catalog = _catalog(engine)
         prices: dict[str, float | None] = {}
         if catalog is not None:
@@ -953,6 +1109,8 @@ class PriceHistory:
         return 0
 
     def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        if not _is_surface_base(engine, _miner(engine, miner)):
+            return {"ok": False, "reason": "not_on_surface_base"}
         if not _item_unlocked(engine, self.item):
             return {"ok": True, "item": self.item, "history": None}
         market = _market(engine)
@@ -1173,6 +1331,7 @@ class Miners:
                     "id": miner_id,
                     "x": int(_get(item, "x", 0) or 0),
                     "y": int(_get(item, "y", 0) or 0),
+                    "layer": _miner_layer(item),
                     "state": "idle",
                     "script": str(_get(item, "script", "") or ""),
                     "inventory_used": int(
@@ -1312,6 +1471,39 @@ class Distance:
 
 
 @dataclass(frozen=True, slots=True)
+class Layer:
+    """Return the index of the layer the miner is on."""
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        return 0
+
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        return {"ok": True, "layer": _miner_layer(_miner(engine, miner))}
+
+
+@dataclass(frozen=True, slots=True)
+class Layers:
+    """List every layer and whether the shaft reaches it."""
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        return 0
+
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        content = engine.content
+        layers = getattr(content, "layers", None) or {}
+        max_layer = _shaft_level(engine)
+        entries = [
+            {
+                "index": int(index),
+                "name": str(getattr(layer, "name", index)),
+                "accessible": int(index) <= max_layer,
+            }
+            for index, layer in sorted(layers.items())
+        ]
+        return {"ok": True, "layers": entries}
+
+
+@dataclass(frozen=True, slots=True)
 class Biome:
     """Return the id of the biome under the miner."""
 
@@ -1320,7 +1512,8 @@ class Biome:
 
     def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
         miner = _miner(engine, miner)
-        tile = engine.world.tile_at(miner.x, miner.y, _tick(engine))
+        layer = _miner_layer(miner)
+        tile = engine.world.tile_at(miner.x, miner.y, _tick(engine), layer=layer)
         return {"ok": True, "biome": tile.biome_id}
 
 
@@ -1364,7 +1557,8 @@ class Inspect:
         world = engine.world
         content = engine.content
         tick = _tick(engine)
-        tile = world.tile_at(miner.x, miner.y, tick)
+        layer = _miner_layer(miner)
+        tile = world.tile_at(miner.x, miner.y, tick, layer=layer)
         if tile.ore_id is None:
             ore = None
         elif _is_unlocked(engine, content, tile.ore_id):
@@ -1373,7 +1567,7 @@ class Inspect:
             ore = "unknown"
         regrows_in: int | None = None
         if tile.depleted:
-            delta = getattr(world, "delta", None)
+            delta = _delta_for(world, layer)
             entry = delta.get((miner.x, miner.y)) if isinstance(delta, dict) else None
             if entry is not None and entry[1] is not None:
                 regrows_in = max(0, int(entry[1]) - tick)

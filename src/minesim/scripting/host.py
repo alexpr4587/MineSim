@@ -26,14 +26,18 @@ from pathlib import Path
 from typing import Any
 
 from minesim.core.commands import (
+    Ascend,
     Biome,
     BuyUpgrade,
     Contracts,
     Deliver,
+    Descend,
     Distance,
     Events,
     Inspect,
     Inventory,
+    Layer,
+    Layers,
     Mine,
     MinerId,
     Miners,
@@ -376,6 +380,34 @@ _DEFAULT_FUNCTIONS: tuple[dict[str, Any], ...] = (
         "signature": "biome()",
         "doc": "Return the current biome id.",
         "category": "world",
+        "unlocked_by": None,
+    },
+    {
+        "name": "layer",
+        "signature": "layer()",
+        "doc": "Return the current layer index.",
+        "category": "world",
+        "unlocked_by": None,
+    },
+    {
+        "name": "layers",
+        "signature": "layers()",
+        "doc": "Return the underground layers and their accessibility.",
+        "category": "world",
+        "unlocked_by": None,
+    },
+    {
+        "name": "descend",
+        "signature": "descend()",
+        "doc": "Descend one layer from a shaft station.",
+        "category": "movement",
+        "unlocked_by": None,
+    },
+    {
+        "name": "ascend",
+        "signature": "ascend()",
+        "doc": "Ascend one layer from a shaft station.",
+        "category": "movement",
         "unlocked_by": None,
     },
     {
@@ -1091,6 +1123,22 @@ class ScriptHost:
             if args or kwargs:
                 raise TypeError("biome() takes no arguments")
             return Biome()
+        if name == "layer":
+            if args or kwargs:
+                raise TypeError("layer() takes no arguments")
+            return Layer()
+        if name == "layers":
+            if args or kwargs:
+                raise TypeError("layers() takes no arguments")
+            return Layers()
+        if name == "descend":
+            if args or kwargs:
+                raise TypeError("descend() takes no arguments")
+            return Descend()
+        if name == "ascend":
+            if args or kwargs:
+                raise TypeError("ascend() takes no arguments")
+            return Ascend()
         if name == "ore_info":
             ore_id = args[0] if args else (kwargs.get("ore_id") or kwargs.get("id"))
             if ore_id is None:
@@ -1220,6 +1268,16 @@ class ScriptHost:
             return int(result.get("distance", 0) or 0)
         if name == "biome":
             return result.get("biome")
+        if name == "layer":
+            return int(result.get("layer", 0) or 0)
+        if name == "layers":
+            return [dict(entry) for entry in (result.get("layers") or [])]
+        if name in ("descend", "ascend"):
+            return {
+                "ok": bool(result.get("ok")),
+                "layer": int(result.get("layer", 0) or 0),
+                "reason": result.get("reason"),
+            }
         if name == "ore_info":
             return result.get("info")
         if name == "inspect":

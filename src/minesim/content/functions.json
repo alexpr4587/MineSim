@@ -171,6 +171,42 @@
     "example": "d = distance()"
   },
   {
+    "name": "layer",
+    "signature": "layer()",
+    "doc": "Return the index of the layer the miner is on (0 is the surface).",
+    "category": "world",
+    "unlocked_by": null,
+    "cost": "0 ticks",
+    "example": "here = layer()"
+  },
+  {
+    "name": "layers",
+    "signature": "layers()",
+    "doc": "Return the underground layers as a list of {index, name, accessible} dicts.",
+    "category": "world",
+    "unlocked_by": null,
+    "cost": "0 ticks",
+    "example": "for level in layers(): print(level['name'])"
+  },
+  {
+    "name": "descend",
+    "signature": "descend()",
+    "doc": "Descend one layer from a shaft station. Requires a deep enough shaft upgrade and returns {ok, layer, reason}.",
+    "category": "movement",
+    "unlocked_by": null,
+    "cost": "20 ticks",
+    "example": "result = descend()"
+  },
+  {
+    "name": "ascend",
+    "signature": "ascend()",
+    "doc": "Ascend one layer from a shaft station and return {ok, layer, reason}.",
+    "category": "movement",
+    "unlocked_by": null,
+    "cost": "20 ticks",
+    "example": "result = ascend()"
+  },
+  {
     "name": "biome",
     "signature": "biome()",
     "doc": "Return the id of the biome under the miner.",

@@ -27,6 +27,10 @@ Functions are called directly, e.g. `move(East)`, `mine()`, `sell()`. Locked fun
 | `tick` | `tick()` | Return the current game tick. | 0 ticks | `now = tick()` | unlocks with the **Clockwork** achievement |
 | `events` | `events()` | Return the active world events as dicts with kind, x, y, radius, ends_in, item and direction ('shortage' or 'glut' for market news). The exact price factor is never included. | 0 ticks | `for event in events(): print(event['kind'])` | unlocks with the **News Reader** achievement |
 | `distance` | `distance()` | Return the Chebyshev distance from the base at (0, 0). | 0 ticks | `d = distance()` | unlocks with the **Far From Home** achievement |
+| `layer` | `layer()` | Return the index of the layer the miner is on (0 is the surface). | 0 ticks | `here = layer()` | available from the start |
+| `layers` | `layers()` | Return the underground layers as a list of {index, name, accessible} dicts. | 0 ticks | `for level in layers(): print(level['name'])` | available from the start |
+| `descend` | `descend()` | Descend one layer from a shaft station. Requires a deep enough shaft upgrade and returns {ok, layer, reason}. | 20 ticks | `result = descend()` | available from the start |
+| `ascend` | `ascend()` | Ascend one layer from a shaft station and return {ok, layer, reason}. | 20 ticks | `result = ascend()` | available from the start |
 | `biome` | `biome()` | Return the id of the biome under the miner. | 0 ticks | `here = biome()` | unlocks with the **Deep Diver** achievement |
 | `ore_info` | `ore_info(ore_id)` | Return {id, name, tier, hardness, base_value, regen_ticks} for a known ore, or None when it is unknown or locked. The mining probability is never included. | 0 ticks | `info = ore_info('coal')` | unlocks with the **Appraiser** achievement |
 | `inspect` | `inspect()` | Return {ore, mineable, reason, regrows_in} for the current tile. | 0 ticks | `seen = inspect()` | unlocks with the **Know Your Limits** achievement |
@@ -385,6 +389,78 @@ d = distance()
 ```
 
 **Unlocked by:** unlocks with the **Far From Home** achievement
+
+### `layer`
+
+**Signature:** `layer()`
+
+**Category:** world
+
+**Description:** Return the index of the layer the miner is on (0 is the surface).
+
+**Cost:** 0 ticks
+
+**Example:**
+
+```python
+here = layer()
+```
+
+**Unlocked by:** available from the start
+
+### `layers`
+
+**Signature:** `layers()`
+
+**Category:** world
+
+**Description:** Return the underground layers as a list of {index, name, accessible} dicts.
+
+**Cost:** 0 ticks
+
+**Example:**
+
+```python
+for level in layers(): print(level['name'])
+```
+
+**Unlocked by:** available from the start
+
+### `descend`
+
+**Signature:** `descend()`
+
+**Category:** movement
+
+**Description:** Descend one layer from a shaft station. Requires a deep enough shaft upgrade and returns {ok, layer, reason}.
+
+**Cost:** 20 ticks
+
+**Example:**
+
+```python
+result = descend()
+```
+
+**Unlocked by:** available from the start
+
+### `ascend`
+
+**Signature:** `ascend()`
+
+**Category:** movement
+
+**Description:** Ascend one layer from a shaft station and return {ok, layer, reason}.
+
+**Cost:** 20 ticks
+
+**Example:**
+
+```python
+result = ascend()
+```
+
+**Unlocked by:** available from the start
 
 ### `biome`
 

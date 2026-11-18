@@ -31,7 +31,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-CURRENT_VERSION = 9
+CURRENT_VERSION = 10
 SAVE_VERSION = CURRENT_VERSION
 DEFAULT_SKIN = "rusty_bot"
 
@@ -162,6 +162,21 @@ def _migrate_v8_to_v9(data: dict[str, Any]) -> dict[str, Any]:
     return migrated
 
 
+def _migrate_v9_to_v10(data: dict[str, Any]) -> dict[str, Any]:
+    """Add miner layers introduced by the mine shaft in version 10."""
+    migrated = dict(data)
+    fleet = migrated.get("fleet")
+    if isinstance(fleet, list):
+        migrated["fleet"] = [
+            {**entry, "layer": int(entry.get("layer", 0) or 0)}
+            if isinstance(entry, dict)
+            else entry
+            for entry in fleet
+        ]
+    migrated["version"] = 10
+    return migrated
+
+
 MIGRATIONS: dict[int, Callable[[dict[str, Any]], dict[str, Any]]] = {
     1: _migrate_v1_to_v2,
     2: _migrate_v2_to_v3,
@@ -171,6 +186,7 @@ MIGRATIONS: dict[int, Callable[[dict[str, Any]], dict[str, Any]]] = {
     6: _migrate_v6_to_v7,
     7: _migrate_v7_to_v8,
     8: _migrate_v8_to_v9,
+    9: _migrate_v9_to_v10,
 }
 
 
@@ -211,7 +227,7 @@ def migrate(data: Any) -> dict[str, Any]:
 
 
 class SaveGame(BaseModel):
-    """A serialised game state (save file schema, version 9)."""
+    """A serialised game state (save file schema, version 10)."""
 
     model_config = ConfigDict(extra="ignore")
 

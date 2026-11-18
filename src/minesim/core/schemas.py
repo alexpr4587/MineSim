@@ -29,6 +29,8 @@ class Config(_ContentModel):
     chunk_size: int = Field(gt=0)
     region_size_chunks: int = Field(gt=0)
     base_half_size: int = Field(ge=0)
+    station_half_size: int = Field(default=1, ge=0)
+    shaft_ticks: int = Field(default=20, ge=0)
     tick_hz: int = Field(gt=0)
     move_ticks: int = Field(default=4, ge=1)
     mine_tick_base: int = Field(default=3, ge=0)
@@ -213,11 +215,24 @@ class WorldEventDefinition(_ContentModel):
         return self
 
 
+class Layer(_ContentModel):
+    """An underground layer (layers.json)."""
+
+    index: int = Field(ge=0)
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    energy_multiplier: float = Field(default=1.0, gt=0.0)
+    heat: int = Field(default=0, ge=0)
+    floor_tint: str = Field(default="#4a4a42", min_length=1)
+    light_ambient: float = Field(default=1.0, ge=0.0, le=1.0)
+
+
 class Biome(_ContentModel):
     """A mine/biome (biomes.json)."""
 
     id: str = Field(min_length=1)
     name: str = Field(min_length=1)
+    layer: int = Field(default=0, ge=0)
     min_distance: int = Field(ge=0)
     weight: float = Field(gt=0)
     floor_color: str = Field(min_length=1)
@@ -454,6 +469,7 @@ __all__ = [
     "Example",
     "Feature",
     "FunctionSpec",
+    "Layer",
     "MarketEntry",
     "MinerFrames",
     "MinerSprites",

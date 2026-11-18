@@ -162,7 +162,7 @@ def test_unload_requires_base(content):
                 miner.x, miner.y = x, y
                 miner.inventory = {"stone": 1}
                 result = _submit(engine, Unload())
-                assert result == {"ok": False, "reason": "not_on_base"}
+                assert result == {"ok": False, "reason": "not_on_surface_base"}
                 assert miner.inventory == {"stone": 1}
                 return
     raise AssertionError("no stone tile")
