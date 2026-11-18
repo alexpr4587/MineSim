@@ -107,7 +107,7 @@ class MainWindow(QMainWindow):
         self.game = game
         self.setWindowTitle("MineSim")
         self.world_view = WorldView(game)
-        self.hud = HUD(game)
+        self.hud = HUD(game, world_view=self.world_view)
         self.scripts_dir: Path = (
             Path(scripts_dir) if scripts_dir is not None else default_scripts_dir()
         )

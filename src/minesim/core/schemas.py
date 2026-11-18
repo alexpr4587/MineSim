@@ -424,10 +424,11 @@ class MinerSprites(_ContentModel):
 
 
 class Sprites(_ContentModel):
-    """Sprite data (sprites.json): miner frames and the base building."""
+    """Sprite data (sprites.json): miner frames, the base and the shaft station."""
 
     miner: MinerSprites
     base: list[str]
+    station: list[str]
 
 
 class Example(_ContentModel):

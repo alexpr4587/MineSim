@@ -1,11 +1,13 @@
 """World view: QPainter rendering of the infinite tile world.
 
 Tiles are rendered from a per-chunk :class:`QPixmap` cache (LRU,
-about 200 chunks). With terrain lighting enabled the key includes the
-chunk versions of the chunk and its eight neighbours, because normals
-depend on neighbouring heights. With lighting disabled the flat
-renderer only keys on the chunk's own version. The miner and the base
-building are drawn as cached pixel-art sprites from the selected skin.
+about 200 chunks). The key includes the viewed layer, because every
+layer has its own palettes, light level and mined delta. With terrain
+lighting enabled it also includes the chunk versions of the chunk and
+its eight neighbours, because normals depend on neighbouring heights.
+With lighting disabled the flat renderer only keys on the chunk's own
+version. The miner, the base and the underground shaft stations are
+drawn as cached pixel-art sprites from the selected skin.
 """
 
 from __future__ import annotations
@@ -14,7 +16,7 @@ import math
 from collections import OrderedDict
 from typing import Any
 
-from PySide6.QtCore import QPointF, Qt, QTimer, Signal
+from PySide6.QtCore import QPointF, QRect, Qt, QTimer, Signal
 from PySide6.QtGui import (
     QBrush,
     QColor,
@@ -55,6 +57,7 @@ MAX_TILE_PX = 64
 DEFAULT_TILE_PX = 24
 CACHE_SIZE = 200
 TERRAIN_LIGHTING_SETTING = "world/terrain_lighting"
+LAYER_FADE_FRAMES = 19
 
 
 def _get(obj: Any, name: str, default: Any = None) -> Any:
@@ -145,6 +148,7 @@ class WorldView(QWidget):
     terrain_lighting_changed = Signal(bool)
     selected_miner_changed = Signal(int)
     follow_selected_changed = Signal(bool)
+    viewed_layer_changed = Signal(int)
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         tile_px_arg = kwargs.pop("tile_px", None)
@@ -166,6 +170,8 @@ class WorldView(QWidget):
         self.follow_miner: bool = True
         self.follow_selected: bool = True
         self.selected_miner_id: int = 0
+        self.viewed_layer: int = self._miner_layer(self.miner)
+        self._fade_alpha: float = 0.0
         self.show_grid: bool = False
         self.terrain_lighting: bool = self._load_terrain_lighting()
         self._pixmap_cache: OrderedDict[tuple[Any, ...], QPixmap] = OrderedDict()
@@ -305,6 +311,80 @@ class WorldView(QWidget):
             return (self._visual_x, self._visual_y)
         return (float(_get(miner, "x", 0) or 0) + 0.5, float(_get(miner, "y", 0) or 0) + 0.5)
 
+    # -- layers -----------------------------------------------------------------
+
+    def _miner_layer(self, miner: Any = None) -> int:
+        """Return the layer of ``miner`` (the selected miner by default)."""
+        target = miner if miner is not None else self.miner
+        return int(_get(target, "layer", 0) or 0)
+
+    def _max_layer(self) -> int:
+        """Return the deepest layer defined by the content."""
+        layers = _get(self.content, "layers", None)
+        if isinstance(layers, dict) and layers:
+            return max(int(index) for index in layers)
+        return 3
+
+    def _clamp_layer(self, layer: int) -> int:
+        return max(0, min(self._max_layer(), int(layer)))
+
+    def layer_name(self, layer: int | None = None) -> str:
+        """Return the display name of ``layer`` (the viewed layer by default)."""
+        index = self.viewed_layer if layer is None else int(layer)
+        layer_def = None
+        getter = _get(self.content, "get_layer")
+        if callable(getter):
+            try:
+                layer_def = getter(index)
+            except Exception:
+                layer_def = None
+        if layer_def is None:
+            layers = _get(self.content, "layers", None)
+            if isinstance(layers, dict):
+                layer_def = layers.get(index)
+        name = _get(layer_def, "name")
+        return str(name) if name else f"Layer {index}"
+
+    def _begin_layer_transition(self) -> None:
+        """Start the 300 ms fade used when the followed miner changes layer."""
+        self._fade_alpha = 1.0
+
+    def finish_layer_transition(self) -> None:
+        """Clear a running layer fade (used by snapshot tools and tests)."""
+        self._fade_alpha = 0.0
+        self.update()
+
+    def _apply_viewed_layer(self, layer: int, *, transition: bool = True) -> None:
+        target = self._clamp_layer(layer)
+        if target == self.viewed_layer:
+            return
+        self.viewed_layer = target
+        self.clear_cache()
+        if transition:
+            self._begin_layer_transition()
+        self.viewed_layer_changed.emit(target)
+        self.update()
+
+    def set_viewed_layer(self, layer: int) -> None:
+        """Show ``layer`` without following the selected miner's layer."""
+        self._apply_viewed_layer(layer, transition=False)
+
+    def change_viewed_layer(self, step: int) -> int:
+        """Change the viewed layer by ``step`` and return the new layer."""
+        self._apply_viewed_layer(self.viewed_layer + int(step), transition=False)
+        return self.viewed_layer
+
+    def _sync_viewed_layer_from_miner(self) -> None:
+        """Follow the selected miner's layer while ``Follow selected`` is on."""
+        if not self.follow_selected:
+            return
+        miner = self._miner_by_id(self.selected_miner_id)
+        if miner is None:
+            miner = self.miner
+        layer = self._miner_layer(miner)
+        if layer != self.viewed_layer:
+            self._apply_viewed_layer(layer, transition=True)
+
     def select_miner(self, miner_id: int) -> None:
         """Select ``miner_id`` and optionally move the camera onto it."""
         miner_id = int(miner_id)
@@ -313,6 +393,7 @@ class WorldView(QWidget):
             return
         changed = miner_id != self.selected_miner_id
         self.selected_miner_id = miner_id
+        self._sync_viewed_layer_from_miner()
         if self.follow_selected:
             center_x, center_y = self._miner_center(miner)
             if miner_id == 0:
@@ -363,9 +444,11 @@ class WorldView(QWidget):
         self.progression_view = _get(game, "progression") or _get(game, "progression_view")
         self.sprite_book = SpriteBook(self.content) if self.content is not None else None
         self.clear_cache()
+        self.finish_layer_transition()
         self.snap_visual_to_miner()
         if self._miner_by_id(self.selected_miner_id) is None:
             self.selected_miner_id = 0
+        self.viewed_layer = self._clamp_layer(self._miner_layer(self.miner))
         self.update()
 
     def _selected_skin(self) -> str:
@@ -607,7 +690,10 @@ class WorldView(QWidget):
     def _chunk_version(self, cx: int, cy: int) -> int:
         getter = _get(self.world, "chunk_version")
         if callable(getter):
-            return int(getter(cx, cy))
+            try:
+                return int(getter(cx, cy, self.viewed_layer))
+            except TypeError:
+                return int(getter(cx, cy))
         return 0
 
     def _version_signature(self, cx: int, cy: int) -> tuple[int, ...]:
@@ -629,7 +715,7 @@ class WorldView(QWidget):
     def get_chunk_pixmap(self, cx: int, cy: int) -> QPixmap:
         """Return the cached pixmap for chunk ``(cx, cy)``, building if needed."""
         version = self._version_signature(cx, cy)
-        key = (cx, cy, version, self.tile_px, self.terrain_lighting)
+        key = (cx, cy, self.viewed_layer, version, self.tile_px, self.terrain_lighting)
         cached = self._pixmap_cache.get(key)
         if cached is not None:
             self._pixmap_cache.move_to_end(key)
@@ -645,16 +731,19 @@ class WorldView(QWidget):
         chunk_tiles = _get(self.world, "chunk_tiles")
         if callable(chunk_tiles):
             try:
-                return chunk_tiles(cx, cy, tick)
+                return chunk_tiles(cx, cy, tick, self.viewed_layer)
             except TypeError:
-                return chunk_tiles(cx, cy)
+                try:
+                    return chunk_tiles(cx, cy, tick)
+                except TypeError:
+                    return chunk_tiles(cx, cy)
         return None
 
     def _tile_at(self, rows: Any, cx: int, cy: int, dx: int, dy: int, tick: int) -> Any:
         if rows is not None:
             return rows[dy][dx]
         size = self._chunk_size()
-        return self.world.tile_at(cx * size + dx, cy * size + dy, tick)
+        return self.world.tile_at(cx * size + dx, cy * size + dy, tick, layer=self.viewed_layer)
 
     def _draw_locked_marks(self, painter: QPainter, rows: Any, cx: int, cy: int, tick: int) -> None:
         size = self._chunk_size()
@@ -691,6 +780,7 @@ class WorldView(QWidget):
             cy,
             tick,
             content=self.content,
+            layer=self.viewed_layer,
             is_locked=self._is_locked,
         )
         pixmap = QPixmap.fromImage(image).scaled(
@@ -732,15 +822,20 @@ class WorldView(QWidget):
             chunk_tiles = _get(self.world, "chunk_tiles")
             if callable(chunk_tiles):
                 try:
-                    rows = chunk_tiles(cx, cy, tick)
+                    rows = chunk_tiles(cx, cy, tick, self.viewed_layer)
                 except TypeError:
-                    rows = chunk_tiles(cx, cy)
+                    try:
+                        rows = chunk_tiles(cx, cy, tick)
+                    except TypeError:
+                        rows = chunk_tiles(cx, cy)
             for dy in range(size):
                 for dx in range(size):
                     if rows is not None:
                         tile = rows[dy][dx]
                     else:
-                        tile = self.world.tile_at(cx * size + dx, cy * size + dy, tick)
+                        tile = self.world.tile_at(
+                            cx * size + dx, cy * size + dy, tick, layer=self.viewed_layer
+                        )
                     rect_x, rect_y = dx * tile_px, dy * tile_px
                     floor = self._floor_color(tile.biome_id)
                     if tile.depleted:
@@ -780,6 +875,9 @@ class WorldView(QWidget):
 
     def _advance_visual(self) -> None:
         """Smoothly move the visual miner position toward the miner tile."""
+        self._sync_viewed_layer_from_miner()
+        if self._fade_alpha > 0.0:
+            self._fade_alpha = max(0.0, self._fade_alpha - 1.0 / LAYER_FADE_FRAMES)
         target_x, target_y = self._miner_tile_center()
         self._visual_x += (target_x - self._visual_x) * 0.25
         self._visual_y += (target_y - self._visual_y) * 0.25
@@ -873,13 +971,23 @@ class WorldView(QWidget):
             painter.restore()
 
     def _draw_base(self, painter: QPainter) -> None:
+        """Draw the surface base or the shaft station of the viewed layer."""
         config = _get(self.content, "config")
-        half = int(_get(config, "base_half_size", 1) or 0)
+        surface = self.viewed_layer == 0
+        if surface:
+            half = int(_get(config, "base_half_size", 1) or 0)
+            label = "BASE"
+        else:
+            half = int(_get(config, "station_half_size", 1) or 0)
+            label = "STATION"
         span = half * 2 + 1
         x0, y0 = self.world_to_screen(-half, -half)
         x1, y1 = self.world_to_screen(half + 1, half + 1)
         if self.sprite_book is not None:
-            pixmap = self.sprite_book.base_pixmap(self._selected_skin(), self.tile_px, span)
+            if surface:
+                pixmap = self.sprite_book.base_pixmap(self._selected_skin(), self.tile_px, span)
+            else:
+                pixmap = self.sprite_book.station_pixmap(self._selected_skin(), self.tile_px, span)
             self._draw_miner_shadow(
                 painter,
                 (x0 + x1) / 2.0,
@@ -887,15 +995,58 @@ class WorldView(QWidget):
                 max(4.0, self.tile_px * span * 0.42),
             )
             painter.drawPixmap(int(round(x0)), int(round(y0)), pixmap)
+        else:
+            painter.setPen(QPen(QColor(BASE_BORDER), 2))
+            painter.drawRect(int(x0), int(y0), int(x1 - x0), int(y1 - y0))
+            painter.setPen(QColor(BASE_LABEL))
+            font = QFont(FONT_FAMILY)
+            font.setBold(True)
+            font.setPointSize(max(8, self.tile_px // 2))
+            painter.setFont(font)
+            painter.drawText(int(x0) + 4, int(y0) + max(12, self.tile_px), label)
+        if not surface:
+            self._draw_shaft_badge(painter, x0, y0, x1)
+
+    def _draw_shaft_badge(self, painter: QPainter, x0: float, y0: float, x1: float) -> None:
+        """Draw a small up and/or down arrow badge on an underground shaft."""
+        show_up = self.viewed_layer > 0
+        show_down = self.viewed_layer < self._max_layer()
+        if not show_up and not show_down:
             return
-        painter.setPen(QPen(QColor(BASE_BORDER), 2))
-        painter.drawRect(int(x0), int(y0), int(x1 - x0), int(y1 - y0))
-        painter.setPen(QColor(BASE_LABEL))
-        font = QFont(FONT_FAMILY)
-        font.setBold(True)
-        font.setPointSize(max(8, self.tile_px // 2))
-        painter.setFont(font)
-        painter.drawText(int(x0) + 4, int(y0) + max(12, self.tile_px), "BASE")
+        radius = max(7.0, self.tile_px * 0.3)
+        painter.save()
+        try:
+            font = QFont(FONT_FAMILY)
+            font.setBold(True)
+            font.setPointSize(max(7, int(radius * 0.9)))
+            painter.setFont(font)
+            badges: list[tuple[float, str]] = []
+            if show_up:
+                badges.append((x1 - radius, "▲"))
+            if show_down:
+                badges.append((x0 + radius, "▼"))
+            for cx, text in badges:
+                painter.setPen(QPen(QColor(MINER_DETAIL), 1))
+                painter.setBrush(QColor(BASE_LABEL))
+                painter.drawEllipse(
+                    int(cx - radius),
+                    int(y0 - radius),
+                    int(radius * 2),
+                    int(radius * 2),
+                )
+                painter.setPen(QPen(QColor(MINER_DETAIL)))
+                painter.drawText(
+                    QRect(
+                        int(cx - radius),
+                        int(y0 - radius),
+                        int(radius * 2),
+                        int(radius * 2),
+                    ),
+                    int(Qt.AlignmentFlag.AlignCenter),
+                    text,
+                )
+        finally:
+            painter.restore()
 
     def _draw_miner_shadow(self, painter: QPainter, sx: float, sy: float, radius: float) -> None:
         """Draw a soft drop shadow offset away from the configured sun."""
@@ -1055,6 +1206,10 @@ class WorldView(QWidget):
                         painter.drawLine(int(left), int(sy), int(right), int(sy))
                 self._draw_base(painter)
             self._draw_miner(painter)
+            if self._fade_alpha > 0.0:
+                overlay = QColor(BACKGROUND)
+                overlay.setAlpha(int(round(255 * min(1.0, self._fade_alpha))))
+                painter.fillRect(self.rect(), overlay)
         finally:
             painter.end()
         super().paintEvent(event)
@@ -1105,7 +1260,7 @@ class WorldView(QWidget):
             super().mouseReleaseEvent(event)
 
     def keyPressEvent(self, event: Any) -> None:  # noqa: N802 - Qt override name
-        """C recenters, G toggles the grid, H toggles lighting; others go to MainWindow."""
+        """C recenters, G toggles the grid, H lighting, PageUp/PageDown layers."""
         key = event.key()
         if key == Qt.Key.Key_C:
             self.recenter()
@@ -1116,6 +1271,13 @@ class WorldView(QWidget):
         elif key == Qt.Key.Key_H:
             self.toggle_terrain_lighting()
             event.accept()
+        elif key in (Qt.Key.Key_PageUp, Qt.Key.Key_PageDown):
+            if not self.follow_selected:
+                step = -1 if key == Qt.Key.Key_PageUp else 1
+                self.change_viewed_layer(step)
+                event.accept()
+                return
+            super().keyPressEvent(event)
         else:
             window = self.window()
             handler = getattr(window, "keyPressEvent", None)

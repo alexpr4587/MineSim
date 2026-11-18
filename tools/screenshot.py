@@ -17,7 +17,9 @@ saved as ``artifacts/ui_wardrobe.png``), ``--panel base|market|refinery|contract
 ``--locked`` (lock every feature and show the market lock overlay,
 saved as ``artifacts/ui_locked.png``), ``--editor-tabs`` (12 scripts,
 three open tabs and the Open… list, saved as
-``artifacts/ui_editor_tabs.png``) and ``--output``.
+``artifacts/ui_editor_tabs.png``), ``--layer N`` (put the main miner on
+layer N, run a short mining session and save ``artifacts/ui_layer_N.png``)
+and ``--output``.
 """
 
 from __future__ import annotations
@@ -204,6 +206,37 @@ def _setup_editor_tabs(
     app.processEvents()
 
 
+def prepare_layer(game: Game, layer: int) -> Game:
+    """Put miner 0 on ``layer`` and run a short mining session there."""
+    layer = max(0, int(layer))
+    game.progression_state.unlock_upgrade("shaft")
+    game.player_stats.upgrades["shaft"] = max(
+        int(game.player_stats.upgrades.get("shaft", 0) or 0), layer
+    )
+    game.miner.layer = layer
+    game.miner.x, game.miner.y = 0, 0
+    session = (
+        Move(Direction.EAST),
+        Move(Direction.EAST),
+        Mine(),
+        Mine(),
+        Mine(),
+        Mine(),
+        Move(Direction.EAST),
+        Mine(),
+        Mine(),
+        Mine(),
+        Mine(),
+        Move(Direction.SOUTH),
+        Mine(),
+        Mine(),
+    )
+    for command in session:
+        game.submit(command)
+        game.run_until_idle()
+    return game
+
+
 def _find_rich_vein(game: Game) -> object | None:
     """Return the first active rich vein for the screenshot."""
     world_events = getattr(game.engine, "world_events", None)
@@ -306,6 +339,7 @@ def build_window(
     events: bool = False,
     locked: bool = False,
     editor_tabs: bool = False,
+    layer: int | None = None,
 ) -> MainWindow:
     """Build the real main window and run ``ticks`` engine ticks."""
     app = QApplication.instance() or QApplication([])
@@ -332,10 +366,12 @@ def build_window(
     if editor_tabs:
         scripts_dir = Path(tempfile.mkdtemp(prefix="minesim_editor_tabs_"))
         _write_editor_scripts(scripts_dir)
-    if panel or miners:
+    if panel or miners or layer is not None:
         unlock_everything(game)
     if panel:
         prepare_economy(game)
+    if layer is not None:
+        prepare_layer(game, int(layer))
     if skin:
         game.select_skin(skin)
     for _ in range(max(0, int(fleet))):
@@ -356,7 +392,7 @@ def build_window(
         _setup_editor_tabs(window, scripts_dir, app)
     if miners:
         _setup_miners(window, game, int(miners), app)
-    if panel is None and not miners and not editor_tabs:
+    if panel is None and not miners and not editor_tabs and layer is None:
         for command in COMMAND_SEQUENCE:
             game.submit(command)
         for _ in range(int(ticks)):
@@ -364,13 +400,19 @@ def build_window(
         if moving:
             game.submit(Move(Direction.EAST))
             game.engine.step()
-    if not miners:
+    if layer is not None:
+        window.game_loop.stop()
+        window.world_view.snap_visual_to_miner()
+        window.world_view.center_on_miner()
+        window.world_view.set_viewed_layer(int(layer))
+        window.world_view.finish_layer_transition()
+    elif not miners:
         window.game_loop.stop()
         window.world_view.snap_visual_to_miner()
         window.world_view.center_on_miner()
     window.hud.refresh()
     editor_panel = getattr(window, "editor_panel", None)
-    if editor_panel is not None and panel is None and not miners:
+    if editor_panel is not None and panel is None and not miners and layer is None:
         from minesim.ui.editor_panel import STARTER_SCRIPT
 
         editor = getattr(editor_panel, "editor", None) or getattr(editor_panel, "code_editor", None)
@@ -469,6 +511,12 @@ def main() -> int:
         help="create 12 scripts, open 3 tabs with the Open… list and save "
         "artifacts/ui_editor_tabs.png",
     )
+    parser.add_argument(
+        "--layer",
+        type=int,
+        default=None,
+        help="put the main miner on layer N and save artifacts/ui_layer_N.png",
+    )
     parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args()
     window = build_window(
@@ -483,6 +531,7 @@ def main() -> int:
         events=args.events,
         locked=args.locked,
         editor_tabs=args.editor_tabs,
+        layer=args.layer,
     )
     for panel_name in (
         "achievements_panel",
@@ -556,6 +605,8 @@ def main() -> int:
         default_name = "ui_locked.png"
     if args.editor_tabs:
         default_name = "ui_editor_tabs.png"
+    if args.layer is not None:
+        default_name = f"ui_layer_{int(args.layer)}.png"
     out = args.output or (Path(__file__).resolve().parents[1] / "artifacts" / default_name)
     out.parent.mkdir(parents=True, exist_ok=True)
     window.grab().save(str(out))

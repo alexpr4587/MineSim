@@ -12,7 +12,7 @@ from typing import Any
 from PySide6.QtCore import QObject, Qt, QTimer
 from PySide6.QtWidgets import QLabel, QWidget
 
-from minesim.core.events import AchievementUnlocked, WorldEventStarted
+from minesim.core.events import AchievementUnlocked, LayerChanged, WorldEventStarted
 from minesim.ui.theme import BACKGROUND, BUTTON_BORDER, TEXT
 
 
@@ -35,7 +35,7 @@ class Toast(QLabel):
         duration_ms: int = 4000,
     ) -> None:
         super().__init__(parent)
-        text = f"<b>{title}</b><br/>{message}"
+        text = f"<b>{title}</b><br/>{message}" if message else f"<b>{title}</b>"
         self.setText(text)
         self.setWordWrap(True)
         self.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
@@ -95,6 +95,7 @@ class ToastManager(QObject):
         try:
             bus.subscribe(AchievementUnlocked, self._on_achievement_unlocked)
             bus.subscribe(WorldEventStarted, self._on_world_event_started)
+            bus.subscribe(LayerChanged, self._on_layer_changed)
         except Exception:
             return
 
@@ -115,6 +116,28 @@ class ToastManager(QObject):
         message = self._reward_message(achievement)
         self._queue.append((title, message))
         self._show_next()
+
+    def _on_layer_changed(self, event: Any) -> None:
+        miner_id = int(_get(event, "miner_id", 0) or 0)
+        from_layer = int(_get(event, "from_layer", 0) or 0)
+        to_layer = int(_get(event, "to_layer", 0) or 0)
+        direction = "down" if to_layer > from_layer else "up"
+        name = self._layer_name(to_layer)
+        self._queue.append((f"Miner {miner_id} went {direction} to {name}", ""))
+        self._show_next()
+
+    def _layer_name(self, layer: int) -> str:
+        content = _get(self.game, "content")
+        getter = _get(content, "get_layer")
+        if callable(getter):
+            try:
+                return str(_get(getter(int(layer)), "name", f"Layer {layer}"))
+            except Exception:
+                pass
+        layers = _get(content, "layers", None)
+        if isinstance(layers, dict):
+            return str(_get(layers.get(int(layer)), "name", f"Layer {layer}"))
+        return f"Layer {layer}"
 
     def _on_world_event_started(self, event: Any) -> None:
         kind = str(_get(event, "kind", "") or "")

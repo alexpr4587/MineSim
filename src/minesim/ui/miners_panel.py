@@ -127,11 +127,14 @@ class MinerRow(QFrame):
         self.script_label = QLabel("Script: —", self)
         self.script_label.setObjectName(f"miner_script_{self.miner_id}")
         self.position_label = QLabel("Pos: (0, 0)", self)
+        self.layer_label = QLabel("Layer: 0", self)
+        self.layer_label.setObjectName(f"miner_layer_{self.miner_id}")
         self.inventory_label = QLabel("0/10", self)
-        for label in (self.script_label, self.inventory_label):
+        for label in (self.script_label, self.inventory_label, self.layer_label):
             label.setStyleSheet(f"color: {TEXT_DIM};")
         info.addWidget(self.script_label, 1)
         info.addWidget(self.position_label)
+        info.addWidget(self.layer_label)
         info.addWidget(self.inventory_label)
         layout.addLayout(info)
 
@@ -180,6 +183,9 @@ class MinerRow(QFrame):
             int(_get(miner, "y", 0) or 0),
         )
         self.position_label.setText(f"Pos: ({position[0]}, {position[1]})")
+        layer = int(_get(miner, "layer", 0) or 0)
+        self.layer_label.setText(f"Layer: {layer}")
+        self.layer_label.setToolTip(self.panel.layer_name(layer))
         used = int(_get(miner, "inventory_size", 0) or 0)
         capacity = int(_get(miner, "capacity", 0) or 0)
         self.inventory_label.setText(f"{used}/{capacity}")
@@ -314,6 +320,19 @@ class MinersPanel(FloatingPanel):
             return []
         files.sort(key=lambda path: (0 if path.name == "main.py" else 1, path.name.lower()))
         return [path.name for path in files]
+
+    def layer_name(self, layer: int) -> str:
+        """Return the display name of ``layer`` from the content."""
+        getter = _get(self.game_content, "get_layer")
+        if callable(getter):
+            try:
+                return str(_get(getter(int(layer)), "name", f"Layer {layer}"))
+            except Exception:
+                pass
+        layers = _get(self.game_content, "layers", None)
+        if isinstance(layers, dict):
+            return str(_get(layers.get(int(layer)), "name", f"Layer {layer}"))
+        return f"Layer {layer}"
 
     def _states(self) -> dict[int, Any]:
         manager = self.manager

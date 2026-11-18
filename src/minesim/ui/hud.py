@@ -1,4 +1,4 @@
-"""HUD top bar: money, inventory, tick, position and speed buttons."""
+"""HUD top bar: money, inventory, tick, position, layer and speed buttons."""
 
 from __future__ import annotations
 
@@ -42,6 +42,7 @@ class HUD(QWidget):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         game = kwargs.pop("game", None)
         game_loop = kwargs.pop("game_loop", None) or kwargs.pop("loop", None)
+        world_view = kwargs.pop("world_view", None)
         parent = kwargs.pop("parent", None)
         for arg in args:
             if arg is None:
@@ -54,6 +55,7 @@ class HUD(QWidget):
         super().__init__(parent)
         self.game = game
         self.game_loop = game_loop
+        self.world_view = world_view
         self.speed: int = 1
         self.paused: bool = False
         self.setObjectName("hud")
@@ -76,6 +78,8 @@ class HUD(QWidget):
         self.miners_label = QLabel("Miners: 1 alive · 0 free", self)
         self.tick_label = QLabel("Tick: 0", self)
         self.position_label = QLabel("Pos: (0, 0)", self)
+        self.layer_label = QLabel("Layer: Surface (0)", self)
+        self.layer_label.setObjectName("hud_layer")
         self.events_label = QLabel("", self)
         self.events_label.setStyleSheet(f"color: {TEXT_DIM};")
         for label in (
@@ -85,6 +89,7 @@ class HUD(QWidget):
             self.miners_label,
             self.tick_label,
             self.position_label,
+            self.layer_label,
             self.events_label,
         ):
             label.setFont(QFont(FONT_FAMILY))
@@ -101,6 +106,8 @@ class HUD(QWidget):
             self.buttons.append(button)
         self._subscribe_events()
         self._sync_buttons()
+        if self.world_view is not None:
+            self._watch_world_view()
         self.refresh()
 
     # -- game loop wiring --------------------------------------------------------
@@ -112,6 +119,22 @@ class HUD(QWidget):
     def attach(self, game_loop: Any) -> None:
         """Alias for :meth:`set_game_loop`."""
         self.set_game_loop(game_loop)
+
+    def set_world_view(self, world_view: Any) -> None:
+        """Attach the world view whose viewed layer the HUD reports."""
+        self.world_view = world_view
+        self._watch_world_view()
+        self.refresh()
+
+    def _watch_world_view(self) -> None:
+        view = self.world_view
+        signal = getattr(view, "viewed_layer_changed", None)
+        if signal is None:
+            return
+        try:
+            signal.connect(lambda _layer: self.refresh())
+        except Exception:
+            pass
 
     def set_game(self, game: Any) -> None:
         """Attach a new game and re-subscribe to its events."""
@@ -241,6 +264,7 @@ class HUD(QWidget):
         self.miners_label.setText(f"Miners: {int(miner_count)} alive · {free_slots} free")
         self.tick_label.setText(f"Tick: {int(tick)}")
         self.position_label.setText(f"Pos: ({int(position[0])}, {int(position[1])})")
+        self.layer_label.setText(self._layer_text(miner))
         self.events_label.setText(self._event_ticker(int(tick)))
         if self.game_loop is not None:
             speed = _get(self.game_loop, "speed")
@@ -248,6 +272,25 @@ class HUD(QWidget):
                 self.speed = int(speed)
                 self.paused = self.speed == 0
                 self._sync_buttons()
+
+    def _layer_text(self, miner: Any) -> str:
+        layer = _get(self.world_view, "viewed_layer")
+        if layer is None:
+            layer = _get(miner, "layer", 0) or 0
+        layer = int(layer)
+        name = None
+        content = _get(self.game, "content")
+        getter = _get(content, "get_layer")
+        if callable(getter):
+            try:
+                name = _get(getter(layer), "name")
+            except Exception:
+                name = None
+        if name is None:
+            layers = _get(content, "layers", None)
+            if isinstance(layers, dict):
+                name = _get(layers.get(layer), "name")
+        return f"Layer: {name or f'Layer {layer}'} ({layer})"
 
     def _event_ticker(self, tick: int) -> str:
         """Return a compact ticker of every active world event."""

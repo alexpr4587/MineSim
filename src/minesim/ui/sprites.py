@@ -1,9 +1,9 @@
-"""Pixel-art sprites for the miner and the base building.
+"""Pixel-art sprites for the miner, the base and the shaft station.
 
-Sprites are data: 16x16 (miner) and 48x48 (base) text grids where every
-character is a palette role. :class:`SpriteBook` validates those grids,
-swaps in a skin palette, scales the result to the current tile size with
-nearest-neighbour filtering and caches the pixmaps.
+Sprites are data: 16x16 (miner) and 48x48 (base and station) text grids
+where every character is a palette role. :class:`SpriteBook` validates
+those grids, swaps in a skin palette, scales the result to the current
+tile size with nearest-neighbour filtering and caches the pixmaps.
 
 A skin may also provide ``assets/skins/<id>.png``: a 4x4 sheet of 16x16
 frames (rows down, up, left, right; columns walk0, walk1, mine0, mine1).
@@ -29,12 +29,14 @@ __all__ = [
     "DIRECTIONS",
     "MINER_ROLES",
     "MINER_SIZE",
+    "STATION_SIZE",
     "SpriteBook",
     "default_assets_dir",
 ]
 
 MINER_SIZE = 16
 BASE_SIZE = 48
+STATION_SIZE = 48
 DIRECTIONS = ("down", "up", "left", "right")
 ANIMATIONS = ("walk0", "walk1", "mine0", "mine1")
 MINER_ROLES = frozenset("bavdms")
@@ -99,6 +101,7 @@ class SpriteBook:
         self.asset_dir = Path(asset_dir) if asset_dir is not None else default_assets_dir()
         self._cache: dict[tuple[Any, ...], QPixmap] = {}
         self._base_cache: dict[tuple[Any, ...], QPixmap] = {}
+        self._station_cache: dict[tuple[Any, ...], QPixmap] = {}
         self._sheet_cache: dict[str, QPixmap] = {}
         self.validate()
 
@@ -121,6 +124,7 @@ class SpriteBook:
                     f"$.miner.{direction}.{animation}",
                 )
         self._validate_grid(self.sprites.get("base"), BASE_SIZE, BASE_ROLES, "$.base")
+        self._validate_grid(self.sprites.get("station"), STATION_SIZE, BASE_ROLES, "$.station")
         for skin_id, skin in self.skins.items():
             self._palette(skin_id, skin)
 
@@ -220,10 +224,25 @@ class SpriteBook:
         self._base_cache[key] = pixmap
         return pixmap
 
+    def station_pixmap(self, skin_id: str, tile_px: int, span: int = 3) -> QPixmap:
+        """Return the shaft station pixmap covering ``span`` tiles."""
+        tile_px = max(1, int(tile_px))
+        span = max(1, int(span))
+        key = (str(skin_id), "station", span, tile_px)
+        cached = self._station_cache.get(key)
+        if cached is not None:
+            return cached
+        grid = self.sprites["station"]
+        size = tile_px * span
+        pixmap = self._render_grid(grid, self._palette(skin_id), STATION_SIZE, size)
+        self._station_cache[key] = pixmap
+        return pixmap
+
     def clear_cache(self) -> None:
         """Drop all cached pixmaps."""
         self._cache.clear()
         self._base_cache.clear()
+        self._station_cache.clear()
         self._sheet_cache.clear()
 
     # -- rendering -----------------------------------------------------------

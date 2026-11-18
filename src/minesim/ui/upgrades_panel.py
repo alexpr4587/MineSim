@@ -92,8 +92,11 @@ class _UpgradeRow(QWidget):
         costs = list(upgrade.costs)
 
         # Effect description.
-        changes = upgrade.stat_changes()
-        effect = "; ".join(f"{stat} {delta:+d}" for stat, delta in changes.items()) or "—"
+        if self.upgrade_id == "shaft":
+            effect = f"reaches layer {level}"
+        else:
+            changes = upgrade.stat_changes()
+            effect = "; ".join(f"{stat} {delta:+d}" for stat, delta in changes.items()) or "—"
 
         if not unlocked:
             unlocked_by = _get(upgrade, "unlocked_by")

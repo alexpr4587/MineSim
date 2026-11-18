@@ -49,6 +49,17 @@ def _config_value(config: Any, name: str, default: Any) -> Any:
     return default if value is None else value
 
 
+def _tile_at(world: Any, x: int, y: int, tick: int, layer: int) -> Any:
+    """Read a tile with the layer, tolerating simple test-world stubs."""
+    try:
+        return world.tile_at(x, y, tick, layer=layer)
+    except TypeError:
+        try:
+            return world.tile_at(x, y, tick)
+        except TypeError:
+            return world.tile_at(x, y)
+
+
 def normalize_sun(sun_dir: Any) -> np.ndarray:
     """Return ``sun_dir`` as a unit-length 3-vector."""
     try:
@@ -150,10 +161,11 @@ def render_chunk(
     tick: int = 0,
     *,
     content: Any | None = None,
+    layer: int = 0,
     art_px_per_tile: int | None = None,
     is_locked: Callable[[str], bool] | None = None,
 ) -> QImage:
-    """Render chunk ``(cx, cy)`` into an art-resolution :class:`QImage`."""
+    """Render chunk ``(cx, cy)`` of ``layer`` into an art-resolution image."""
     started = time.perf_counter()
     content = content if content is not None else getattr(world, "content", None)
     config = getattr(content, "config", None)
@@ -164,6 +176,17 @@ def render_chunk(
     ambient = float(_config_value(config, "ambient", 0.35))
     sun = _config_value(config, "sun_dir", _DEFAULT_SUN)
     seed = int(getattr(world, "seed", 0) or 0)
+    layer = int(layer)
+    layer_tint: np.ndarray | None = None
+    try:
+        layer_def = content.get_layer(layer) if content is not None else None
+    except Exception:
+        layer_def = None
+    if layer_def is not None:
+        ambient *= float(getattr(layer_def, "light_ambient", 1.0) or 1.0)
+        tint = str(getattr(layer_def, "floor_tint", "") or "")
+        if tint:
+            layer_tint = _rgb(tint, _DEFAULT_FLOOR)
     x0, y0 = int(cx) * side, int(cy) * side
     grid = side + 2
 
@@ -173,10 +196,10 @@ def render_chunk(
     for gy in range(-1, side + 1):
         for gx in range(-1, side + 1):
             x, y = x0 + gx, y0 + gy
-            tile = world.tile_at(x, y, tick)
+            tile = _tile_at(world, x, y, tick, layer)
             tile_grid[gy + 1][gx + 1] = tile
             heights[gy + 1, gx + 1] = tile_height(
-                world, x, y, tick, tile=tile, noise_cache=noise_cache
+                world, x, y, tick, tile=tile, noise_cache=noise_cache, layer=layer
             )
     tiles = [[tile_grid[gy + 1][gx + 1] for gx in range(side)] for gy in range(side)]
 
@@ -212,6 +235,9 @@ def render_chunk(
                         (floor[0] * 0.5, floor[1] * 0.5, floor[2] * 0.6),
                         dtype=np.float64,
                     )
+            if layer_tint is not None:
+                floor = floor * 0.65 + layer_tint * 0.35
+                shadow = shadow * 0.72 + layer_tint * 0.18
             if tile.depleted:
                 floor = floor * 0.7
                 shadow = shadow * 0.6
@@ -241,7 +267,8 @@ def render_chunk(
     for gy, gx, ore_color, locked in speckles:
         ratio = _LOCKED_ORE_RATIO if locked else _UNLOCKED_ORE_RATIO
         salt = _LOCKED_SPECKLE_SALT if locked else _UNLOCKED_SPECKLE_SALT
-        mask = _ore_mask(seed, x0 + gx, y0 + gy, art, ratio, salt)
+        layer_salt = salt ^ (layer * 0x9E3779B1) if layer else salt
+        mask = _ore_mask(seed, x0 + gx, y0 + gy, art, ratio, layer_salt)
         tile_y = gy * art
         tile_x = gx * art
         base_image[tile_y : tile_y + art, tile_x : tile_x + art][mask] = ore_color
