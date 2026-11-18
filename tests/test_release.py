@@ -1,4 +1,4 @@
-"""Release checks for v0.3.0 packaging and documentation."""
+"""Release checks for v0.3.1 packaging and documentation."""
 
 from __future__ import annotations
 
@@ -29,8 +29,23 @@ def qapp():
     return QApplication.instance() or QApplication([])
 
 
-def test_project_version_is_0_3_0() -> None:
-    assert 'version = "0.3.0"' in _read("pyproject.toml")
+def test_project_version_is_0_3_1() -> None:
+    assert 'version = "0.3.1"' in _read("pyproject.toml")
+
+
+def test_changelog_has_0_3_1_entry() -> None:
+    changelog = _read("CHANGELOG.md")
+    assert "## [0.3.1]" in changelog
+    for phrase in (
+        "closable editor tabs",
+        "ctrl+w",
+        "ctrl+shift+t",
+        "open…",
+        "trash",
+        "to miners",
+        "high-contrast",
+    ):
+        assert phrase in changelog.lower()
 
 
 def test_changelog_has_0_3_0_entry() -> None:

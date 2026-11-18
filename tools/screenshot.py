@@ -15,7 +15,9 @@ achievements panel visible), ``--wardrobe`` (show the wardrobe panel,
 saved as ``artifacts/ui_wardrobe.png``), ``--panel base|market|refinery|contracts``
 (a scripted economy session, saved as ``artifacts/ui_<panel>.png``),
 ``--locked`` (lock every feature and show the market lock overlay,
-saved as ``artifacts/ui_locked.png``) and ``--output``.
+saved as ``artifacts/ui_locked.png``), ``--editor-tabs`` (12 scripts,
+three open tabs and the Open… list, saved as
+``artifacts/ui_editor_tabs.png``) and ``--output``.
 """
 
 from __future__ import annotations
@@ -52,6 +54,21 @@ MINER_SCRIPT = (
     "while True:\n"
     "    move(East)\n"
     "    move(West)\n"
+)
+
+EDITOR_SCRIPTS = (
+    "main.py",
+    "sweep.py",
+    "scan.py",
+    "spiral.py",
+    "market.py",
+    "refine.py",
+    "contracts.py",
+    "fleet.py",
+    "events.py",
+    "forecast.py",
+    "helpers.py",
+    "worker.py",
 )
 
 COMMAND_SEQUENCE = [
@@ -134,6 +151,57 @@ def prepare_economy(game: Game, ticks: int = 3000) -> Game:
     for _ in range(120):
         game.step()
     return game
+
+
+def _write_editor_scripts(scripts_dir: Path) -> None:
+    """Create the twelve scripts used by the editor-tabs screenshot."""
+    source = (
+        "# {name}: sample automation for the editor-tabs screenshot.\n"
+        "for _ in range(12):\n"
+        "    if peek() is not None:\n"
+        "        mine()\n"
+        "    move(East)\n"
+    )
+    for name in EDITOR_SCRIPTS:
+        try:
+            (scripts_dir / name).write_text(source.format(name=name[:-3]), encoding="utf-8")
+        except OSError:
+            pass
+
+
+def _setup_editor_tabs(
+    window: MainWindow,
+    scripts_dir: Path,
+    app: QApplication,
+    open_names: tuple[str, ...] = ("main.py", "sweep.py", "scan.py"),
+    show_open: bool = True,
+) -> None:
+    """Open a few tabs and leave the searchable Open… list on screen."""
+    panel = getattr(window, "editor_panel", None)
+    if panel is None:
+        return
+    panel.close_all_tabs(save=False, remember=False)
+    for name in open_names:
+        path = Path(scripts_dir) / name
+        if path.is_file():
+            panel.add_file(path)
+    if panel.tabs.count() > 1:
+        panel.tabs.setCurrentIndex(1)
+    try:
+        panel.show_panel()
+        panel.move(300, 40)
+        panel.resize(700, 560)
+    except Exception:
+        panel.show()
+    if show_open:
+        try:
+            panel.open_dialog()
+            panel.open_files_popup.resize(380, 280)
+            panel.open_files_popup.move(170, 150)
+        except Exception:
+            pass
+    window.hud.refresh()
+    app.processEvents()
 
 
 def _find_rich_vein(game: Game) -> object | None:
@@ -237,6 +305,7 @@ def build_window(
     panel: str | None = None,
     events: bool = False,
     locked: bool = False,
+    editor_tabs: bool = False,
 ) -> MainWindow:
     """Build the real main window and run ``ticks`` engine ticks."""
     app = QApplication.instance() or QApplication([])
@@ -260,6 +329,9 @@ def build_window(
     if miners:
         scripts_dir = Path(tempfile.mkdtemp(prefix="minesim_miners_"))
         (scripts_dir / "worker.py").write_text(MINER_SCRIPT, encoding="utf-8")
+    if editor_tabs:
+        scripts_dir = Path(tempfile.mkdtemp(prefix="minesim_editor_tabs_"))
+        _write_editor_scripts(scripts_dir)
     if panel or miners:
         unlock_everything(game)
     if panel:
@@ -279,9 +351,12 @@ def build_window(
     window.world_view.set_terrain_lighting(not flat, persist=False)
     window.resize(size[0], size[1])
     window.show()
+    if editor_tabs and scripts_dir is not None:
+        window.game_loop.stop()
+        _setup_editor_tabs(window, scripts_dir, app)
     if miners:
         _setup_miners(window, game, int(miners), app)
-    if panel is None and not miners:
+    if panel is None and not miners and not editor_tabs:
         for command in COMMAND_SEQUENCE:
             game.submit(command)
         for _ in range(int(ticks)):
@@ -388,6 +463,12 @@ def main() -> int:
         action="store_true",
         help="lock every feature and save artifacts/ui_locked.png",
     )
+    parser.add_argument(
+        "--editor-tabs",
+        action="store_true",
+        help="create 12 scripts, open 3 tabs with the Open… list and save "
+        "artifacts/ui_editor_tabs.png",
+    )
     parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args()
     window = build_window(
@@ -401,6 +482,7 @@ def main() -> int:
         panel=args.panel,
         events=args.events,
         locked=args.locked,
+        editor_tabs=args.editor_tabs,
     )
     for panel_name in (
         "achievements_panel",
@@ -417,6 +499,8 @@ def main() -> int:
         if args.wardrobe and panel_name == "wardrobe_panel":
             continue
         if args.miners and panel_name in ("miners_panel", "editor_panel"):
+            continue
+        if args.editor_tabs and panel_name == "editor_panel":
             continue
         panel = getattr(window, panel_name, None)
         if panel is not None:
@@ -470,6 +554,8 @@ def main() -> int:
         default_name = "ui_miners.png"
     if args.locked:
         default_name = "ui_locked.png"
+    if args.editor_tabs:
+        default_name = "ui_editor_tabs.png"
     out = args.output or (Path(__file__).resolve().parents[1] / "artifacts" / default_name)
     out.parent.mkdir(parents=True, exist_ok=True)
     window.grab().save(str(out))

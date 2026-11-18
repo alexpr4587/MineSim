@@ -36,7 +36,10 @@ Miner fleet with a script and console per miner:
   features, recipes and example scripts.
 - Miner skins and pixel-art sprites, selected in the wardrobe panel (`K`).
 - Floating script editor with syntax highlighting (`Ctrl+R` run, `Ctrl+.` stop),
-  API reference, console, HUD, fleet consoles and achievement toasts.
+  closable tabs, a searchable **Open…** list, rename/duplicate/delete with a
+  recoverable trash, per-tab autosave and running-script indicators (`Ctrl+W`
+  closes a tab, `Ctrl+Shift+T` reopens the last one), plus an API reference,
+  console, HUD, fleet consoles and achievement toasts.
 - 35 player API functions, the `minerlib` helper module (including route,
   trading, data and OOP helpers) and 16 example scripts.
 - Data-driven content, deterministic seeded worlds and save format v9 with
@@ -56,7 +59,9 @@ Miner fleet with a script and console per miner:
 Single-letter keys (`E F L U K B M T H C G Space 1-5`) work while the world
 view has focus. While the code editor has focus, letters are typed as code —
 press `Esc` (or click the world) first, or use the **View** menu, which works
-from anywhere.
+from anywhere. In the editor, use the tab close buttons, middle-click, `Ctrl+W`
+or `Ctrl+Shift+T` to manage scripts; the `⋯` menu renames, duplicates, deletes
+and restores files.
 
 | Key | Action |
 |-----|--------|
@@ -76,6 +81,8 @@ from anywhere.
 | `1`–`5` | Set game speed (slowest to fastest) |
 | `Ctrl+R` | Run the current script |
 | `Ctrl+.` | Stop the running script |
+| `Ctrl+W` | Close the current editor tab (file is kept) |
+| `Ctrl+Shift+T` | Reopen the last closed editor tab |
 | `Esc` (in editor) | Return focus to the world |
 
 ## Your first script

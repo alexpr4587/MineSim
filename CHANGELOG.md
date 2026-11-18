@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.3.1] - 2026-11-17
+
+### Added
+
+- Closable editor tabs: every tab has a close button, middle-click closes a tab,
+  `Ctrl+W` closes the current tab and `Ctrl+Shift+T` reopens the last closed one.
+  Closing never deletes a script and running scripts keep running.
+- A searchable **Open…** list of closed scripts, sorted by last modified time.
+- File actions menu with Rename (validated Python module names), Duplicate,
+  Delete to a timestamped `.trash` folder and Restore deleted.
+- Open tabs, their order and the active tab are remembered between runs.
+- A dirty dot in the tab title, two-second autosave and running-script dots in
+  the colour of the miner that runs each script.
+- Tabs close automatically with a console note when their file is deleted or
+  renamed outside the game.
+
+### Changed
+
+- Renamed drones to miners throughout the game: UI text, player API, content
+  ids and save data. The old API names remain as deprecated aliases, and old
+  saves migrate automatically.
+
+### Fixed
+
+- The selected speed button in the HUD now uses a high-contrast label.
+
 ## [0.3.0] - 2026-11-16
 
 ### Added
@@ -61,7 +87,4 @@
 
 ## [Unreleased]
 
-- Renamed drones to miners throughout the game: UI text, player API, content
-  ids and save data. The old API names remain as deprecated aliases, and old
-  saves migrate automatically.
 - Bootstrap repository.

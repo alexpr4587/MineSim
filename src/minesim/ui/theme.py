@@ -39,6 +39,8 @@ __all__ = [
     "HIGHLIGHT_NUMBER",
     "HIGHLIGHT_STRING",
     "HUD_BACKGROUND",
+    "HUD_SELECTED_BACKGROUND",
+    "HUD_SELECTED_TEXT",
     "LOCKED_MARK",
     "MINER_BODY",
     "MINER_DETAIL",
@@ -70,6 +72,8 @@ COLORS: dict[str, str] = {
     "background": "#1e1e2e",
     "surface": "#2a2a3d",
     "hud_background": "#252535",
+    "hud_selected_background": "#ffd166",
+    "hud_selected_text": "#101018",
     "text": "#e6e6e6",
     "text_dim": "#9a9ab0",
     "disabled_text": "#6a6a7d",
@@ -109,6 +113,8 @@ COLORS: dict[str, str] = {
 
 BACKGROUND = COLORS["background"]
 HUD_BACKGROUND = COLORS["hud_background"]
+HUD_SELECTED_BACKGROUND = COLORS["hud_selected_background"]
+HUD_SELECTED_TEXT = COLORS["hud_selected_text"]
 TEXT = COLORS["text"]
 TEXT_DIM = COLORS["text_dim"]
 DISABLED_TEXT = COLORS["disabled_text"]

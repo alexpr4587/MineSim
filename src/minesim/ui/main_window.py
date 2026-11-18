@@ -181,6 +181,10 @@ class MainWindow(QMainWindow):
         self.code_editor = _get(self.editor_panel, "code_editor") or _get(
             self.editor_panel, "editor"
         )
+        try:
+            self.editor_panel.editor_changed.connect(self._on_editor_changed)
+        except Exception:
+            pass
         self.console_panel = _get(self.editor_panel, "console_panel") or console_panel_arg
         self.console = self.console_panel
         if self.console_panel is not None and manager is not None:
@@ -280,6 +284,11 @@ class MainWindow(QMainWindow):
         self.world_view.setFocus()
 
     # -- panel toggles -------------------------------------------------------------
+
+    def _on_editor_changed(self, editor: Any) -> None:
+        """Keep the main-window editor aliases on the active tab."""
+        self.code_editor = editor
+        self.editor = self.editor_panel
 
     def _sync_view_actions(self) -> None:
         for action, panel in (

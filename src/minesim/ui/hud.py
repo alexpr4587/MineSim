@@ -7,7 +7,14 @@ from typing import Any
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QWidget
 
-from minesim.ui.theme import FONT_FAMILY, HUD_BACKGROUND, TEXT_DIM
+from minesim.ui.theme import (
+    FONT_FAMILY,
+    HUD_BACKGROUND,
+    HUD_SELECTED_BACKGROUND,
+    HUD_SELECTED_TEXT,
+    TEXT,
+    TEXT_DIM,
+)
 
 __all__ = ["HUD", "SPEEDS", "SPEED_BUTTONS"]
 
@@ -49,7 +56,18 @@ class HUD(QWidget):
         self.game_loop = game_loop
         self.speed: int = 1
         self.paused: bool = False
-        self.setStyleSheet(f"background-color: {HUD_BACKGROUND};")
+        self.setObjectName("hud")
+        self.setStyleSheet(
+            "QWidget#hud {"
+            f" background-color: {HUD_BACKGROUND};"
+            " }"
+            " QPushButton:checked {"
+            f" background-color: {HUD_SELECTED_BACKGROUND};"
+            f" color: {HUD_SELECTED_TEXT};"
+            f" border: 2px solid {TEXT};"
+            " font-weight: bold;"
+            " }"
+        )
         layout = QHBoxLayout(self)
         layout.setContentsMargins(6, 4, 6, 4)
         self.money_label = QLabel("Money: 0", self)
