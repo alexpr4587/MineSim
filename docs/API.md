@@ -12,6 +12,9 @@ Functions are called directly, e.g. `move(East)`, `mine()`, `sell()`. Locked fun
 | `mine` | `mine()` | Mine the tile the miner stands on. Returns a dict with ok, and reason or ore when relevant. | ceil(hardness * 3 / tool power) ticks | `result = mine()` | available from the start |
 | `peek` | `peek()` | Return the ore on the current tile, None if empty, or 'unknown' if the ore is locked. | 0 ticks | `ore = peek()` | available from the start |
 | `position` | `position()` | Return the miner position as (x, y). | 0 ticks | `x, y = position()` | available from the start |
+| `battery` | `battery()` | Return the miner battery as (energy, capacity). | 0 ticks | `energy, capacity = battery()` | available from the start |
+| `charge` | `charge()` | Recharge the battery on a base or shaft station and return {ok, energy, capacity, charged}. | ceil(missing energy / charge rate) ticks | `charge()` | available from the start |
+| `energy_cost` | `energy_cost(action, arg=None)` | Return the energy an action would cost right now. For 'scan', arg is the radius; for 'mine' the ore under the miner is used. | 0 ticks | `energy_cost('mine')` | available from the start |
 | `sell` | `sell()` | Sell the whole inventory at the base and return the money gained. | 2 ticks at the base | `earned = sell()` | unlocks with the **First Dig** achievement |
 | `unload` | `unload()` | Move the miner inventory into the base warehouse and return {moved, left}. | 1 tick at the base | `result = unload()` | unlocks with the **Storage Unit** achievement |
 | `stock` | `stock()` | Return the warehouse contents and capacity as {items, capacity, used, free}. | 0 ticks | `stock()['items']` | unlocks with the **Storage Unit** achievement |
@@ -116,6 +119,60 @@ ore = peek()
 
 ```python
 x, y = position()
+```
+
+**Unlocked by:** available from the start
+
+### `battery`
+
+**Signature:** `battery()`
+
+**Category:** energy
+
+**Description:** Return the miner battery as (energy, capacity).
+
+**Cost:** 0 ticks
+
+**Example:**
+
+```python
+energy, capacity = battery()
+```
+
+**Unlocked by:** available from the start
+
+### `charge`
+
+**Signature:** `charge()`
+
+**Category:** energy
+
+**Description:** Recharge the battery on a base or shaft station and return {ok, energy, capacity, charged}.
+
+**Cost:** ceil(missing energy / charge rate) ticks
+
+**Example:**
+
+```python
+charge()
+```
+
+**Unlocked by:** available from the start
+
+### `energy_cost`
+
+**Signature:** `energy_cost(action, arg=None)`
+
+**Category:** energy
+
+**Description:** Return the energy an action would cost right now. For 'scan', arg is the radius; for 'mine' the ore under the miner is used.
+
+**Cost:** 0 ticks
+
+**Example:**
+
+```python
+energy_cost('mine')
 ```
 
 **Unlocked by:** available from the start

@@ -5,9 +5,11 @@ from __future__ import annotations
 from typing import Any
 
 from PySide6.QtGui import QFont
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QPushButton, QWidget
 
 from minesim.ui.theme import (
+    ACCENT,
+    ERROR,
     FONT_FAMILY,
     HUD_BACKGROUND,
     HUD_SELECTED_BACKGROUND,
@@ -74,6 +76,13 @@ class HUD(QWidget):
         layout.setContentsMargins(6, 4, 6, 4)
         self.money_label = QLabel("Money: 0", self)
         self.inventory_label = QLabel("Inventory: 0/10", self)
+        self.energy_label = QLabel("Energy: 0/0", self)
+        self.energy_label.setObjectName("hud_energy_label")
+        self.energy_bar = QProgressBar(self)
+        self.energy_bar.setObjectName("hud_energy_bar")
+        self.energy_bar.setTextVisible(False)
+        self.energy_bar.setFixedWidth(80)
+        self.energy_bar.setFixedHeight(10)
         self.warehouse_label = QLabel("Warehouse: 0/100", self)
         self.miners_label = QLabel("Miners: 1 alive · 0 free", self)
         self.tick_label = QLabel("Tick: 0", self)
@@ -85,6 +94,7 @@ class HUD(QWidget):
         for label in (
             self.money_label,
             self.inventory_label,
+            self.energy_label,
             self.warehouse_label,
             self.miners_label,
             self.tick_label,
@@ -94,6 +104,8 @@ class HUD(QWidget):
         ):
             label.setFont(QFont(FONT_FAMILY))
             layout.addWidget(label)
+            if label is self.energy_label:
+                layout.addWidget(self.energy_bar)
         layout.addStretch(1)
         self.speed_buttons: dict[int, QPushButton] = {}
         self.buttons: list[QPushButton] = []
@@ -194,7 +206,9 @@ class HUD(QWidget):
             return
         try:
             from minesim.core.events import (
+                Charged,
                 ContractDelivered,
+                EnergySpent,
                 MineAttempted,
                 MinerRemoved,
                 MinerSpawned,
@@ -222,6 +236,8 @@ class HUD(QWidget):
             bus.subscribe(Unloaded, lambda _event: self.refresh())
             bus.subscribe(RefineFinished, lambda _event: self.refresh())
             bus.subscribe(ContractDelivered, lambda _event: self.refresh())
+            bus.subscribe(EnergySpent, lambda _event: self.refresh())
+            bus.subscribe(Charged, lambda _event: self.refresh())
         except Exception:
             pass
 
@@ -258,8 +274,19 @@ class HUD(QWidget):
         if warehouse_used is None:
             warehouse_used = 0
         warehouse_capacity = _get(warehouse, "capacity", 0) or 0
+        energy = int(_get(miner, "energy", 0) or 0)
+        battery_capacity = int(_get(miner, "battery_capacity", 0) or 0)
         self.money_label.setText(f"Money: {int(money)}")
         self.inventory_label.setText(f"Inventory: {int(used)}/{int(capacity)}")
+        self.energy_label.setText(f"Energy: {energy}/{battery_capacity}")
+        self.energy_bar.setRange(0, max(1, battery_capacity))
+        self.energy_bar.setValue(max(0, min(energy, max(1, battery_capacity))))
+        bar_color = ERROR if battery_capacity and energy * 4 < battery_capacity else ACCENT
+        self.energy_bar.setStyleSheet(
+            "QProgressBar { border: 1px solid "
+            f"{TEXT_DIM}; border-radius: 3px; background: transparent; }}"
+            f" QProgressBar::chunk {{ background-color: {bar_color}; border-radius: 2px; }}"
+        )
         self.warehouse_label.setText(f"Warehouse: {int(warehouse_used)}/{int(warehouse_capacity)}")
         self.miners_label.setText(f"Miners: {int(miner_count)} alive · {free_slots} free")
         self.tick_label.setText(f"Tick: {int(tick)}")

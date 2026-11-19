@@ -137,5 +137,35 @@
       12000
     ],
     "unlocked_by": null
+  },
+  {
+    "id": "battery",
+    "name": "Battery",
+    "description": "Store more energy: battery capacity +100 per level.",
+    "stat": "battery_capacity",
+    "per_level": 100,
+    "max_level": 5,
+    "costs": [
+      200,
+      600,
+      1500,
+      4000,
+      9000
+    ],
+    "unlocked_by": null
+  },
+  {
+    "id": "charger",
+    "name": "Charger",
+    "description": "Recharge faster: charge rate +10 energy per tick per level.",
+    "stat": "charge_rate",
+    "per_level": 10,
+    "max_level": 3,
+    "costs": [
+      300,
+      900,
+      2500
+    ],
+    "unlocked_by": null
   }
 ]

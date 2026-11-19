@@ -130,11 +130,14 @@ class MinerRow(QFrame):
         self.layer_label = QLabel("Layer: 0", self)
         self.layer_label.setObjectName(f"miner_layer_{self.miner_id}")
         self.inventory_label = QLabel("0/10", self)
-        for label in (self.script_label, self.inventory_label, self.layer_label):
+        self.energy_label = QLabel("Energy: 0/0", self)
+        self.energy_label.setObjectName(f"miner_energy_{self.miner_id}")
+        for label in (self.script_label, self.inventory_label, self.layer_label, self.energy_label):
             label.setStyleSheet(f"color: {TEXT_DIM};")
         info.addWidget(self.script_label, 1)
         info.addWidget(self.position_label)
         info.addWidget(self.layer_label)
+        info.addWidget(self.energy_label)
         info.addWidget(self.inventory_label)
         layout.addLayout(info)
 
@@ -190,6 +193,16 @@ class MinerRow(QFrame):
         capacity = int(_get(miner, "capacity", 0) or 0)
         self.inventory_label.setText(f"{used}/{capacity}")
         self.inventory_label.setToolTip("Inventory used / capacity")
+        energy = int(_get(miner, "energy", 0) or 0)
+        battery_capacity = int(_get(miner, "battery_capacity", 0) or 0)
+        self.energy_label.setText(f"Energy: {energy}/{battery_capacity}")
+        if _get(miner, "stranded_since", None) is not None:
+            self.energy_label.setText(f"Energy: {energy}/{battery_capacity} · STRANDED")
+            self.energy_label.setStyleSheet(f"color: {ERROR}; font-weight: bold;")
+            self.energy_label.setToolTip("Stranded: waiting for rescue")
+        else:
+            self.energy_label.setStyleSheet(f"color: {TEXT_DIM};")
+            self.energy_label.setToolTip("Battery energy / capacity")
         color = miner_badge_color(self.miner_id)
         self.badge.setStyleSheet(
             f"background-color: {color}; border: 1px solid {TEXT}; border-radius: 8px;"

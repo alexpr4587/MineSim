@@ -5,13 +5,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from minesim.core.commands import Move
 from minesim.core.contracts import ContractBoard
 from minesim.core.events import (
     ContractExpired,
     ContractGenerated,
+    EnergySpent,
     EventBus,
     MinerRemoved,
+    MinerRescued,
     MinerSpawned,
+    MinerStranded,
     RefineFinished,
     TickAdvanced,
     TileRegenerated,
@@ -27,9 +31,20 @@ from minesim.core.worldevents import WorldEvents
 
 __all__ = ["AllUnlocked", "GameEngine", "ProgressionView", "Ticket"]
 
+
+def _get_attr(obj: Any, name: str, default: Any = None) -> Any:
+    if obj is None:
+        return default
+    if isinstance(obj, dict):
+        return obj.get(name, default)
+    return getattr(obj, name, default)
+
+
 _ZERO_COST_NAMES = {
+    "Battery",
     "Biome",
     "Distance",
+    "EnergyCost",
     "Events",
     "Layer",
     "Layers",
@@ -149,6 +164,8 @@ class _Entry:
     ticket: Ticket
     remaining: int = 0
     miner_id: int = 0
+    refused_reason: str | None = None
+    refused_cost: int = 0
 
 
 class GameEngine:
@@ -460,15 +477,42 @@ class GameEngine:
 
     def _execute_now(self, entry: _Entry) -> None:
         miner = self._miners[entry.miner_id]
-        result = entry.command.execute(self, miner)
+        if entry.refused_reason is not None:
+            result = {
+                "ok": False,
+                "reason": entry.refused_reason,
+                "cost": int(entry.refused_cost),
+                "energy": int(getattr(miner, "energy", 0) or 0),
+            }
+        else:
+            result = entry.command.execute(self, miner)
         entry.ticket.result = result
         entry.ticket.done = True
+
+    def _command_energy_cost(self, command: Any, miner: Any) -> int:
+        """Return the energy ``command`` needs to start for ``miner``."""
+        method = getattr(command, "energy_cost", None)
+        if not callable(method):
+            return 0
+        try:
+            return max(0, int(method(self, miner)))
+        except Exception:
+            return 0
+
+    def _spend_energy(self, miner: Any, amount: int) -> None:
+        amount = max(0, int(amount))
+        if amount <= 0:
+            return
+        miner.energy = max(0, int(getattr(miner, "energy", 0) or 0) - amount)
+        self._events.publish(EnergySpent(miner_id=int(getattr(miner, "id", 0) or 0), amount=amount))
 
     def _activate_next(self, miner: Any) -> None:
         """Promote queued commands until one occupies ``miner`` or it empties.
 
         Zero-cost commands at the head execute immediately without
         consuming a tick; the first positive-cost command becomes active.
+        A command the miner cannot afford is refused after one tick
+        without spending anything.
         """
         while miner.active is None and miner.queue:
             entry = miner.queue[0]
@@ -481,6 +525,15 @@ class GameEngine:
                 self._execute_now(entry)
                 continue
             miner.queue.popleft()
+            energy = self._command_energy_cost(entry.command, miner)
+            if energy > int(getattr(miner, "energy", 0) or 0):
+                entry.refused_reason = "low_energy"
+                entry.refused_cost = energy
+                entry.remaining = 1
+                miner.active = entry
+                miner.busy_timer = 1
+                continue
+            self._spend_energy(miner, energy)
             entry.remaining = cost
             miner.active = entry
             miner.busy_timer = cost
@@ -557,6 +610,75 @@ class GameEngine:
                 miner.busy_timer = 0
                 self._execute_now(active)
                 self._activate_next(miner)
+        self._update_stranding()
+
+    # -- energy and rescue ---------------------------------------------------
+
+    def _on_station(self, miner: Any) -> bool:
+        """Return True when ``miner`` stands on a base or shaft station."""
+        world = getattr(self, "world", None)
+        if world is None:
+            return True
+        try:
+            tile = world.tile_at(
+                int(_get_attr(miner, "x", 0)),
+                int(_get_attr(miner, "y", 0)),
+                self.tick,
+                layer=int(_get_attr(miner, "layer", 0) or 0),
+            )
+        except Exception:
+            return True
+        return bool(_get_attr(tile, "is_base", False))
+
+    def _move_energy_cost(self, miner: Any) -> int:
+        return self._command_energy_cost(Move(), miner)
+
+    def _update_stranding(self) -> None:
+        """Mark miners that cannot afford a move and rescue them in time."""
+        config = getattr(self.content, "config", None)
+        rescue_ticks = max(0, int(_get_attr(config, "rescue_ticks", 600) or 0))
+        rescue_fraction = float(_get_attr(config, "rescue_energy_fraction", 0.25) or 0.0)
+        rescue_loses = bool(_get_attr(config, "rescue_loses_inventory", True))
+        for miner_id in sorted(self._miners):
+            miner = self._miners[miner_id]
+            if self._on_station(miner) or int(getattr(miner, "energy", 0) or 0) >= int(
+                self._move_energy_cost(miner)
+            ):
+                if getattr(miner, "stranded_since", None) is not None:
+                    miner.stranded_since = None
+                continue
+            stranded_since = getattr(miner, "stranded_since", None)
+            if stranded_since is None:
+                miner.stranded_since = self.tick
+                self._events.publish(MinerStranded(miner_id=int(miner_id)))
+                stranded_since = self.tick
+            if self.tick - int(stranded_since) >= rescue_ticks:
+                self._rescue_miner(miner, rescue_fraction, rescue_loses)
+
+    def _rescue_miner(self, miner: Any, fraction: float, loses_inventory: bool) -> None:
+        """Tow a stranded miner to the station on its current layer."""
+        lost: dict[str, int] = {}
+        if loses_inventory:
+            lost = {
+                str(item_id): int(count)
+                for item_id, count in dict(getattr(miner, "inventory", {}) or {}).items()
+                if int(count) > 0
+            }
+            try:
+                miner.inventory.clear()
+            except Exception:
+                pass
+        miner.x = 0
+        miner.y = 0
+        capacity = max(0, int(getattr(miner, "battery_capacity", 0) or 0))
+        miner.energy = max(0, min(capacity, int(capacity * max(0.0, float(fraction)))))
+        miner.stranded_since = None
+        self._events.publish(
+            MinerRescued(
+                miner_id=int(getattr(miner, "id", 0) or 0),
+                lost_items=lost,
+            )
+        )
 
     def run_until_idle(self, max_ticks: int = 10000) -> None:
         """Step until idle or ``max_ticks`` ticks have passed."""

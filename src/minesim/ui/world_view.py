@@ -37,6 +37,7 @@ from minesim.ui.theme import (
     BACKGROUND,
     BASE_BORDER,
     BASE_LABEL,
+    ERROR,
     EVENT_LABEL,
     FONT_FAMILY,
     GRID,
@@ -1103,6 +1104,34 @@ class WorldView(QWidget):
             text,
         )
 
+    def _draw_stranded_badge(self, painter: QPainter, sx: float, sy: float) -> None:
+        """Draw a red exclamation mark next to a stranded miner."""
+        radius = max(6.0, self.tile_px * 0.23)
+        cx = sx - self.tile_px * 0.34
+        cy = sy - self.tile_px * 0.34
+        painter.setPen(QPen(QColor(MINER_DETAIL), 1))
+        painter.setBrush(QColor(ERROR))
+        painter.drawEllipse(
+            int(cx - radius),
+            int(cy - radius),
+            int(radius * 2),
+            int(radius * 2),
+        )
+        font = QFont(FONT_FAMILY)
+        font.setBold(True)
+        font.setPointSize(max(6, int(radius)))
+        painter.setFont(font)
+        painter.setPen(QPen(QColor(MINER_DETAIL)))
+        metrics = painter.fontMetrics()
+        text = "!"
+        text_width = metrics.horizontalAdvance(text)
+        text_height = metrics.ascent()
+        painter.drawText(
+            int(cx - text_width / 2),
+            int(cy + text_height / 2 - 1),
+            text,
+        )
+
     def _draw_one_miner(
         self, painter: QPainter, miner: Any, sx: float, sy: float, *, badge: bool
     ) -> None:
@@ -1144,6 +1173,8 @@ class WorldView(QWidget):
             painter.drawEllipse(int(sx - 2), int(sy - 2), 4, 4)
         if badge:
             self._draw_miner_badge(painter, sx, sy, int(_get(miner, "id", 0) or 0))
+        if _get(miner, "stranded_since", None) is not None:
+            self._draw_stranded_badge(painter, sx, sy)
 
     def _draw_selection_ring(self, painter: QPainter, sx: float, sy: float, miner_id: int) -> None:
         """Draw a coloured ring around the selected miner."""

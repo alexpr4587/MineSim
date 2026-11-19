@@ -305,10 +305,10 @@ def test_v9_save_fixture_migrates_miner_layers() -> None:
     data = json.loads(SAVE_V9.read_text(encoding="utf-8"))
     assert data["version"] == 9
     migrated = migrate(data)
-    assert migrated["version"] == CURRENT_VERSION == 10
+    assert migrated["version"] == CURRENT_VERSION == 11
     assert migrated["fleet"][0]["layer"] == 0
     savegame = SaveGame.from_dict(data)
-    assert savegame.version == 10
+    assert savegame.version == 11
     game = Game.load_data(savegame) if hasattr(Game, "load_data") else None
     if game is not None:
         assert game.miner.layer == 0

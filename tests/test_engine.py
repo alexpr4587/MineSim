@@ -304,6 +304,8 @@ def test_mining_probability_within_3_sigma(content, ore_id):
     miner.x, miner.y = _find_tile(world, ore_id)
     ore = content.get_ore(ore_id)
     miner.capacity = 10**9
+    miner.player_stats.battery_capacity = 10**9
+    miner.energy = 10**9
     attempts = 5000
     successes = 0
     for _ in range(attempts):

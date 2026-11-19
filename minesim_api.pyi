@@ -6,7 +6,7 @@ East: str = "east"
 South: str = "south"
 West: str = "west"
 
-def move(direction: str) -> None:
+def move(direction: str) -> bool:
     'Move one tile in the given direction.'
     ...
 def mine() -> dict:
@@ -17,6 +17,15 @@ def peek() -> str | None:
     ...
 def position() -> tuple[int, int]:
     'Return the miner position as (x, y).'
+    ...
+def battery() -> tuple[int, int]:
+    'Return the miner battery as (energy, capacity).'
+    ...
+def charge() -> dict:
+    'Recharge the battery on a base or shaft station and return {ok, energy, capacity, charged}.'
+    ...
+def energy_cost(action: str, arg: int | None = None) -> int:
+    "Return the energy an action would cost right now. For 'scan', arg is the radius; for 'mine' the ore under the miner is used."
     ...
 def sell() -> int:
     'Sell the whole inventory at the base and return the money gained.'

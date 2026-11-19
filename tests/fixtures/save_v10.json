@@ -1,0 +1,191 @@
+{
+  "contracts": {
+    "contracts": [],
+    "generation": 0,
+    "next_id": 1,
+    "slots": 3,
+    "tick": 0
+  },
+  "fleet": [
+    {
+      "facing": "north",
+      "id": 0,
+      "inventory": {
+        "stone": 2
+      },
+      "layer": 0,
+      "script": "",
+      "x": 2,
+      "y": 1
+    }
+  ],
+  "market": {
+    "items": {
+      "coal": {
+        "history": [],
+        "impact": 0.0,
+        "index": 1.0,
+        "shock": 1.0,
+        "shock_until": null
+      },
+      "copper": {
+        "history": [],
+        "impact": 0.0,
+        "index": 1.0,
+        "shock": 1.0,
+        "shock_until": null
+      },
+      "copper_bar": {
+        "history": [],
+        "impact": 0.0,
+        "index": 1.0,
+        "shock": 1.0,
+        "shock_until": null
+      },
+      "cut_ruby": {
+        "history": [],
+        "impact": 0.0,
+        "index": 1.0,
+        "shock": 1.0,
+        "shock_until": null
+      },
+      "gold": {
+        "history": [],
+        "impact": 0.0,
+        "index": 1.0,
+        "shock": 1.0,
+        "shock_until": null
+      },
+      "gold_bar": {
+        "history": [],
+        "impact": 0.0,
+        "index": 1.0,
+        "shock": 1.0,
+        "shock_until": null
+      },
+      "iron": {
+        "history": [],
+        "impact": 0.0,
+        "index": 1.0,
+        "shock": 1.0,
+        "shock_until": null
+      },
+      "iron_bar": {
+        "history": [],
+        "impact": 0.0,
+        "index": 1.0,
+        "shock": 1.0,
+        "shock_until": null
+      },
+      "ruby": {
+        "history": [],
+        "impact": 0.0,
+        "index": 1.0,
+        "shock": 1.0,
+        "shock_until": null
+      },
+      "silver": {
+        "history": [],
+        "impact": 0.0,
+        "index": 1.0,
+        "shock": 1.0,
+        "shock_until": null
+      },
+      "silver_bar": {
+        "history": [],
+        "impact": 0.0,
+        "index": 1.0,
+        "shock": 1.0,
+        "shock_until": null
+      },
+      "steel_bar": {
+        "history": [],
+        "impact": 0.0,
+        "index": 1.0,
+        "shock": 1.0,
+        "shock_until": null
+      },
+      "stone": {
+        "history": [],
+        "impact": 0.0,
+        "index": 1.0,
+        "shock": 1.0,
+        "shock_until": null
+      }
+    },
+    "step": 0
+  },
+  "player_stats": {
+    "capacity": 10,
+    "estimates": {},
+    "money": 0,
+    "move_ticks": 4,
+    "scan_radius": 2,
+    "stats": {
+      "attempts": {},
+      "sales": 0,
+      "successes": {},
+      "tiles_moved": 0,
+      "total_earned": 0,
+      "total_mined": 0
+    },
+    "tool_power": 1,
+    "tool_tier": 0,
+    "upgrades": {}
+  },
+  "progression": {
+    "completed": {},
+    "counters": {},
+    "current_fail_streak": 0,
+    "current_streak": 0,
+    "unlocked_examples": [
+      "01_hello"
+    ],
+    "unlocked_features": [],
+    "unlocked_functions": [
+      "ascend",
+      "descend",
+      "layer",
+      "layers",
+      "mine",
+      "move",
+      "peek",
+      "position"
+    ],
+    "unlocked_modules": [
+      "math"
+    ],
+    "unlocked_ores": [
+      "stone"
+    ],
+    "unlocked_recipes": [],
+    "unlocked_skins": [
+      "rusty_bot"
+    ],
+    "unlocked_upgrades": [
+      "shaft"
+    ]
+  },
+  "refinery": {
+    "jobs": [],
+    "slots": 1,
+    "tick": 0
+  },
+  "seed": 12345,
+  "selected_skin": "rusty_bot",
+  "shared_memory": {},
+  "tick": 0,
+  "version": 10,
+  "warehouse": {
+    "capacity": 100,
+    "items": {}
+  },
+  "world_delta": {
+    "delta": {
+      "3,0": [
+        0,
+        600
+      ]
+    }
+  }
+}

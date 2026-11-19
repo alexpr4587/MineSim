@@ -33,7 +33,7 @@ def _legacy_v8() -> dict:
 
 def test_v8_save_names_migrate_to_miner_names() -> None:
     migrated = migrate(_legacy_v8())
-    assert migrated["version"] == CURRENT_VERSION == 10
+    assert migrated["version"] == CURRENT_VERSION == 11
     progression = migrated["progression"]
     assert progression["counters"] == {
         "miners_spawned": 3,
@@ -67,6 +67,6 @@ def test_save_game_from_dict_applies_legacy_name_migration() -> None:
     from minesim.core.save import SaveGame
 
     savegame = SaveGame.from_dict(_legacy_v8())
-    assert savegame.version == 10
+    assert savegame.version == 11
     assert savegame.progression["counters"]["miners_spawned"] == 3
     assert savegame.player_stats["upgrades"] == {"miner_bay": 2}

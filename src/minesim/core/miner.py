@@ -68,6 +68,8 @@ class PlayerStats:
     tool_tier: int = 0
     move_ticks: int = 4
     scan_radius: int = 0
+    battery_capacity: int = 300
+    charge_rate: int = 10
     stats: MinerStats = field(default_factory=MinerStats)
     upgrades: dict[str, int] = field(default_factory=dict)
     estimates: dict[str, int] = field(default_factory=dict)
@@ -93,6 +95,8 @@ class PlayerStats:
             tool_tier=int(config.start_tool_tier),
             move_ticks=int(config.move_ticks),
             scan_radius=int(config.start_scan_radius),
+            battery_capacity=int(config.battery_start),
+            charge_rate=int(config.charge_rate),
         )
 
     @classmethod
@@ -103,11 +107,15 @@ class PlayerStats:
         default_capacity = 10
         default_power = 1
         default_move = 4
+        default_battery = 300
+        default_charge = 10
         if content is not None:
             config = getattr(content, "config", None)
             default_capacity = int(getattr(config, "start_capacity", default_capacity))
             default_power = int(getattr(config, "start_tool_power", default_power))
             default_move = int(getattr(config, "move_ticks", default_move))
+            default_battery = int(getattr(config, "battery_start", default_battery))
+            default_charge = int(getattr(config, "charge_rate", default_charge))
         return cls(
             money=int(data.get("money", 0)),
             capacity=int(data.get("capacity", default_capacity)),
@@ -115,6 +123,8 @@ class PlayerStats:
             tool_tier=int(data.get("tool_tier", 0)),
             move_ticks=int(data.get("move_ticks", default_move)),
             scan_radius=int(data.get("scan_radius", 0)),
+            battery_capacity=int(data.get("battery_capacity", default_battery)),
+            charge_rate=int(data.get("charge_rate", default_charge)),
             stats=MinerStats.from_dict(data.get("stats")),
             upgrades={str(k): int(v) for k, v in dict(data.get("upgrades", {})).items()},
             estimates={str(k): int(v) for k, v in dict(data.get("estimates", {})).items()},
@@ -129,6 +139,8 @@ class PlayerStats:
             "tool_tier": self.tool_tier,
             "move_ticks": self.move_ticks,
             "scan_radius": self.scan_radius,
+            "battery_capacity": self.battery_capacity,
+            "charge_rate": self.charge_rate,
             "stats": self.stats.to_dict(),
             "upgrades": dict(self.upgrades),
             "estimates": dict(self.estimates),
@@ -154,6 +166,8 @@ class Miner:
     active: Any = field(default=None, repr=False)
     busy_timer: int = 0
     script: str = ""
+    energy: int | None = None
+    stranded_since: int | None = None
 
     def __post_init__(self) -> None:
         self.id = int(self.id)
@@ -164,6 +178,11 @@ class Miner:
             self.inventory = {}
         if self.player_stats is None:
             self.player_stats = PlayerStats()
+        capacity = max(0, int(self.player_stats.battery_capacity))
+        if self.energy is None:
+            self.energy = capacity
+        else:
+            self.energy = max(0, min(int(self.energy), capacity))
 
     # -- shared player stats -------------------------------------------------
 
@@ -220,6 +239,29 @@ class Miner:
     @scan_radius.setter
     def scan_radius(self, value: int) -> None:
         self.player_stats.scan_radius = int(value)
+
+    @property
+    def battery_capacity(self) -> int:
+        """Shared battery capacity across the fleet."""
+        return self.player_stats.battery_capacity
+
+    @battery_capacity.setter
+    def battery_capacity(self, value: int) -> None:
+        self.player_stats.battery_capacity = max(0, int(value))
+
+    @property
+    def charge_rate(self) -> int:
+        """Shared charging speed in energy per tick."""
+        return self.player_stats.charge_rate
+
+    @charge_rate.setter
+    def charge_rate(self, value: int) -> None:
+        self.player_stats.charge_rate = max(1, int(value))
+
+    @property
+    def is_stranded(self) -> bool:
+        """Return True while this miner is waiting for a rescue."""
+        return self.stranded_since is not None
 
     @property
     def stats(self) -> MinerStats:
@@ -296,6 +338,7 @@ class Miner:
             inventory={str(k): int(v) for k, v in dict(data.get("inventory", {})).items()},
             player_stats=player_stats if player_stats is not None else PlayerStats(),
             script=str(data.get("script", "") or ""),
+            energy=None if data.get("energy") is None else int(data.get("energy", 0)),
         )
 
     # -- inventory -----------------------------------------------------------
@@ -354,6 +397,7 @@ class Miner:
             facing=facing,
             inventory={str(k): int(v) for k, v in dict(data.get("inventory", {})).items()},
             player_stats=player_stats,
+            energy=None if data.get("energy") is None else int(data.get("energy", 0)),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -367,6 +411,7 @@ class Miner:
             if isinstance(self.facing, Direction)
             else self.facing,
             "inventory": dict(self.inventory),
+            "energy": self.energy,
             **self.player_stats.to_dict(),
         }
 
@@ -382,4 +427,5 @@ class Miner:
             else self.facing,
             "inventory": dict(self.inventory),
             "script": str(self.script),
+            "energy": self.energy,
         }

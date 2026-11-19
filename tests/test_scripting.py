@@ -247,6 +247,22 @@ def test_api_return_values(content, tmp_path):
     host.stop()
 
 
+def test_battery_charge_and_energy_cost_api(content, tmp_path):
+    engine, _, miner, _, view, _ = _make(content)
+    host = ScriptHost(engine, content, view, tmp_path)
+    source = (
+        "print(move(East))\nprint(battery())\nprint(energy_cost('move'))\nprint(charge()['ok'])\n"
+    )
+    host.start("s.py", source)
+    assert _run(host, engine) is ScriptState.FINISHED
+    texts = [event.text for event in host.console_lines]
+    assert "True" in texts
+    assert "(299, 300)" in texts
+    assert "1" in texts
+    assert miner.energy <= 300
+    host.stop()
+
+
 def test_minerlib_pure_helpers():
     assert list(minerlib.sweep(3, 2)) == [(0, 0), (1, 0), (2, 0), (2, 1), (1, 1), (0, 1)]
     spiral = minerlib.spiral()

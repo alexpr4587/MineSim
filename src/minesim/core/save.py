@@ -31,7 +31,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-CURRENT_VERSION = 10
+CURRENT_VERSION = 11
 SAVE_VERSION = CURRENT_VERSION
 DEFAULT_SKIN = "rusty_bot"
 
@@ -177,6 +177,25 @@ def _migrate_v9_to_v10(data: dict[str, Any]) -> dict[str, Any]:
     return migrated
 
 
+def _migrate_v10_to_v11(data: dict[str, Any]) -> dict[str, Any]:
+    """Add a full miner battery introduced in version 11."""
+    migrated = dict(data)
+    player_stats = migrated.get("player_stats")
+    capacity = 300
+    if isinstance(player_stats, dict):
+        capacity = int(player_stats.get("battery_capacity", capacity) or capacity)
+    fleet = migrated.get("fleet")
+    if isinstance(fleet, list):
+        migrated["fleet"] = [
+            {**entry, "energy": int(entry.get("energy", capacity))}
+            if isinstance(entry, dict)
+            else entry
+            for entry in fleet
+        ]
+    migrated["version"] = 11
+    return migrated
+
+
 MIGRATIONS: dict[int, Callable[[dict[str, Any]], dict[str, Any]]] = {
     1: _migrate_v1_to_v2,
     2: _migrate_v2_to_v3,
@@ -187,6 +206,7 @@ MIGRATIONS: dict[int, Callable[[dict[str, Any]], dict[str, Any]]] = {
     7: _migrate_v7_to_v8,
     8: _migrate_v8_to_v9,
     9: _migrate_v9_to_v10,
+    10: _migrate_v10_to_v11,
 }
 
 
@@ -227,7 +247,7 @@ def migrate(data: Any) -> dict[str, Any]:
 
 
 class SaveGame(BaseModel):
-    """A serialised game state (save file schema, version 10)."""
+    """A serialised game state (save file schema, version 11)."""
 
     model_config = ConfigDict(extra="ignore")
 

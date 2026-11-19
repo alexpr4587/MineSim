@@ -10,10 +10,14 @@ __all__ = [
     "AchievementUnlocked",
     "ApiCalled",
     "ContractDelivered",
+    "Charged",
     "ContractExpired",
     "ContractGenerated",
+    "EnergySpent",
     "MinerRemoved",
+    "MinerRescued",
     "MinerSpawned",
+    "MinerStranded",
     "EstimateSubmitted",
     "EventBus",
     "LayerChanged",
@@ -182,6 +186,37 @@ class MinerRemoved:
     """A miner was removed from the fleet."""
 
     id: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class EnergySpent:
+    """A miner spent energy to start an action."""
+
+    miner_id: int = 0
+    amount: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class Charged:
+    """A miner restored energy at a base or station."""
+
+    miner_id: int = 0
+    amount: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class MinerStranded:
+    """A miner ran out of energy away from a base or station."""
+
+    miner_id: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class MinerRescued:
+    """A stranded miner was towed back to a station."""
+
+    miner_id: int = 0
+    lost_items: dict[str, int] | None = None
 
 
 @dataclass(frozen=True, slots=True)

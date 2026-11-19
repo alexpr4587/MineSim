@@ -27,12 +27,15 @@ from typing import Any
 
 from minesim.core.commands import (
     Ascend,
+    Battery,
     Biome,
     BuyUpgrade,
+    Charge,
     Contracts,
     Deliver,
     Descend,
     Distance,
+    EnergyCost,
     Events,
     Inspect,
     Inventory,
@@ -240,6 +243,27 @@ _DEFAULT_FUNCTIONS: tuple[dict[str, Any], ...] = (
         "signature": "position()",
         "doc": "Return (x, y).",
         "category": "movement",
+        "unlocked_by": None,
+    },
+    {
+        "name": "battery",
+        "signature": "battery()",
+        "doc": "Return (energy, capacity).",
+        "category": "energy",
+        "unlocked_by": None,
+    },
+    {
+        "name": "charge",
+        "signature": "charge()",
+        "doc": "Recharge on a base or station.",
+        "category": "energy",
+        "unlocked_by": None,
+    },
+    {
+        "name": "energy_cost",
+        "signature": "energy_cost(action, arg=None)",
+        "doc": "Return an action's energy cost.",
+        "category": "energy",
         "unlocked_by": None,
     },
     {
@@ -1011,6 +1035,20 @@ class ScriptHost:
             if args or kwargs:
                 raise TypeError("position() takes no arguments")
             return Position()
+        if name == "battery":
+            if args or kwargs:
+                raise TypeError("battery() takes no arguments")
+            return Battery()
+        if name == "charge":
+            if args or kwargs:
+                raise TypeError("charge() takes no arguments")
+            return Charge()
+        if name == "energy_cost":
+            action = args[0] if args else kwargs.get("action")
+            if action is None:
+                raise TypeError("energy_cost() missing required argument 'action'")
+            arg = args[1] if len(args) > 1 else kwargs.get("arg")
+            return EnergyCost(str(action), None if arg is None else int(arg))
         if name == "miner_id":
             if args or kwargs:
                 raise TypeError("miner_id() takes no arguments")
@@ -1163,7 +1201,21 @@ class ScriptHost:
         if not isinstance(result, dict):
             return result
         if name == "move":
-            return None
+            return bool(result.get("ok"))
+        if name == "battery":
+            return (int(result.get("energy", 0) or 0), int(result.get("capacity", 0) or 0))
+        if name == "charge":
+            cleaned: dict[str, Any] = {
+                "ok": bool(result.get("ok")),
+                "energy": int(result.get("energy", 0) or 0),
+                "capacity": int(result.get("capacity", 0) or 0),
+                "charged": int(result.get("charged", 0) or 0),
+            }
+            if result.get("reason"):
+                cleaned["reason"] = result["reason"]
+            return cleaned
+        if name == "energy_cost":
+            return int(result.get("cost", 0) or 0)
         if name == "mine":
             if result.get("ok"):
                 return {"ok": True, "ore": result.get("ore") or result.get("ore_id")}

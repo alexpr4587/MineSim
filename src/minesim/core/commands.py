@@ -8,6 +8,7 @@ from typing import Any
 
 from minesim.core.direction import Direction
 from minesim.core.events import (
+    Charged,
     ContractDelivered,
     EstimateSubmitted,
     LayerChanged,
@@ -24,10 +25,13 @@ from minesim.core.rng import mix64, unit
 
 __all__ = [
     "Ascend",
+    "Battery",
     "Biome",
     "BuyUpgrade",
+    "Charge",
     "Descend",
     "Distance",
+    "EnergyCost",
     "Events",
     "Inspect",
     "Inventory",
@@ -62,8 +66,10 @@ __all__ = [
 ]
 
 _ZERO_COST_NAMES = {
+    "Battery",
     "Biome",
     "Distance",
+    "EnergyCost",
     "Layer",
     "Layers",
     "Events",
@@ -351,6 +357,36 @@ def _mine_failure(engine: Any, miner: Any = None) -> dict[str, Any] | None:
     return None
 
 
+def _energy_config(engine: Any) -> Any:
+    content = _get(engine, "content")
+    return _get(content, "config")
+
+
+def _energy_multiplier(engine: Any, miner: Any) -> float:
+    """Return the current layer's energy multiplier (1.0 when unknown)."""
+    content = _get(engine, "content")
+    layer = _miner_layer(miner)
+    layers = _get(content, "layers", None)
+    definition = None
+    if isinstance(layers, dict):
+        definition = layers.get(layer)
+    if definition is None:
+        getter = _get(content, "get_layer")
+        if callable(getter):
+            try:
+                definition = getter(layer)
+            except Exception:
+                definition = None
+    return float(_get(definition, "energy_multiplier", 1.0) or 1.0)
+
+
+def _scale_energy(base: int, multiplier: float) -> int:
+    """Scale ``base`` energy by ``multiplier`` and round up."""
+    if int(base) <= 0:
+        return 0
+    return int(math.ceil(float(base) * float(multiplier)))
+
+
 @dataclass(frozen=True, slots=True)
 class Move:
     """Move one tile in ``direction``."""
@@ -385,6 +421,13 @@ class Move:
             if multiplier > 1:
                 return int(math.ceil(base * multiplier))
         return base
+
+    def energy_cost(self, engine: Any, miner: Any = None) -> int:
+        """Return the energy needed to start this move."""
+        miner = _miner(engine, miner)
+        config = _energy_config(engine)
+        base = int(_get(config, "energy_move", 1) or 0)
+        return _scale_energy(base, _energy_multiplier(engine, miner))
 
     def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
         miner = _miner(engine, miner)
@@ -468,6 +511,17 @@ class Descend:
         content = ctx["content"]
         return int(getattr(content.config, "shaft_ticks", 20))
 
+    def energy_cost(self, engine: Any, miner: Any = None) -> int:
+        """Return the energy needed to start a descent."""
+        miner = _miner(engine, miner)
+        if miner is None or not _is_station(engine, miner):
+            return 0
+        if _shaft_target(engine, miner) is None:
+            return 0
+        config = _energy_config(engine)
+        base = int(_get(config, "energy_shaft", 15) or 0)
+        return _scale_energy(base, _energy_multiplier(engine, miner))
+
     def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
         miner = _miner(engine, miner)
         layer = _miner_layer(miner)
@@ -494,6 +548,15 @@ class Ascend:
         content = ctx["content"]
         return int(getattr(content.config, "shaft_ticks", 20))
 
+    def energy_cost(self, engine: Any, miner: Any = None) -> int:
+        """Return the energy needed to start an ascent."""
+        miner = _miner(engine, miner)
+        if miner is None or not _is_station(engine, miner) or _miner_layer(miner) == 0:
+            return 0
+        config = _energy_config(engine)
+        base = int(_get(config, "energy_shaft", 15) or 0)
+        return _scale_energy(base, _energy_multiplier(engine, miner))
+
     def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
         miner = _miner(engine, miner)
         layer = _miner_layer(miner)
@@ -505,6 +568,63 @@ class Ascend:
         if not _has_layer(engine, target):
             return {"ok": False, "layer": layer, "reason": "unknown_layer"}
         return _change_layer(engine, miner, target, layer)
+
+
+def _battery_state(miner: Any) -> tuple[int, int, int]:
+    """Return ``(energy, capacity, charge_rate)`` for ``miner``."""
+    capacity = max(0, int(_get(miner, "battery_capacity", 0) or 0))
+    energy = max(0, min(int(_get(miner, "energy", capacity) or 0), capacity))
+    rate = max(1, int(_get(miner, "charge_rate", 1) or 1))
+    return energy, capacity, rate
+
+
+def _charge_ticks(miner: Any) -> int:
+    energy, capacity, rate = _battery_state(miner)
+    missing = max(0, capacity - energy)
+    return max(1, int(math.ceil(missing / rate)))
+
+
+@dataclass(frozen=True, slots=True)
+class Charge:
+    """Recharge the battery while standing on a base or station."""
+
+    def cost_ticks(self, engine: Any, miner: Any = None) -> int:
+        miner = _miner(engine, miner)
+        if miner is None or not _is_station(engine, miner):
+            return 0
+        return _charge_ticks(miner)
+
+    def energy_cost(self, engine: Any, miner: Any = None) -> int:
+        """Charging never costs energy."""
+        return 0
+
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        miner = _miner(engine, miner)
+        energy, capacity, rate = _battery_state(miner)
+        if not _is_station(engine, miner):
+            return {
+                "ok": False,
+                "reason": "not_on_station",
+                "energy": energy,
+                "capacity": capacity,
+                "charge_rate": rate,
+                "charged": 0,
+            }
+        missing = max(0, capacity - energy)
+        amount = missing
+        if amount > 0:
+            try:
+                miner.energy = energy + amount
+            except Exception:
+                pass
+            _publish(engine, Charged(miner_id=_miner_id(miner), amount=amount))
+        return {
+            "ok": True,
+            "energy": int(_get(miner, "energy", energy + amount) or 0),
+            "capacity": capacity,
+            "charge_rate": rate,
+            "charged": amount,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -525,6 +645,24 @@ class Mine:
         ore = _get_ore(content, world.tile_at(miner.x, miner.y, _tick(engine), layer=layer).ore_id)
         power = max(1, int(miner.tool_power))
         return int(math.ceil(ore.hardness * content.config.mine_tick_base / power))
+
+    def energy_cost(self, engine: Any, miner: Any = None) -> int:
+        """Return the energy needed to start mining the current tile."""
+        miner = _miner(engine, miner)
+        if miner is None or _mine_failure(engine, miner) is not None:
+            return 0
+        world = _get(engine, "world")
+        content = _get(engine, "content")
+        if world is None or content is None:
+            return 0
+        tile = world.tile_at(miner.x, miner.y, _tick(engine), layer=_miner_layer(miner))
+        try:
+            ore = _get_ore(content, tile.ore_id)
+        except Exception:
+            return 0
+        config = _energy_config(engine)
+        base = int(_get(config, "energy_mine_base", 1) or 0) + int(ore.hardness) // 2
+        return _scale_energy(base, _energy_multiplier(engine, miner))
 
     def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
         miner = _miner(engine, miner)
@@ -618,6 +756,71 @@ class Mine:
 
 
 @dataclass(frozen=True, slots=True)
+class Battery:
+    """Return the battery energy and capacity of the acting miner."""
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        return 0
+
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        miner = _miner(engine, miner)
+        energy, capacity, rate = _battery_state(miner)
+        return {
+            "ok": True,
+            "energy": energy,
+            "capacity": capacity,
+            "charge_rate": rate,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class EnergyCost:
+    """Return the energy an action would cost right now."""
+
+    action: str = ""
+    arg: int | None = None
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        return 0
+
+    def _command_for(self) -> Any | None:
+        action = str(self.action or "").strip().lower()
+        if action == "move":
+            return Move()
+        if action == "mine":
+            return Mine()
+        if action == "scan":
+            return Scan(0 if self.arg is None else int(self.arg))
+        if action == "descend":
+            return Descend()
+        if action == "ascend":
+            return Ascend()
+        if action == "charge":
+            return Charge()
+        return None
+
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        miner = _miner(engine, miner)
+        action = str(self.action or "").strip().lower()
+        command = self._command_for()
+        if command is None:
+            return {
+                "ok": False,
+                "reason": "unknown_action",
+                "action": action,
+                "cost": 0,
+            }
+        method = getattr(command, "energy_cost", None)
+        cost = int(method(engine, miner)) if callable(method) else 0
+        return {
+            "ok": True,
+            "action": action,
+            "cost": max(0, cost),
+            "energy": int(_get(miner, "energy", 0) or 0),
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class Peek:
     """Look at the tile the miner stands on."""
 
@@ -653,6 +856,16 @@ class Scan:
         effective = max(0, effective)
         per_radius = int(content.config.scan_ticks_per_radius) if content is not None else 1
         return 1 + per_radius * effective
+
+    def energy_cost(self, engine: Any, miner: Any = None) -> int:
+        """Return the energy needed to start a scan of ``radius`` tiles."""
+        miner = _miner(engine, miner)
+        effective = max(0, int(self.radius))
+        if miner is not None:
+            effective = min(effective, max(0, int(miner.scan_radius)))
+        config = _energy_config(engine)
+        base = int(_get(config, "energy_scan_per_radius", 1) or 0) * effective
+        return _scale_energy(base, _energy_multiplier(engine, miner))
 
     def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
         miner = _miner(engine, miner)

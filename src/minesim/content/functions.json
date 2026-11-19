@@ -36,6 +36,33 @@
     "example": "x, y = position()"
   },
   {
+    "name": "battery",
+    "signature": "battery()",
+    "doc": "Return the miner battery as (energy, capacity).",
+    "category": "energy",
+    "unlocked_by": null,
+    "cost": "0 ticks",
+    "example": "energy, capacity = battery()"
+  },
+  {
+    "name": "charge",
+    "signature": "charge()",
+    "doc": "Recharge the battery on a base or shaft station and return {ok, energy, capacity, charged}.",
+    "category": "energy",
+    "unlocked_by": null,
+    "cost": "ceil(missing energy / charge rate) ticks",
+    "example": "charge()"
+  },
+  {
+    "name": "energy_cost",
+    "signature": "energy_cost(action, arg=None)",
+    "doc": "Return the energy an action would cost right now. For 'scan', arg is the radius; for 'mine' the ore under the miner is used.",
+    "category": "energy",
+    "unlocked_by": null,
+    "cost": "0 ticks",
+    "example": "energy_cost('mine')"
+  },
+  {
     "name": "sell",
     "signature": "sell()",
     "doc": "Sell the whole inventory at the base and return the money gained.",

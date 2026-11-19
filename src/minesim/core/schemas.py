@@ -76,6 +76,15 @@ class Config(_ContentModel):
     contract_value_max: int = Field(default=4000, ge=1)
     world_event_interval_ticks: int = Field(default=2500, ge=1)
     world_event_chance: float = Field(default=0.6, ge=0.0, le=1.0)
+    battery_start: int = Field(default=300, ge=0)
+    energy_move: int = Field(default=1, ge=0)
+    energy_mine_base: int = Field(default=1, ge=0)
+    energy_scan_per_radius: int = Field(default=1, ge=0)
+    energy_shaft: int = Field(default=15, ge=0)
+    charge_rate: int = Field(default=10, ge=1)
+    rescue_ticks: int = Field(default=600, ge=0)
+    rescue_energy_fraction: float = Field(default=0.25, ge=0.0, le=1.0)
+    rescue_loses_inventory: bool = True
 
     @field_validator("contract_deadline_max")
     @classmethod

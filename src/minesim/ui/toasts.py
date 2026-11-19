@@ -12,7 +12,12 @@ from typing import Any
 from PySide6.QtCore import QObject, Qt, QTimer
 from PySide6.QtWidgets import QLabel, QWidget
 
-from minesim.core.events import AchievementUnlocked, LayerChanged, WorldEventStarted
+from minesim.core.events import (
+    AchievementUnlocked,
+    LayerChanged,
+    MinerRescued,
+    WorldEventStarted,
+)
 from minesim.ui.theme import BACKGROUND, BUTTON_BORDER, TEXT
 
 
@@ -96,6 +101,7 @@ class ToastManager(QObject):
             bus.subscribe(AchievementUnlocked, self._on_achievement_unlocked)
             bus.subscribe(WorldEventStarted, self._on_world_event_started)
             bus.subscribe(LayerChanged, self._on_layer_changed)
+            bus.subscribe(MinerRescued, self._on_miner_rescued)
         except Exception:
             return
 
@@ -124,6 +130,18 @@ class ToastManager(QObject):
         direction = "down" if to_layer > from_layer else "up"
         name = self._layer_name(to_layer)
         self._queue.append((f"Miner {miner_id} went {direction} to {name}", ""))
+        self._show_next()
+
+    def _on_miner_rescued(self, event: Any) -> None:
+        miner_id = int(_get(event, "miner_id", 0) or 0)
+        lost = _get(event, "lost_items") or {}
+        lost_count = sum(int(count) for count in lost.values())
+        if lost_count:
+            plural = "s" if lost_count != 1 else ""
+            message = f"Towed to the station; lost {lost_count} item{plural}."
+        else:
+            message = "Towed back to the station."
+        self._queue.append((f"Miner {miner_id} rescued", message))
         self._show_next()
 
     def _layer_name(self, layer: int) -> str:

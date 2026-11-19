@@ -303,11 +303,11 @@ def test_saved_version_1_fixture_migrates(tmp_path):
     path = FIXTURES / "save_v1.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     migrated = migrate(data)
-    assert migrated["version"] == 10
+    assert migrated["version"] == 11
     assert migrated["selected_skin"] == DEFAULT_SKIN
 
     savegame = SaveGame.load(path)
-    assert savegame.version == 10
+    assert savegame.version == 11
     assert savegame.selected_skin == DEFAULT_SKIN
 
     game = Game.load(path)
@@ -321,10 +321,10 @@ def test_saved_version_2_fixture_migrates(content):
     path = FIXTURES / "save_v2.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     migrated = migrate(data)
-    assert migrated["version"] == 10
+    assert migrated["version"] == 11
 
     savegame = SaveGame.load(path)
-    assert savegame.version == 10
+    assert savegame.version == 11
     assert savegame.selected_skin == "steel_walker"
     assert savegame.progression["counters"]["tiles_moved"] == 12
 
@@ -424,6 +424,8 @@ def _documented_counters() -> list[str]:
 
 def test_headless_scripted_session_moves_every_documented_counter(content):
     game = Game.new(seed=12345)
+    game.player_stats.battery_capacity = 10**9
+    game.miner.energy = 10**9
     state = game.progression_state
     state.unlocked_features.update({"warehouse", "market", "refinery", "contracts", "miners"})
     state.unlocked_recipes.update(content.recipes)

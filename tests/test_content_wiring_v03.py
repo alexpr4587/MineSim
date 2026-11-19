@@ -97,7 +97,7 @@ def test_v03_initial_unlock_sets(content):
     state = ProgressionState(content)
     assert state.unlocked_recipes == set()
     assert state.unlocked_features == set()
-    assert state.unlocked_upgrades == {"shaft"}
+    assert state.unlocked_upgrades == {"shaft", "battery", "charger"}
     assert state.unlocked_modules == {"math"}
     assert state.unlocked_examples == {"01_hello"}
     assert state.unlocked_functions == {
@@ -105,6 +105,9 @@ def test_v03_initial_unlock_sets(content):
         "mine",
         "peek",
         "position",
+        "battery",
+        "charge",
+        "energy_cost",
         "layer",
         "layers",
         "descend",

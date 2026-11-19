@@ -67,6 +67,24 @@ _DEFAULT_FUNCTIONS: tuple[dict[str, Any], ...] = (
     {"name": "mine", "signature": "mine()", "doc": "Mine the current tile.", "category": ""},
     {"name": "peek", "signature": "peek()", "doc": "Look at the current tile.", "category": ""},
     {"name": "position", "signature": "position()", "doc": "Return (x, y).", "category": ""},
+    {
+        "name": "battery",
+        "signature": "battery()",
+        "doc": "Return (energy, capacity).",
+        "category": "",
+    },
+    {
+        "name": "charge",
+        "signature": "charge()",
+        "doc": "Recharge on a base or station.",
+        "category": "",
+    },
+    {
+        "name": "energy_cost",
+        "signature": "energy_cost(action, arg=None)",
+        "doc": "Return an action's energy cost.",
+        "category": "",
+    },
     {"name": "layer", "signature": "layer()", "doc": "Return the current layer.", "category": ""},
     {
         "name": "layers",
@@ -359,6 +377,8 @@ def _raise_from_error(error: dict[str, Any]) -> None:
 def _convert_result(name: str, result: Any) -> Any:
     """Convert a JSON result back to player-facing Python values."""
     if name == "position" and isinstance(result, list):
+        return tuple(result)
+    if name == "battery" and isinstance(result, list):
         return tuple(result)
     if name == "scan" and isinstance(result, list):
         return [tuple(item) if isinstance(item, list) else item for item in result]

@@ -848,8 +848,11 @@
     "unlocked_features": [],
     "unlocked_functions": [
       "ascend",
+      "battery",
       "buy_upgrade",
+      "charge",
       "descend",
+      "energy_cost",
       "layer",
       "layers",
       "mine",
@@ -871,6 +874,8 @@
     ],
     "unlocked_upgrades": [
       "backpack",
+      "battery",
+      "charger",
       "motor",
       "pickaxe",
       "scanner",

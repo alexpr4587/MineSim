@@ -58,5 +58,14 @@
   "contract_value_min": 500,
   "contract_value_max": 4000,
   "world_event_interval_ticks": 2500,
-  "world_event_chance": 0.6
+  "world_event_chance": 0.6,
+  "battery_start": 300,
+  "energy_move": 1,
+  "energy_mine_base": 1,
+  "energy_scan_per_radius": 1,
+  "energy_shaft": 15,
+  "charge_rate": 10,
+  "rescue_ticks": 600,
+  "rescue_energy_fraction": 0.25,
+  "rescue_loses_inventory": true
 }

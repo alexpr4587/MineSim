@@ -184,3 +184,19 @@ def test_miners_panel_works_without_main_window(qapp, tmp_path):
     assert calls == [1]
     assert panel.selected_miner == 1
     panel.close()
+
+
+def test_energy_bar_and_fleet_energy_column(qapp, tmp_path):
+    game, window = _window(qapp, tmp_path)
+    game.miner.energy = 123
+    window.miners_panel.refresh()
+    window.hud.refresh()
+    qapp.processEvents()
+    assert window.hud.energy_label.text() == "Energy: 123/300"
+    assert window.hud.energy_bar.value() == 123
+    assert window.hud.energy_bar.maximum() == 300
+    assert window.miners_panel.rows[0].energy_label.text() == "Energy: 123/300"
+    game.miner.stranded_since = 7
+    window.miners_panel.refresh()
+    assert "STRANDED" in window.miners_panel.rows[0].energy_label.text()
+    window.close()

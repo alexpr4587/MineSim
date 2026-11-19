@@ -20,6 +20,9 @@ _PRIMITIVE_NAMES: frozenset[str] = frozenset(
         "mine",
         "peek",
         "position",
+        "battery",
+        "charge",
+        "energy_cost",
         "sell",
         "unload",
         "stock",
@@ -60,6 +63,8 @@ _PRIMITIVE_NAMES: frozenset[str] = frozenset(
 
 _PARAM_TYPES: dict[str, str] = {
     "direction": "str",
+    "action": "str",
+    "arg": "int | None",
     "alpha": "float",
     "min_index": "float",
     "values": "list[float]",
@@ -93,7 +98,10 @@ _PARAM_TYPES: dict[str, str] = {
 }
 
 _RETURN_TYPES: dict[str, str] = {
-    "move": "None",
+    "move": "bool",
+    "battery": "tuple[int, int]",
+    "charge": "dict",
+    "energy_cost": "int",
     "mine": "dict",
     "peek": "str | None",
     "position": "tuple[int, int]",
@@ -192,6 +200,13 @@ def _function_entries(content: Any) -> list[dict[str, Any]]:
         {"name": "mine", "signature": "mine()", "doc": "Mine the current tile."},
         {"name": "peek", "signature": "peek()", "doc": "Look at the current tile."},
         {"name": "position", "signature": "position()", "doc": "Return (x, y)."},
+        {"name": "battery", "signature": "battery()", "doc": "Return (energy, capacity)."},
+        {"name": "charge", "signature": "charge()", "doc": "Recharge on a base or station."},
+        {
+            "name": "energy_cost",
+            "signature": "energy_cost(action, arg=None)",
+            "doc": "Return an action's energy cost.",
+        },
         {"name": "sell", "signature": "sell()", "doc": "Sell the inventory."},
         {"name": "unload", "signature": "unload()", "doc": "Unload into the warehouse."},
         {"name": "stock", "signature": "stock()", "doc": "Return the warehouse stock."},
