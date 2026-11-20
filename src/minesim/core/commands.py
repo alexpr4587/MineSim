@@ -29,6 +29,8 @@ __all__ = [
     "Biome",
     "BuyUpgrade",
     "Charge",
+    "Climate",
+    "Cool",
     "Descend",
     "Distance",
     "EnergyCost",
@@ -60,6 +62,7 @@ __all__ = [
     "Stats",
     "Stock",
     "SubmitEstimate",
+    "Temperature",
     "Tick",
     "Unload",
     "Wait",
@@ -68,6 +71,7 @@ __all__ = [
 _ZERO_COST_NAMES = {
     "Battery",
     "Biome",
+    "Climate",
     "Distance",
     "EnergyCost",
     "Layer",
@@ -91,6 +95,7 @@ _ZERO_COST_NAMES = {
     "Stats",
     "Stock",
     "SubmitEstimate",
+    "Temperature",
     "Tick",
 }
 
@@ -360,6 +365,32 @@ def _mine_failure(engine: Any, miner: Any = None) -> dict[str, Any] | None:
 def _energy_config(engine: Any) -> Any:
     content = _get(engine, "content")
     return _get(content, "config")
+
+
+def _temperature(miner: Any) -> float:
+    return max(0.0, float(_get(miner, "temperature", 0.0) or 0.0))
+
+
+def _cooldown_remaining(miner: Any) -> int:
+    return max(0, int(_get(miner, "cooldown_remaining", 0) or 0))
+
+
+def _cool_target(value: Any) -> float:
+    try:
+        target = float(value)
+    except (TypeError, ValueError):
+        target = 30.0
+    return max(0.0, min(100.0, target))
+
+
+def _cool_ticks(engine: Any, miner: Any, target: float) -> int:
+    """Return the ticks needed to cool ``miner`` to ``target``."""
+    if miner is None or not _is_station(engine, miner):
+        return 0
+    config = _energy_config(engine)
+    rate = max(0.001, float(_get(config, "cool_rate", 2.0) or 2.0))
+    missing = max(0.0, _temperature(miner) - _cool_target(target))
+    return int(math.ceil(missing / rate))
 
 
 def _energy_multiplier(engine: Any, miner: Any) -> float:
@@ -817,6 +848,104 @@ class EnergyCost:
             "action": action,
             "cost": max(0, cost),
             "energy": int(_get(miner, "energy", 0) or 0),
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class Temperature:
+    """Return the temperature state of the acting miner."""
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        return 0
+
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        miner = _miner(engine, miner)
+        layer = _miner_layer(miner)
+        state: dict[str, Any] = {}
+        getter = getattr(engine, "climate_state", None)
+        if callable(getter):
+            try:
+                state = dict(getter(miner))
+            except Exception:
+                state = {}
+        cooldown = _cooldown_remaining(miner)
+        return {
+            "ok": True,
+            "temperature": _temperature(miner),
+            "overheated": cooldown > 0,
+            "cooldown": cooldown,
+            "cooldown_remaining": cooldown,
+            "layer": int(state.get("layer", layer) or layer),
+            "heat": float(state.get("heat", 0.0) or 0.0),
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class Climate:
+    """Return the climate of the layer the acting miner is on."""
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        return 0
+
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        miner = _miner(engine, miner)
+        layer = _miner_layer(miner)
+        getter = getattr(engine, "climate_state", None)
+        if callable(getter):
+            try:
+                state = dict(getter(miner))
+            except Exception:
+                state = {}
+        else:
+            state = {}
+        return {
+            "layer": int(state.get("layer", layer) or layer),
+            "heat": float(state.get("heat", 0.0) or 0.0),
+            "airflow": int(state.get("airflow", 0) or 0),
+            "miners_in_hot_layers": int(state.get("miners_in_hot_layers", 0) or 0),
+            "overload": float(state.get("overload", 0.0) or 0.0),
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class Cool:
+    """Cool down on a station until the temperature reaches ``target``."""
+
+    target: float = 30.0
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "target", _cool_target(self.target))
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        ctx = _resolve_context(*args, **kwargs)
+        return _cool_ticks(ctx["engine"], ctx["miner"], self.target)
+
+    def energy_cost(self, engine: Any, miner: Any = None) -> int:
+        """Cooling never costs energy."""
+        return 0
+
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        miner = _miner(engine, miner)
+        layer = _miner_layer(miner)
+        current = _temperature(miner)
+        if not _is_station(engine, miner):
+            return {
+                "ok": False,
+                "reason": "not_on_station",
+                "temperature": current,
+                "target": self.target,
+                "layer": layer,
+            }
+        final = min(current, self.target)
+        try:
+            miner.temperature = final
+        except Exception:
+            pass
+        return {
+            "ok": True,
+            "temperature": final,
+            "target": self.target,
+            "layer": layer,
         }
 
 

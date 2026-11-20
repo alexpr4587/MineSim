@@ -14,6 +14,8 @@ __all__ = [
     "ContractExpired",
     "ContractGenerated",
     "EnergySpent",
+    "MinerOverheated",
+    "MinerRecovered",
     "MinerRemoved",
     "MinerRescued",
     "MinerSpawned",
@@ -172,6 +174,20 @@ class UpgradeBought:
     miner_id: int = 0
     id: str = ""
     level: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class MinerOverheated:
+    """A miner reached the overheat threshold and shut down."""
+
+    miner_id: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class MinerRecovered:
+    """An overheated miner cooled down and restarted."""
+
+    miner_id: int = 0
 
 
 @dataclass(frozen=True, slots=True)

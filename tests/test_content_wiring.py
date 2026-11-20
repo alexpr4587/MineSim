@@ -114,13 +114,22 @@ def test_initial_unlock_sets(content):
         "battery",
         "charge",
         "energy_cost",
+        "temperature",
+        "cool",
+        "climate",
         "layer",
         "layers",
         "descend",
         "ascend",
     }
     assert state.unlocked_modules == {"math"}
-    assert state.unlocked_upgrades == {"shaft", "battery", "charger"}
+    assert state.unlocked_upgrades == {
+        "shaft",
+        "battery",
+        "charger",
+        "cooling",
+        "ventilation",
+    }
     assert state.unlocked_recipes == set()
     assert state.unlocked_features == set()
     assert state.unlocked_skins == {"rusty_bot"}

@@ -167,5 +167,36 @@
       2500
     ],
     "unlocked_by": null
+  },
+  {
+    "id": "cooling",
+    "name": "Cooling",
+    "description": "Reduce heat gain by 15 percent per level.",
+    "stat": "heat_gain_reduction_percent",
+    "per_level": 15,
+    "max_level": 4,
+    "costs": [
+      400,
+      1200,
+      3000,
+      7000
+    ],
+    "unlocked_by": null
+  },
+  {
+    "id": "ventilation",
+    "name": "Ventilation",
+    "description": "Support two more miners in hot layers: airflow +2 per level.",
+    "stat": "airflow_bonus",
+    "per_level": 2,
+    "max_level": 5,
+    "costs": [
+      500,
+      1500,
+      3500,
+      8000,
+      16000
+    ],
+    "unlocked_by": null
   }
 ]

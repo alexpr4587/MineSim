@@ -67,5 +67,13 @@
   "charge_rate": 10,
   "rescue_ticks": 600,
   "rescue_energy_fraction": 0.25,
-  "rescue_loses_inventory": true
+  "rescue_loses_inventory": true,
+  "heat_gain_per_level": 0.12,
+  "cool_rate": 2.0,
+  "overheat_at": 100,
+  "cooldown_ticks": 300,
+  "cooldown_temperature": 50,
+  "airflow_start": 4,
+  "overload_penalty": 0.5,
+  "hot_layer_min_heat": 1
 }

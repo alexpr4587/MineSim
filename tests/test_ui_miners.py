@@ -200,3 +200,39 @@ def test_energy_bar_and_fleet_energy_column(qapp, tmp_path):
     window.miners_panel.refresh()
     assert "STRANDED" in window.miners_panel.rows[0].energy_label.text()
     window.close()
+
+
+def test_temperature_bar_overheated_badge_and_airflow(qapp, tmp_path):
+    game, window = _window(qapp, tmp_path)
+    game.miner.temperature = 100.0
+    game.miner.cooldown_remaining = 120
+    window.show_miners()
+    window.miners_panel.refresh()
+    window.hud.refresh()
+    qapp.processEvents()
+    row = window.miners_panel.rows[0]
+    assert row.temperature_label.text() == "Temp: 100/100"
+    assert row.temperature_bar.value() == 100
+    assert row.overheated_badge.isVisible()
+    assert window.hud.temperature_label.text() == "Temp: 100/100"
+    assert window.hud.temperature_bar.value() == 100
+    assert "f7768e" in window.hud.temperature_label.styleSheet()
+    assert window.hud.airflow_label.text() == "Air 4 / load 0"
+
+    game.engine.spawn_miner()
+    hot = game.engine.miner_by_id(1)
+    hot.layer = 2
+    hot.x, hot.y = 5, 5
+    window.hud.refresh()
+    qapp.processEvents()
+    assert window.hud.airflow_label.text() == "Air 4 / load 1"
+    assert "f7768e" not in window.hud.airflow_label.styleSheet()
+    for _ in range(4):
+        extra = game.engine.spawn_miner()
+        extra.layer = 2
+        extra.x, extra.y = 6, 5
+    window.hud.refresh()
+    qapp.processEvents()
+    assert window.hud.airflow_label.text() == "Air 4 / load 5"
+    assert "f7768e" in window.hud.airflow_label.styleSheet()
+    window.close()

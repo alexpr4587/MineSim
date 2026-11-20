@@ -31,7 +31,9 @@ from minesim.core.commands import (
     Biome,
     BuyUpgrade,
     Charge,
+    Climate,
     Contracts,
+    Cool,
     Deliver,
     Descend,
     Distance,
@@ -62,6 +64,7 @@ from minesim.core.commands import (
     Stats,
     Stock,
     SubmitEstimate,
+    Temperature,
     Tick,
     Unload,
     Wait,
@@ -264,6 +267,27 @@ _DEFAULT_FUNCTIONS: tuple[dict[str, Any], ...] = (
         "signature": "energy_cost(action, arg=None)",
         "doc": "Return an action's energy cost.",
         "category": "energy",
+        "unlocked_by": None,
+    },
+    {
+        "name": "temperature",
+        "signature": "temperature()",
+        "doc": "Return the miner temperature state.",
+        "category": "climate",
+        "unlocked_by": None,
+    },
+    {
+        "name": "cool",
+        "signature": "cool(target=30)",
+        "doc": "Cool down on a base or shaft station.",
+        "category": "climate",
+        "unlocked_by": None,
+    },
+    {
+        "name": "climate",
+        "signature": "climate()",
+        "doc": "Return the layer climate.",
+        "category": "climate",
         "unlocked_by": None,
     },
     {
@@ -1049,6 +1073,19 @@ class ScriptHost:
                 raise TypeError("energy_cost() missing required argument 'action'")
             arg = args[1] if len(args) > 1 else kwargs.get("arg")
             return EnergyCost(str(action), None if arg is None else int(arg))
+        if name == "temperature":
+            if args or kwargs:
+                raise TypeError("temperature() takes no arguments")
+            return Temperature()
+        if name == "climate":
+            if args or kwargs:
+                raise TypeError("climate() takes no arguments")
+            return Climate()
+        if name == "cool":
+            target = args[0] if args else kwargs.get("target", 30)
+            if len(args) > 1 or len(kwargs) > (0 if args else 1):
+                raise TypeError("cool() takes at most one argument 'target'")
+            return Cool(float(target))
         if name == "miner_id":
             if args or kwargs:
                 raise TypeError("miner_id() takes no arguments")
@@ -1216,6 +1253,32 @@ class ScriptHost:
             return cleaned
         if name == "energy_cost":
             return int(result.get("cost", 0) or 0)
+        if name == "temperature":
+            return {
+                "temperature": float(result.get("temperature", 0.0) or 0.0),
+                "overheated": bool(result.get("overheated")),
+                "cooldown": int(result.get("cooldown", result.get("cooldown_remaining", 0)) or 0),
+                "layer": int(result.get("layer", 0) or 0),
+                "heat": int(result.get("heat", 0) or 0),
+            }
+        if name == "climate":
+            return {
+                "layer": int(result.get("layer", 0) or 0),
+                "heat": int(result.get("heat", 0) or 0),
+                "airflow": int(result.get("airflow", 0) or 0),
+                "miners_in_hot_layers": int(result.get("miners_in_hot_layers", 0) or 0),
+                "overload": float(result.get("overload", 0.0) or 0.0),
+            }
+        if name == "cool":
+            cleaned = {
+                "ok": bool(result.get("ok")),
+                "temperature": float(result.get("temperature", 0.0) or 0.0),
+                "target": float(result.get("target", 0.0) or 0.0),
+                "layer": int(result.get("layer", 0) or 0),
+            }
+            if result.get("reason"):
+                cleaned["reason"] = result["reason"]
+            return cleaned
         if name == "mine":
             if result.get("ok"):
                 return {"ok": True, "ore": result.get("ore") or result.get("ore_id")}

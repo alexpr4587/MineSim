@@ -15,6 +15,8 @@ from PySide6.QtWidgets import QLabel, QWidget
 from minesim.core.events import (
     AchievementUnlocked,
     LayerChanged,
+    MinerOverheated,
+    MinerRecovered,
     MinerRescued,
     WorldEventStarted,
 )
@@ -102,6 +104,8 @@ class ToastManager(QObject):
             bus.subscribe(WorldEventStarted, self._on_world_event_started)
             bus.subscribe(LayerChanged, self._on_layer_changed)
             bus.subscribe(MinerRescued, self._on_miner_rescued)
+            bus.subscribe(MinerOverheated, self._on_miner_overheated)
+            bus.subscribe(MinerRecovered, self._on_miner_recovered)
         except Exception:
             return
 
@@ -142,6 +146,21 @@ class ToastManager(QObject):
         else:
             message = "Towed back to the station."
         self._queue.append((f"Miner {miner_id} rescued", message))
+        self._show_next()
+
+    def _on_miner_overheated(self, event: Any) -> None:
+        miner_id = int(_get(event, "miner_id", 0) or 0)
+        self._queue.append(
+            (
+                f"Miner {miner_id} overheated",
+                "Shut down until it cools. Move it to a station or the base.",
+            )
+        )
+        self._show_next()
+
+    def _on_miner_recovered(self, event: Any) -> None:
+        miner_id = int(_get(event, "miner_id", 0) or 0)
+        self._queue.append((f"Miner {miner_id} recovered", "The miner is ready to work again."))
         self._show_next()
 
     def _layer_name(self, layer: int) -> str:

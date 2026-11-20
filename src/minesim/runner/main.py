@@ -85,6 +85,24 @@ _DEFAULT_FUNCTIONS: tuple[dict[str, Any], ...] = (
         "doc": "Return an action's energy cost.",
         "category": "",
     },
+    {
+        "name": "temperature",
+        "signature": "temperature()",
+        "doc": "Return the miner temperature state.",
+        "category": "",
+    },
+    {
+        "name": "cool",
+        "signature": "cool(target=30)",
+        "doc": "Cool down on a base or shaft station.",
+        "category": "",
+    },
+    {
+        "name": "climate",
+        "signature": "climate()",
+        "doc": "Return the layer climate.",
+        "category": "",
+    },
     {"name": "layer", "signature": "layer()", "doc": "Return the current layer.", "category": ""},
     {
         "name": "layers",

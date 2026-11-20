@@ -168,6 +168,8 @@ class Miner:
     script: str = ""
     energy: int | None = None
     stranded_since: int | None = None
+    temperature: float = 0.0
+    cooldown_remaining: int = 0
 
     def __post_init__(self) -> None:
         self.id = int(self.id)
@@ -183,6 +185,8 @@ class Miner:
             self.energy = capacity
         else:
             self.energy = max(0, min(int(self.energy), capacity))
+        self.temperature = max(0.0, min(100.0, float(self.temperature or 0.0)))
+        self.cooldown_remaining = max(0, int(self.cooldown_remaining or 0))
 
     # -- shared player stats -------------------------------------------------
 
@@ -264,6 +268,11 @@ class Miner:
         return self.stranded_since is not None
 
     @property
+    def is_overheated(self) -> bool:
+        """Return True while the miner is shut down by overheating."""
+        return int(self.cooldown_remaining) > 0
+
+    @property
     def stats(self) -> MinerStats:
         """Shared aggregate mining stats."""
         return self.player_stats.stats
@@ -339,6 +348,8 @@ class Miner:
             player_stats=player_stats if player_stats is not None else PlayerStats(),
             script=str(data.get("script", "") or ""),
             energy=None if data.get("energy") is None else int(data.get("energy", 0)),
+            temperature=float(data.get("temperature", 0.0) or 0.0),
+            cooldown_remaining=int(data.get("cooldown_remaining", 0) or 0),
         )
 
     # -- inventory -----------------------------------------------------------
@@ -398,6 +409,8 @@ class Miner:
             inventory={str(k): int(v) for k, v in dict(data.get("inventory", {})).items()},
             player_stats=player_stats,
             energy=None if data.get("energy") is None else int(data.get("energy", 0)),
+            temperature=float(data.get("temperature", 0.0) or 0.0),
+            cooldown_remaining=int(data.get("cooldown_remaining", 0) or 0),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -412,6 +425,8 @@ class Miner:
             else self.facing,
             "inventory": dict(self.inventory),
             "energy": self.energy,
+            "temperature": self.temperature,
+            "cooldown_remaining": self.cooldown_remaining,
             **self.player_stats.to_dict(),
         }
 
@@ -428,4 +443,6 @@ class Miner:
             "inventory": dict(self.inventory),
             "script": str(self.script),
             "energy": self.energy,
+            "temperature": self.temperature,
+            "cooldown_remaining": self.cooldown_remaining,
         }

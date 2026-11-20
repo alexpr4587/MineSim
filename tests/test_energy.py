@@ -271,7 +271,7 @@ def test_v10_save_fixture_migrates_to_full_battery(content):
     raw = json.loads((FIXTURES / "save_v10.json").read_text(encoding="utf-8"))
     assert raw["version"] == 10
     savegame = SaveGame.load(FIXTURES / "save_v10.json")
-    assert savegame.version == CURRENT_VERSION == 11
+    assert savegame.version == CURRENT_VERSION == 12
     assert savegame.fleet[0]["energy"] == 300
     game = Game.load(FIXTURES / "save_v10.json", content)
     assert game.miner.energy == 300

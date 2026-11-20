@@ -16,6 +16,7 @@ from minesim.ui.theme import (
     HUD_SELECTED_TEXT,
     TEXT,
     TEXT_DIM,
+    temperature_color,
 )
 
 __all__ = ["HUD", "SPEEDS", "SPEED_BUTTONS"]
@@ -83,8 +84,19 @@ class HUD(QWidget):
         self.energy_bar.setTextVisible(False)
         self.energy_bar.setFixedWidth(80)
         self.energy_bar.setFixedHeight(10)
+        self.temperature_label = QLabel("Temp: 0/100", self)
+        self.temperature_label.setObjectName("hud_temperature_label")
+        self.temperature_bar = QProgressBar(self)
+        self.temperature_bar.setObjectName("hud_temperature_bar")
+        self.temperature_bar.setTextVisible(False)
+        self.temperature_bar.setFixedWidth(80)
+        self.temperature_bar.setFixedHeight(10)
+        self.temperature_bar.setRange(0, 100)
+        self.airflow_label = QLabel("Air 4 / load 0", self)
+        self.airflow_label.setObjectName("hud_airflow_label")
         self.warehouse_label = QLabel("Warehouse: 0/100", self)
-        self.miners_label = QLabel("Miners: 1 alive · 0 free", self)
+        self.miners_label = QLabel("Miners: 1/0", self)
+        self.miners_label.setToolTip("Miners alive / free slots")
         self.tick_label = QLabel("Tick: 0", self)
         self.position_label = QLabel("Pos: (0, 0)", self)
         self.layer_label = QLabel("Layer: Surface (0)", self)
@@ -95,6 +107,8 @@ class HUD(QWidget):
             self.money_label,
             self.inventory_label,
             self.energy_label,
+            self.temperature_label,
+            self.airflow_label,
             self.warehouse_label,
             self.miners_label,
             self.tick_label,
@@ -106,6 +120,8 @@ class HUD(QWidget):
             layout.addWidget(label)
             if label is self.energy_label:
                 layout.addWidget(self.energy_bar)
+            elif label is self.temperature_label:
+                layout.addWidget(self.temperature_bar)
         layout.addStretch(1)
         self.speed_buttons: dict[int, QPushButton] = {}
         self.buttons: list[QPushButton] = []
@@ -210,6 +226,8 @@ class HUD(QWidget):
                 ContractDelivered,
                 EnergySpent,
                 MineAttempted,
+                MinerOverheated,
+                MinerRecovered,
                 MinerRemoved,
                 MinerSpawned,
                 Moved,
@@ -238,6 +256,8 @@ class HUD(QWidget):
             bus.subscribe(ContractDelivered, lambda _event: self.refresh())
             bus.subscribe(EnergySpent, lambda _event: self.refresh())
             bus.subscribe(Charged, lambda _event: self.refresh())
+            bus.subscribe(MinerOverheated, lambda _event: self.refresh())
+            bus.subscribe(MinerRecovered, lambda _event: self.refresh())
         except Exception:
             pass
 
@@ -287,8 +307,33 @@ class HUD(QWidget):
             f"{TEXT_DIM}; border-radius: 3px; background: transparent; }}"
             f" QProgressBar::chunk {{ background-color: {bar_color}; border-radius: 2px; }}"
         )
+        climate = self._climate_state(engine, miner)
+        temperature = float(_get(miner, "temperature", 0.0) or 0.0)
+        overheated = int(_get(miner, "cooldown_remaining", 0) or 0) > 0
+        config = _get(_get(game, "content"), "config")
+        heat_limit = int(_get(config, "overheat_at", 100) or 100)
+        self.temperature_bar.setRange(0, max(1, heat_limit))
+        self.temperature_bar.setValue(max(0, min(int(temperature), max(1, heat_limit))))
+        self.temperature_label.setText(f"Temp: {int(round(temperature))}/{heat_limit}")
+        temp_color = ERROR if overheated else temperature_color(temperature)
+        self.temperature_label.setStyleSheet(
+            f"color: {temp_color};" + (" font-weight: bold;" if overheated else "")
+        )
+        self.temperature_bar.setStyleSheet(
+            "QProgressBar { border: 1px solid "
+            f"{TEXT_DIM}; border-radius: 3px; background: transparent; }}"
+            f" QProgressBar::chunk {{ background-color: {temp_color}; border-radius: 2px; }}"
+        )
+        airflow = int(climate.get("airflow", 0) or 0)
+        load = int(climate.get("miners_in_hot_layers", 0) or 0)
+        overload = float(climate.get("overload", 0.0) or 0.0)
+        self.airflow_label.setText(f"Air {airflow} / load {load}")
+        self.airflow_label.setStyleSheet(
+            f"color: {ERROR}; font-weight: bold;" if overload > 0 else f"color: {TEXT_DIM};"
+        )
+        self.airflow_label.setToolTip("Miners in hot layers / airflow. Overload raises heat gain.")
         self.warehouse_label.setText(f"Warehouse: {int(warehouse_used)}/{int(warehouse_capacity)}")
-        self.miners_label.setText(f"Miners: {int(miner_count)} alive · {free_slots} free")
+        self.miners_label.setText(f"Miners: {int(miner_count)}/{free_slots}")
         self.tick_label.setText(f"Tick: {int(tick)}")
         self.position_label.setText(f"Pos: ({int(position[0])}, {int(position[1])})")
         self.layer_label.setText(self._layer_text(miner))
@@ -299,6 +344,23 @@ class HUD(QWidget):
                 self.speed = int(speed)
                 self.paused = self.speed == 0
                 self._sync_buttons()
+
+    def _climate_state(self, engine: Any, miner: Any) -> dict[str, Any]:
+        getter = _get(engine, "climate_state")
+        if callable(getter):
+            try:
+                state = getter(miner)
+                if isinstance(state, dict):
+                    return state
+            except Exception:
+                pass
+        return {
+            "layer": int(_get(miner, "layer", 0) or 0),
+            "heat": 0,
+            "airflow": 0,
+            "miners_in_hot_layers": 0,
+            "overload": 0.0,
+        }
 
     def _layer_text(self, miner: Any) -> str:
         layer = _get(self.world_view, "viewed_layer")

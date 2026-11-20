@@ -31,7 +31,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-CURRENT_VERSION = 11
+CURRENT_VERSION = 12
 SAVE_VERSION = CURRENT_VERSION
 DEFAULT_SKIN = "rusty_bot"
 
@@ -196,6 +196,25 @@ def _migrate_v10_to_v11(data: dict[str, Any]) -> dict[str, Any]:
     return migrated
 
 
+def _migrate_v11_to_v12(data: dict[str, Any]) -> dict[str, Any]:
+    """Add miner temperature and shutdown cooldown in version 12."""
+    migrated = dict(data)
+    fleet = migrated.get("fleet")
+    if isinstance(fleet, list):
+        migrated["fleet"] = [
+            {
+                **entry,
+                "temperature": float(entry.get("temperature", 0.0) or 0.0),
+                "cooldown_remaining": int(entry.get("cooldown_remaining", 0) or 0),
+            }
+            if isinstance(entry, dict)
+            else entry
+            for entry in fleet
+        ]
+    migrated["version"] = 12
+    return migrated
+
+
 MIGRATIONS: dict[int, Callable[[dict[str, Any]], dict[str, Any]]] = {
     1: _migrate_v1_to_v2,
     2: _migrate_v2_to_v3,
@@ -207,6 +226,7 @@ MIGRATIONS: dict[int, Callable[[dict[str, Any]], dict[str, Any]]] = {
     8: _migrate_v8_to_v9,
     9: _migrate_v9_to_v10,
     10: _migrate_v10_to_v11,
+    11: _migrate_v11_to_v12,
 }
 
 
@@ -247,7 +267,7 @@ def migrate(data: Any) -> dict[str, Any]:
 
 
 class SaveGame(BaseModel):
-    """A serialised game state (save file schema, version 11)."""
+    """A serialised game state (save file schema, version 12)."""
 
     model_config = ConfigDict(extra="ignore")
 

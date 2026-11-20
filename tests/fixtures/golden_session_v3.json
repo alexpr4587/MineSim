@@ -851,6 +851,8 @@
       "battery",
       "buy_upgrade",
       "charge",
+      "climate",
+      "cool",
       "descend",
       "energy_cost",
       "layer",
@@ -859,7 +861,8 @@
       "move",
       "peek",
       "position",
-      "sell"
+      "sell",
+      "temperature"
     ],
     "unlocked_modules": [
       "math"
@@ -876,10 +879,12 @@
       "backpack",
       "battery",
       "charger",
+      "cooling",
       "motor",
       "pickaxe",
       "scanner",
-      "shaft"
+      "shaft",
+      "ventilation"
     ]
   },
   "seed": 12345,

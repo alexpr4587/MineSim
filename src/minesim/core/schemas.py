@@ -85,6 +85,14 @@ class Config(_ContentModel):
     rescue_ticks: int = Field(default=600, ge=0)
     rescue_energy_fraction: float = Field(default=0.25, ge=0.0, le=1.0)
     rescue_loses_inventory: bool = True
+    heat_gain_per_level: float = Field(default=0.12, ge=0.0)
+    cool_rate: float = Field(default=2.0, gt=0.0)
+    overheat_at: int = Field(default=100, gt=0)
+    cooldown_ticks: int = Field(default=300, ge=0)
+    cooldown_temperature: int = Field(default=50, ge=0)
+    airflow_start: int = Field(default=4, ge=0)
+    overload_penalty: float = Field(default=0.5, ge=0.0)
+    hot_layer_min_heat: int = Field(default=1, ge=0)
 
     @field_validator("contract_deadline_max")
     @classmethod

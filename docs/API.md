@@ -15,6 +15,9 @@ Functions are called directly, e.g. `move(East)`, `mine()`, `sell()`. Locked fun
 | `battery` | `battery()` | Return the miner battery as (energy, capacity). | 0 ticks | `energy, capacity = battery()` | available from the start |
 | `charge` | `charge()` | Recharge the battery on a base or shaft station and return {ok, energy, capacity, charged}. | ceil(missing energy / charge rate) ticks | `charge()` | available from the start |
 | `energy_cost` | `energy_cost(action, arg=None)` | Return the energy an action would cost right now. For 'scan', arg is the radius; for 'mine' the ore under the miner is used. | 0 ticks | `energy_cost('mine')` | available from the start |
+| `temperature` | `temperature()` | Return the miner temperature as {ok, temperature, overheated, cooldown, layer, heat}. | 0 ticks | `temperature()['temperature']` | available from the start |
+| `cool` | `cool(target=30)` | Cool down on a base or shaft station until the temperature reaches target. | ceil((temperature - target) / cool rate) ticks | `cool(30)` | available from the start |
+| `climate` | `climate()` | Return the layer climate as {layer, heat, airflow, miners_in_hot_layers, overload}. | 0 ticks | `climate()['airflow']` | available from the start |
 | `sell` | `sell()` | Sell the whole inventory at the base and return the money gained. | 2 ticks at the base | `earned = sell()` | unlocks with the **First Dig** achievement |
 | `unload` | `unload()` | Move the miner inventory into the base warehouse and return {moved, left}. | 1 tick at the base | `result = unload()` | unlocks with the **Storage Unit** achievement |
 | `stock` | `stock()` | Return the warehouse contents and capacity as {items, capacity, used, free}. | 0 ticks | `stock()['items']` | unlocks with the **Storage Unit** achievement |
@@ -173,6 +176,60 @@ charge()
 
 ```python
 energy_cost('mine')
+```
+
+**Unlocked by:** available from the start
+
+### `temperature`
+
+**Signature:** `temperature()`
+
+**Category:** climate
+
+**Description:** Return the miner temperature as {ok, temperature, overheated, cooldown, layer, heat}.
+
+**Cost:** 0 ticks
+
+**Example:**
+
+```python
+temperature()['temperature']
+```
+
+**Unlocked by:** available from the start
+
+### `cool`
+
+**Signature:** `cool(target=30)`
+
+**Category:** climate
+
+**Description:** Cool down on a base or shaft station until the temperature reaches target.
+
+**Cost:** ceil((temperature - target) / cool rate) ticks
+
+**Example:**
+
+```python
+cool(30)
+```
+
+**Unlocked by:** available from the start
+
+### `climate`
+
+**Signature:** `climate()`
+
+**Category:** climate
+
+**Description:** Return the layer climate as {layer, heat, airflow, miners_in_hot_layers, overload}.
+
+**Cost:** 0 ticks
+
+**Example:**
+
+```python
+climate()['airflow']
 ```
 
 **Unlocked by:** available from the start

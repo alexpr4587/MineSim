@@ -63,6 +63,33 @@
     "example": "energy_cost('mine')"
   },
   {
+    "name": "temperature",
+    "signature": "temperature()",
+    "doc": "Return the miner temperature as {ok, temperature, overheated, cooldown, layer, heat}.",
+    "category": "climate",
+    "unlocked_by": null,
+    "cost": "0 ticks",
+    "example": "temperature()['temperature']"
+  },
+  {
+    "name": "cool",
+    "signature": "cool(target=30)",
+    "doc": "Cool down on a base or shaft station until the temperature reaches target.",
+    "category": "climate",
+    "unlocked_by": null,
+    "cost": "ceil((temperature - target) / cool rate) ticks",
+    "example": "cool(30)"
+  },
+  {
+    "name": "climate",
+    "signature": "climate()",
+    "doc": "Return the layer climate as {layer, heat, airflow, miners_in_hot_layers, overload}.",
+    "category": "climate",
+    "unlocked_by": null,
+    "cost": "0 ticks",
+    "example": "climate()['airflow']"
+  },
+  {
     "name": "sell",
     "signature": "sell()",
     "doc": "Sell the whole inventory at the base and return the money gained.",

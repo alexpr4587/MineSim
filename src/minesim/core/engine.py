@@ -12,6 +12,8 @@ from minesim.core.events import (
     ContractGenerated,
     EnergySpent,
     EventBus,
+    MinerOverheated,
+    MinerRecovered,
     MinerRemoved,
     MinerRescued,
     MinerSpawned,
@@ -43,6 +45,7 @@ def _get_attr(obj: Any, name: str, default: Any = None) -> Any:
 _ZERO_COST_NAMES = {
     "Battery",
     "Biome",
+    "Climate",
     "Distance",
     "EnergyCost",
     "Events",
@@ -65,6 +68,7 @@ _ZERO_COST_NAMES = {
     "MinerId",
     "Miners",
     "SubmitEstimate",
+    "Temperature",
     "Tick",
 }
 
@@ -506,6 +510,144 @@ class GameEngine:
         miner.energy = max(0, int(getattr(miner, "energy", 0) or 0) - amount)
         self._events.publish(EnergySpent(miner_id=int(getattr(miner, "id", 0) or 0), amount=amount))
 
+    # -- climate -------------------------------------------------------------
+
+    def _layer_definition(self, layer: int) -> Any:
+        layers = getattr(self.content, "layers", None)
+        if isinstance(layers, dict):
+            return layers.get(int(layer))
+        return None
+
+    def layer_heat(self, layer: int) -> int:
+        """Return the heat level of ``layer`` (0 when unknown)."""
+        return int(_get_attr(self._layer_definition(layer), "heat", 0) or 0)
+
+    def _hot_layer_min_heat(self) -> int:
+        config = getattr(self.content, "config", None)
+        return max(0, int(_get_attr(config, "hot_layer_min_heat", 1) or 0))
+
+    def _is_hot_layer(self, layer: int) -> bool:
+        return self.layer_heat(layer) >= self._hot_layer_min_heat()
+
+    def _upgrade_change(self, upgrade_id: str, stat: str) -> int:
+        upgrades = getattr(self.content, "upgrades", None)
+        if not isinstance(upgrades, dict):
+            return 0
+        upgrade = upgrades.get(upgrade_id)
+        changes = getattr(upgrade, "stat_changes", None)
+        if not callable(changes):
+            return 0
+        try:
+            return int(changes().get(stat, 0) or 0)
+        except Exception:
+            return 0
+
+    def airflow(self) -> int:
+        """Return how many miners can work in hot layers without overload."""
+        config = getattr(self.content, "config", None)
+        start = max(0, int(_get_attr(config, "airflow_start", 0) or 0))
+        level = max(0, int(self.upgrade_levels.get("ventilation", 0) or 0))
+        return start + level * self._upgrade_change("ventilation", "airflow_bonus")
+
+    def miners_in_hot_layers(self) -> int:
+        """Return the number of miners currently in hot layers."""
+        count = 0
+        for miner in self._miners.values():
+            if self._is_hot_layer(int(_get_attr(miner, "layer", 0) or 0)):
+                count += 1
+        return count
+
+    def overload(self) -> float:
+        """Return the current airflow overload factor for hot layers."""
+        config = getattr(self.content, "config", None)
+        penalty = max(0.0, float(_get_attr(config, "overload_penalty", 0.0) or 0.0))
+        excess = max(0, self.miners_in_hot_layers() - self.airflow())
+        return penalty * excess
+
+    def climate_state(self, miner: Any = None) -> dict[str, Any]:
+        """Return the climate seen by ``miner`` (defaults to miner 0)."""
+        if miner is None:
+            miner = self.miner
+        layer = int(_get_attr(miner, "layer", 0) or 0)
+        return {
+            "layer": layer,
+            "heat": self.layer_heat(layer),
+            "airflow": self.airflow(),
+            "miners_in_hot_layers": self.miners_in_hot_layers(),
+            "overload": self.overload(),
+        }
+
+    def _cooling_reduction(self) -> float:
+        level = max(0, int(self.upgrade_levels.get("cooling", 0) or 0))
+        percent = self._upgrade_change("cooling", "heat_gain_reduction_percent")
+        return max(0.0, min(1.0, (level * percent) / 100.0))
+
+    def _refuse_all_overheated(self, miner: Any) -> None:
+        """Refuse the active and queued commands of an overheated miner."""
+        entries = []
+        if miner.active is not None:
+            entries.append(miner.active)
+            miner.active = None
+        entries.extend(miner.queue)
+        miner.queue.clear()
+        miner.busy_timer = 0
+        for entry in entries:
+            entry.refused_reason = "overheated"
+            entry.refused_cost = 0
+            self._execute_now(entry)
+
+    def _start_overheat(self, miner: Any) -> None:
+        config = getattr(self.content, "config", None)
+        overheat_at = max(1, int(_get_attr(config, "overheat_at", 100) or 100))
+        cooldown = max(0, int(_get_attr(config, "cooldown_ticks", 0) or 0))
+        miner.temperature = float(overheat_at)
+        miner.cooldown_remaining = cooldown
+        self._events.publish(MinerOverheated(miner_id=int(_get_attr(miner, "id", 0) or 0)))
+        if cooldown > 0:
+            self._refuse_all_overheated(miner)
+            return
+        miner.temperature = float(_get_attr(config, "cooldown_temperature", 50) or 0)
+        self._events.publish(MinerRecovered(miner_id=int(_get_attr(miner, "id", 0) or 0)))
+
+    def _update_cooldown(self, miner: Any) -> bool:
+        """Advance a shutdown; return True when this tick is skipped."""
+        remaining = max(0, int(_get_attr(miner, "cooldown_remaining", 0) or 0))
+        if remaining <= 0:
+            return False
+        remaining -= 1
+        miner.cooldown_remaining = remaining
+        if remaining > 0:
+            return True
+        config = getattr(self.content, "config", None)
+        miner.temperature = float(_get_attr(config, "cooldown_temperature", 50) or 0)
+        self._events.publish(MinerRecovered(miner_id=int(_get_attr(miner, "id", 0) or 0)))
+        return True
+
+    def _apply_climate(self, miner: Any, active: bool) -> bool:
+        """Apply heat or cooling; return True when the miner overheated."""
+        config = getattr(self.content, "config", None)
+        layer = int(_get_attr(miner, "layer", 0) or 0)
+        heat = self.layer_heat(layer)
+        temperature = max(0.0, float(_get_attr(miner, "temperature", 0.0) or 0.0))
+        cool_rate = max(0.0, float(_get_attr(config, "cool_rate", 0.0) or 0.0))
+        if layer == 0 or self._on_station(miner):
+            miner.temperature = max(0.0, temperature - cool_rate)
+            return False
+        if not active or heat <= 0 or heat < self._hot_layer_min_heat():
+            miner.temperature = temperature
+            return False
+        gain = max(0.0, float(_get_attr(config, "heat_gain_per_level", 0.0) or 0.0))
+        gain *= float(heat)
+        gain *= 1.0 + self.overload()
+        gain *= 1.0 - self._cooling_reduction()
+        overheat_at = max(1, int(_get_attr(config, "overheat_at", 100) or 100))
+        temperature = min(float(overheat_at), temperature + gain)
+        miner.temperature = temperature
+        if temperature >= overheat_at:
+            self._start_overheat(miner)
+            return True
+        return False
+
     def _activate_next(self, miner: Any) -> None:
         """Promote queued commands until one occupies ``miner`` or it empties.
 
@@ -514,6 +656,14 @@ class GameEngine:
         A command the miner cannot afford is refused after one tick
         without spending anything.
         """
+        if int(_get_attr(miner, "cooldown_remaining", 0) or 0) > 0:
+            entries = list(miner.queue)
+            miner.queue.clear()
+            for entry in entries:
+                entry.refused_reason = "overheated"
+                entry.refused_cost = 0
+                self._execute_now(entry)
+            return
         while miner.active is None and miner.queue:
             entry = miner.queue[0]
             try:
@@ -548,6 +698,10 @@ class GameEngine:
         ticket = Ticket(command=command, miner_id=int(miner_id))
         entry = _Entry(command=command, ticket=ticket, miner_id=int(miner_id))
         if self._is_static_zero_cost(command):
+            self._execute_now(entry)
+            return ticket
+        if int(_get_attr(miner, "cooldown_remaining", 0) or 0) > 0:
+            entry.refused_reason = "overheated"
             self._execute_now(entry)
             return ticket
         miner.queue.append(entry)
@@ -598,8 +752,12 @@ class GameEngine:
                 self._events.publish(ContractExpired(id=int(contract.id)))
         for miner_id in sorted(self._miners):
             miner = self._miners[miner_id]
+            if self._update_cooldown(miner):
+                continue
             if miner.active is None:
                 self._activate_next(miner)
+            if self._apply_climate(miner, miner.active is not None):
+                continue
             active = miner.active
             if active is None:
                 continue

@@ -60,11 +60,15 @@ __all__ = [
     "SYNTAX_KEYWORD",
     "SYNTAX_NUMBER",
     "SYNTAX_STRING",
+    "TEMPERATURE_COOL",
+    "TEMPERATURE_HOT",
+    "TEMPERATURE_WARM",
     "TEXT",
     "TEXT_DIM",
     "apply_theme",
     "dark_palette",
     "miner_badge_color",
+    "temperature_color",
     "get_stylesheet",
 ]
 
@@ -109,6 +113,9 @@ COLORS: dict[str, str] = {
     "slow_zone": "#5b6b8c",
     "slow_zone_border": "#7dcfff",
     "event_label": "#e6e6e6",
+    "temperature_cool": "#c3e88d",
+    "temperature_warm": "#ffd166",
+    "temperature_hot": "#f7768e",
 }
 
 BACKGROUND = COLORS["background"]
@@ -158,6 +165,9 @@ RICH_VEIN_BORDER = COLORS["rich_vein_border"]
 SLOW_ZONE = COLORS["slow_zone"]
 SLOW_ZONE_BORDER = COLORS["slow_zone_border"]
 EVENT_LABEL = COLORS["event_label"]
+TEMPERATURE_COOL = COLORS["temperature_cool"]
+TEMPERATURE_WARM = COLORS["temperature_warm"]
+TEMPERATURE_HOT = COLORS["temperature_hot"]
 
 MINER_ID_COLORS: tuple[str, ...] = (
     "#f2a541",
@@ -177,6 +187,16 @@ def miner_badge_color(miner_id: int) -> str:
     if miner_id <= 0:
         return MINER_BODY
     return MINER_ID_COLORS[(miner_id - 1) % len(MINER_ID_COLORS)]
+
+
+def temperature_color(temperature: float) -> str:
+    """Return the green-to-red colour for a temperature from 0 to 100."""
+    value = max(0.0, min(100.0, float(temperature)))
+    if value < 50.0:
+        return TEMPERATURE_COOL
+    if value < 80.0:
+        return TEMPERATURE_WARM
+    return TEMPERATURE_HOT
 
 
 MONOSPACE_FONT = "Consolas, 'DejaVu Sans Mono', 'Liberation Mono', monospace"

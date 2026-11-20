@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
+    QProgressBar,
     QPushButton,
     QScrollArea,
     QVBoxLayout,
@@ -27,6 +28,8 @@ from PySide6.QtWidgets import (
 
 from minesim.core.commands import RemoveMiner, SpawnMiner
 from minesim.core.events import (
+    MinerOverheated,
+    MinerRecovered,
     MinerRemoved,
     MinerSpawned,
     Moved,
@@ -42,12 +45,14 @@ from minesim.ui.floating_panel import FloatingPanel
 from minesim.ui.lock_overlay import LockOverlay
 from minesim.ui.theme import (
     ACCENT,
+    BACKGROUND,
     BUTTON_BORDER,
     DISABLED_TEXT,
     ERROR,
     TEXT,
     TEXT_DIM,
     miner_badge_color,
+    temperature_color,
 )
 
 __all__ = ["MinersPanel", "MinerRow", "miner_state_label"]
@@ -123,23 +128,52 @@ class MinerRow(QFrame):
         top.addWidget(self.kill_button)
         layout.addLayout(top)
 
-        info = QHBoxLayout()
         self.script_label = QLabel("Script: —", self)
         self.script_label.setObjectName(f"miner_script_{self.miner_id}")
+        self.script_label.setStyleSheet(f"color: {TEXT_DIM};")
+        layout.addWidget(self.script_label)
+
+        info = QHBoxLayout()
         self.position_label = QLabel("Pos: (0, 0)", self)
         self.layer_label = QLabel("Layer: 0", self)
         self.layer_label.setObjectName(f"miner_layer_{self.miner_id}")
         self.inventory_label = QLabel("0/10", self)
         self.energy_label = QLabel("Energy: 0/0", self)
         self.energy_label.setObjectName(f"miner_energy_{self.miner_id}")
-        for label in (self.script_label, self.inventory_label, self.layer_label, self.energy_label):
+        for label in (
+            self.position_label,
+            self.inventory_label,
+            self.layer_label,
+            self.energy_label,
+        ):
             label.setStyleSheet(f"color: {TEXT_DIM};")
-        info.addWidget(self.script_label, 1)
         info.addWidget(self.position_label)
         info.addWidget(self.layer_label)
+        info.addStretch(1)
         info.addWidget(self.energy_label)
         info.addWidget(self.inventory_label)
         layout.addLayout(info)
+
+        climate = QHBoxLayout()
+        self.temperature_label = QLabel("Temp: 0/100", self)
+        self.temperature_label.setObjectName(f"miner_temperature_{self.miner_id}")
+        self.temperature_label.setStyleSheet(f"color: {TEXT_DIM};")
+        self.temperature_bar = QProgressBar(self)
+        self.temperature_bar.setObjectName(f"miner_temperature_bar_{self.miner_id}")
+        self.temperature_bar.setTextVisible(False)
+        self.temperature_bar.setRange(0, 100)
+        self.temperature_bar.setFixedHeight(8)
+        self.overheated_badge = QLabel("OVERHEATED", self)
+        self.overheated_badge.setObjectName(f"miner_overheated_{self.miner_id}")
+        self.overheated_badge.setStyleSheet(
+            f"color: {BACKGROUND}; background-color: {ERROR};"
+            " border-radius: 3px; padding: 1px 5px; font-weight: bold;"
+        )
+        self.overheated_badge.hide()
+        climate.addWidget(self.temperature_label)
+        climate.addWidget(self.temperature_bar, 1)
+        climate.addWidget(self.overheated_badge)
+        layout.addLayout(climate)
 
         assign = QHBoxLayout()
         assign_label = QLabel("Assign:", self)
@@ -203,6 +237,22 @@ class MinerRow(QFrame):
         else:
             self.energy_label.setStyleSheet(f"color: {TEXT_DIM};")
             self.energy_label.setToolTip("Battery energy / capacity")
+        temperature = max(0.0, float(_get(miner, "temperature", 0.0) or 0.0))
+        cooldown = max(0, int(_get(miner, "cooldown_remaining", 0) or 0))
+        limit = self.panel.overheat_at()
+        self.temperature_bar.setRange(0, max(1, limit))
+        self.temperature_bar.setValue(max(0, min(int(round(temperature)), max(1, limit))))
+        color = temperature_color(temperature)
+        self.temperature_label.setText(f"Temp: {int(round(temperature))}/{limit}")
+        self.temperature_label.setStyleSheet(
+            f"color: {ERROR if cooldown else color};" + (" font-weight: bold;" if cooldown else "")
+        )
+        self.temperature_bar.setStyleSheet(
+            f"QProgressBar {{ border: 1px solid {BUTTON_BORDER}; border-radius: 2px; }}"
+            f" QProgressBar::chunk {{ background-color: {color}; border-radius: 1px; }}"
+        )
+        self.overheated_badge.setVisible(cooldown > 0)
+        self.overheated_badge.setToolTip(f"Shut down for {cooldown} more ticks" if cooldown else "")
         color = miner_badge_color(self.miner_id)
         self.badge.setStyleSheet(
             f"background-color: {color}; border: 1px solid {TEXT}; border-radius: 8px;"
@@ -346,6 +396,11 @@ class MinersPanel(FloatingPanel):
         if isinstance(layers, dict):
             return str(_get(layers.get(int(layer)), "name", f"Layer {layer}"))
         return f"Layer {layer}"
+
+    def overheat_at(self) -> int:
+        """Return the configured overheat threshold."""
+        config = _get(self.game_content, "config")
+        return max(1, int(_get(config, "overheat_at", 100) or 100))
 
     def _states(self) -> dict[int, Any]:
         manager = self.manager
@@ -607,6 +662,8 @@ class MinersPanel(FloatingPanel):
         try:
             for event_type in (
                 MinerSpawned,
+                MinerOverheated,
+                MinerRecovered,
                 MinerRemoved,
                 ScriptStarted,
                 ScriptFinished,

@@ -330,7 +330,7 @@ def test_save_v3_fixture_migrates_to_fleet() -> None:
     path = FIXTURES / "save_v3.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     migrated = migrate(data)
-    assert migrated["version"] == 11
+    assert migrated["version"] == 12
     assert migrated["player_stats"]["money"] == 43
     assert migrated["fleet"] == [
         {
@@ -342,13 +342,15 @@ def test_save_v3_fixture_migrates_to_fleet() -> None:
             "inventory": {},
             "script": "",
             "energy": 300,
+            "temperature": 0.0,
+            "cooldown_remaining": 0,
         }
     ]
     assert migrated["warehouse"] == {}
     assert migrated["market"] == {}
 
     savegame = SaveGame.load(path)
-    assert savegame.version == 11
+    assert savegame.version == 12
     game = Game.load(path)
     assert len(game.miners) == 1
     assert game.player_stats.money == 43
@@ -361,12 +363,12 @@ def test_save_v4_fixture_migrates_to_warehouse_and_market() -> None:
     path = FIXTURES / "save_v4.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     migrated = migrate(data)
-    assert migrated["version"] == 11
+    assert migrated["version"] == 12
     assert migrated["warehouse"] == {}
     assert migrated["market"] == {}
 
     savegame = SaveGame.load(path)
-    assert savegame.version == 11
+    assert savegame.version == 12
     game = Game.load(path)
     assert game.engine.warehouse.total() == 0
     assert game.engine.warehouse.capacity == game.content.config.warehouse_start_capacity
@@ -407,7 +409,7 @@ def test_save_v6_migrates_shared_memory_and_scripts(tmp_path) -> None:
     for entry in raw["fleet"]:
         entry.pop("script", None)
     migrated = migrate(raw)
-    assert migrated["version"] == 11
+    assert migrated["version"] == 12
     assert migrated["shared_memory"] == {}
     assert migrated["fleet"][0]["script"] == ""
 
