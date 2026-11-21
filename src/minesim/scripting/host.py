@@ -37,6 +37,8 @@ from minesim.core.commands import (
     Deliver,
     Descend,
     Distance,
+    DockRate,
+    DockStatus,
     EnergyCost,
     Events,
     Inspect,
@@ -1110,6 +1112,14 @@ class ScriptHost:
             if args or kwargs:
                 raise TypeError("unload() takes no arguments")
             return Unload()
+        if name == "dock_free":
+            if args or kwargs:
+                raise TypeError("dock_free() takes no arguments")
+            return DockStatus()
+        if name == "dock_rate":
+            if args or kwargs:
+                raise TypeError("dock_rate() takes no arguments")
+            return DockRate()
         if name == "stock":
             if args or kwargs:
                 raise TypeError("stock() takes no arguments")
@@ -1338,6 +1348,14 @@ class ScriptHost:
                 "moved": dict(result.get("moved") or {}),
                 "left": dict(result.get("left") or {}),
             }
+        if name == "dock_free":
+            return {
+                "free": bool(result.get("free")),
+                "queue": int(result.get("queue_length", result.get("queue", 0)) or 0),
+                "eta": int(result.get("eta_ticks", result.get("eta", 0)) or 0),
+            }
+        if name == "dock_rate":
+            return int(result.get("rate", 0) or 0)
         if name == "stock":
             return {
                 "items": dict(result.get("items") or {}),

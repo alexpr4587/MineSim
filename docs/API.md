@@ -18,8 +18,10 @@ Functions are called directly, e.g. `move(East)`, `mine()`, `sell()`. Locked fun
 | `temperature` | `temperature()` | Return the miner temperature as {ok, temperature, overheated, cooldown, layer, heat}. | 0 ticks | `temperature()['temperature']` | available from the start |
 | `cool` | `cool(target=30)` | Cool down on a base or shaft station until the temperature reaches target. | ceil((temperature - target) / cool rate) ticks | `cool(30)` | available from the start |
 | `climate` | `climate()` | Return the layer climate as {layer, heat, airflow, miners_in_hot_layers, overload}. | 0 ticks | `climate()['airflow']` | available from the start |
-| `sell` | `sell()` | Sell the whole inventory at the base and return the money gained. | 2 ticks at the base | `earned = sell()` | unlocks with the **First Dig** achievement |
-| `unload` | `unload()` | Move the miner inventory into the base warehouse and return {moved, left}. | 1 tick at the base | `result = unload()` | unlocks with the **Storage Unit** achievement |
+| `sell` | `sell()` | Sell the whole inventory at the base and return the money gained. Waits for the shared surface dock. | ceil(units / dock rate) ticks at the base | `earned = sell()` | unlocks with the **First Dig** achievement |
+| `unload` | `unload()` | Move the miner inventory into the base warehouse and return {moved, left}. Waits for the shared surface dock. | ceil(units / dock rate) ticks at the base | `result = unload()` | unlocks with the **Storage Unit** achievement |
+| `dock_free` | `dock_free()` | Return the surface dock status as {free, queue, eta}. | 0 ticks | `status = dock_free()` | available from the start |
+| `dock_rate` | `dock_rate()` | Return how many inventory units the surface dock services per tick. | 0 ticks | `rate = dock_rate()` | available from the start |
 | `stock` | `stock()` | Return the warehouse contents and capacity as {items, capacity, used, free}. | 0 ticks | `stock()['items']` | unlocks with the **Storage Unit** achievement |
 | `sell_stock` | `sell_stock(item, amount=None)` | Sell items from the warehouse at market prices and return the money gained. | 2 ticks at the base | `earned = sell_stock('stone', 10)` | unlocks with the **Storage Unit** achievement |
 | `price` | `price(item)` | Return the current market price of an unlocked item, or None. | 0 ticks | `price('stone')` | unlocks with the **Market Watcher** achievement |
@@ -240,9 +242,9 @@ climate()['airflow']
 
 **Category:** business
 
-**Description:** Sell the whole inventory at the base and return the money gained.
+**Description:** Sell the whole inventory at the base and return the money gained. Waits for the shared surface dock.
 
-**Cost:** 2 ticks at the base
+**Cost:** ceil(units / dock rate) ticks at the base
 
 **Example:**
 
@@ -258,9 +260,9 @@ earned = sell()
 
 **Category:** business
 
-**Description:** Move the miner inventory into the base warehouse and return {moved, left}.
+**Description:** Move the miner inventory into the base warehouse and return {moved, left}. Waits for the shared surface dock.
 
-**Cost:** 1 tick at the base
+**Cost:** ceil(units / dock rate) ticks at the base
 
 **Example:**
 
@@ -269,6 +271,42 @@ result = unload()
 ```
 
 **Unlocked by:** unlocks with the **Storage Unit** achievement
+
+### `dock_free`
+
+**Signature:** `dock_free()`
+
+**Category:** business
+
+**Description:** Return the surface dock status as {free, queue, eta}.
+
+**Cost:** 0 ticks
+
+**Example:**
+
+```python
+status = dock_free()
+```
+
+**Unlocked by:** available from the start
+
+### `dock_rate`
+
+**Signature:** `dock_rate()`
+
+**Category:** business
+
+**Description:** Return how many inventory units the surface dock services per tick.
+
+**Cost:** 0 ticks
+
+**Example:**
+
+```python
+rate = dock_rate()
+```
+
+**Unlocked by:** available from the start
 
 ### `stock`
 

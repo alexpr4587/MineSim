@@ -1,5 +1,5 @@
 {
-  "attempt_counter": 4,
+  "attempt_counter": 5,
   "events": [
     {
       "tick": 1,
@@ -222,10 +222,6 @@
       "type": "TickAdvanced"
     },
     {
-      "tick": 21,
-      "type": "TickAdvanced"
-    },
-    {
       "avg_index": 1.0,
       "items": {
         "stone": 1
@@ -265,15 +261,15 @@
       "type": "UpgradeBought"
     },
     {
+      "tick": 21,
+      "type": "TickAdvanced"
+    },
+    {
       "tick": 22,
       "type": "TickAdvanced"
     },
     {
       "tick": 23,
-      "type": "TickAdvanced"
-    },
-    {
-      "tick": 24,
       "type": "TickAdvanced"
     },
     {
@@ -286,15 +282,15 @@
       "y": 0
     },
     {
+      "tick": 24,
+      "type": "TickAdvanced"
+    },
+    {
       "tick": 25,
       "type": "TickAdvanced"
     },
     {
       "tick": 26,
-      "type": "TickAdvanced"
-    },
-    {
-      "tick": 27,
       "type": "TickAdvanced"
     },
     {
@@ -331,15 +327,15 @@
       "type": "MineAttempted"
     },
     {
+      "tick": 27,
+      "type": "TickAdvanced"
+    },
+    {
       "tick": 28,
       "type": "TickAdvanced"
     },
     {
       "tick": 29,
-      "type": "TickAdvanced"
-    },
-    {
-      "tick": 30,
       "type": "TickAdvanced"
     },
     {
@@ -352,15 +348,15 @@
       "y": -1
     },
     {
+      "tick": 30,
+      "type": "TickAdvanced"
+    },
+    {
       "tick": 31,
       "type": "TickAdvanced"
     },
     {
       "tick": 32,
-      "type": "TickAdvanced"
-    },
-    {
-      "tick": 33,
       "type": "TickAdvanced"
     },
     {
@@ -373,11 +369,11 @@
       "y": -2
     },
     {
-      "tick": 34,
+      "tick": 33,
       "type": "TickAdvanced"
     },
     {
-      "tick": 35,
+      "tick": 34,
       "type": "TickAdvanced"
     },
     {
@@ -397,15 +393,15 @@
       "type": "OreMined"
     },
     {
+      "tick": 35,
+      "type": "TickAdvanced"
+    },
+    {
       "tick": 36,
       "type": "TickAdvanced"
     },
     {
       "tick": 37,
-      "type": "TickAdvanced"
-    },
-    {
-      "tick": 38,
       "type": "TickAdvanced"
     },
     {
@@ -418,15 +414,15 @@
       "y": -1
     },
     {
+      "tick": 38,
+      "type": "TickAdvanced"
+    },
+    {
       "tick": 39,
       "type": "TickAdvanced"
     },
     {
       "tick": 40,
-      "type": "TickAdvanced"
-    },
-    {
-      "tick": 41,
       "type": "TickAdvanced"
     },
     {
@@ -439,15 +435,15 @@
       "y": 0
     },
     {
+      "tick": 41,
+      "type": "TickAdvanced"
+    },
+    {
       "tick": 42,
       "type": "TickAdvanced"
     },
     {
       "tick": 43,
-      "type": "TickAdvanced"
-    },
-    {
-      "tick": 44,
       "type": "TickAdvanced"
     },
     {
@@ -460,11 +456,11 @@
       "y": 1
     },
     {
-      "tick": 45,
+      "tick": 44,
       "type": "TickAdvanced"
     },
     {
-      "tick": 46,
+      "tick": 45,
       "type": "TickAdvanced"
     },
     {
@@ -484,15 +480,15 @@
       "type": "OreMined"
     },
     {
+      "tick": 46,
+      "type": "TickAdvanced"
+    },
+    {
       "tick": 47,
       "type": "TickAdvanced"
     },
     {
       "tick": 48,
-      "type": "TickAdvanced"
-    },
-    {
-      "tick": 49,
       "type": "TickAdvanced"
     },
     {
@@ -505,15 +501,15 @@
       "y": 1
     },
     {
+      "tick": 49,
+      "type": "TickAdvanced"
+    },
+    {
       "tick": 50,
       "type": "TickAdvanced"
     },
     {
       "tick": 51,
-      "type": "TickAdvanced"
-    },
-    {
-      "tick": 52,
       "type": "TickAdvanced"
     },
     {
@@ -526,11 +522,7 @@
       "y": 1
     },
     {
-      "tick": 53,
-      "type": "TickAdvanced"
-    },
-    {
-      "tick": 54,
+      "tick": 52,
       "type": "TickAdvanced"
     },
     {
@@ -541,6 +533,14 @@
       "miner_id": 0,
       "money": 1,
       "type": "Sold"
+    },
+    {
+      "tick": 53,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 54,
+      "type": "TickAdvanced"
     },
     {
       "tick": 55,
@@ -559,14 +559,6 @@
       "type": "TickAdvanced"
     },
     {
-      "tick": 59,
-      "type": "TickAdvanced"
-    },
-    {
-      "tick": 60,
-      "type": "TickAdvanced"
-    },
-    {
       "direction": "south",
       "in_slow_zone": false,
       "layer": 0,
@@ -576,15 +568,15 @@
       "y": 2
     },
     {
+      "tick": 59,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 60,
+      "type": "TickAdvanced"
+    },
+    {
       "tick": 61,
-      "type": "TickAdvanced"
-    },
-    {
-      "tick": 62,
-      "type": "TickAdvanced"
-    },
-    {
-      "tick": 63,
       "type": "TickAdvanced"
     },
     {
@@ -597,15 +589,15 @@
       "y": 3
     },
     {
+      "tick": 62,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 63,
+      "type": "TickAdvanced"
+    },
+    {
       "tick": 64,
-      "type": "TickAdvanced"
-    },
-    {
-      "tick": 65,
-      "type": "TickAdvanced"
-    },
-    {
-      "tick": 66,
       "type": "TickAdvanced"
     },
     {
@@ -618,15 +610,15 @@
       "y": 3
     },
     {
+      "tick": 65,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 66,
+      "type": "TickAdvanced"
+    },
+    {
       "tick": 67,
-      "type": "TickAdvanced"
-    },
-    {
-      "tick": 68,
-      "type": "TickAdvanced"
-    },
-    {
-      "tick": 69,
       "type": "TickAdvanced"
     },
     {
@@ -637,6 +629,22 @@
       "type": "Moved",
       "x": 2,
       "y": 3
+    },
+    {
+      "tick": 68,
+      "type": "TickAdvanced"
+    },
+    {
+      "tick": 69,
+      "type": "TickAdvanced"
+    },
+    {
+      "layer": 0,
+      "miner_id": 0,
+      "ore_id": "stone",
+      "reason": "miss",
+      "success": false,
+      "type": "MineAttempted"
     },
     {
       "tick": 70,
@@ -661,14 +669,6 @@
       "miner_id": 0,
       "ore_id": "stone",
       "type": "OreMined"
-    },
-    {
-      "layer": 0,
-      "miner_id": 0,
-      "ore_id": null,
-      "reason": "nothing_to_mine",
-      "success": false,
-      "type": "MineAttempted"
     },
     {
       "tick": 72,
@@ -759,10 +759,6 @@
       "type": "TickAdvanced"
     },
     {
-      "tick": 85,
-      "type": "TickAdvanced"
-    },
-    {
       "id": "backpack",
       "level": 3,
       "miner_id": 0,
@@ -777,11 +773,11 @@
       "type": "MineAttempted"
     },
     {
-      "tick": 86,
+      "tick": 85,
       "type": "TickAdvanced"
     },
     {
-      "tick": 87,
+      "tick": 86,
       "type": "TickAdvanced"
     }
   ],
@@ -795,7 +791,7 @@
     "scan_radius": 3,
     "stats": {
       "attempts": {
-        "stone": 4
+        "stone": 5
       },
       "sales": 2,
       "successes": {
@@ -819,14 +815,16 @@
   "progression": {
     "completed": {
       "first_dig": 11,
-      "first_sale": 21
+      "first_sale": 20
     },
     "counters": {
-      "attempts:any": 4,
-      "attempts:stone": 4,
+      "attempts:any": 5,
+      "attempts:stone": 5,
       "biome:quarry": 1,
       "biomes_visited": 1,
-      "fail:nothing_to_mine": 16,
+      "fail:miss": 1,
+      "fail:nothing_to_mine": 15,
+      "fail_streak": 1,
       "largest_sale": 1,
       "max_distance": 3,
       "mined:any": 4,
@@ -834,13 +832,13 @@
       "money_earned": 2,
       "ores_in_one_sale": 1,
       "sales": 2,
-      "streak": 4,
+      "streak": 3,
       "tiles_moved": 21,
       "unique_ores_mined": 1,
       "upgrades_bought": 6
     },
     "current_fail_streak": 0,
-    "current_streak": 4,
+    "current_streak": 1,
     "unlocked_examples": [
       "01_hello",
       "02_sweep_and_sell"
@@ -854,6 +852,8 @@
       "climate",
       "cool",
       "descend",
+      "dock_free",
+      "dock_rate",
       "energy_cost",
       "layer",
       "layers",
@@ -880,6 +880,7 @@
       "battery",
       "charger",
       "cooling",
+      "dock",
       "motor",
       "pickaxe",
       "scanner",
@@ -888,12 +889,12 @@
     ]
   },
   "seed": 12345,
-  "tick": 87,
+  "tick": 86,
   "world": {
     "delta": {
       "2,-2": [
         0,
-        335
+        334
       ],
       "2,0": [
         0,
@@ -901,7 +902,7 @@
       ],
       "2,1": [
         0,
-        346
+        345
       ],
       "2,3": [
         0,

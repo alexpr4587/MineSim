@@ -37,10 +37,16 @@ def climate() -> dict:
     'Return the layer climate as {layer, heat, airflow, miners_in_hot_layers, overload}.'
     ...
 def sell() -> int:
-    'Sell the whole inventory at the base and return the money gained.'
+    'Sell the whole inventory at the base and return the money gained. Waits for the shared surface dock.'
     ...
 def unload() -> dict:
-    'Move the miner inventory into the base warehouse and return {moved, left}.'
+    'Move the miner inventory into the base warehouse and return {moved, left}. Waits for the shared surface dock.'
+    ...
+def dock_free() -> dict:
+    'Return the surface dock status as {free, queue, eta}.'
+    ...
+def dock_rate() -> int:
+    'Return how many inventory units the surface dock services per tick.'
     ...
 def stock() -> dict:
     'Return the warehouse contents and capacity as {items, capacity, used, free}.'

@@ -95,6 +95,8 @@ class HUD(QWidget):
         self.airflow_label = QLabel("Air 4 / load 0", self)
         self.airflow_label.setObjectName("hud_airflow_label")
         self.warehouse_label = QLabel("Warehouse: 0/100", self)
+        self.dock_label = QLabel("Dock: free", self)
+        self.dock_label.setObjectName("hud_dock_label")
         self.miners_label = QLabel("Miners: 1/0", self)
         self.miners_label.setToolTip("Miners alive / free slots")
         self.tick_label = QLabel("Tick: 0", self)
@@ -110,6 +112,7 @@ class HUD(QWidget):
             self.temperature_label,
             self.airflow_label,
             self.warehouse_label,
+            self.dock_label,
             self.miners_label,
             self.tick_label,
             self.position_label,
@@ -224,6 +227,8 @@ class HUD(QWidget):
             from minesim.core.events import (
                 Charged,
                 ContractDelivered,
+                DockQueued,
+                DockServed,
                 EnergySpent,
                 MineAttempted,
                 MinerOverheated,
@@ -252,6 +257,8 @@ class HUD(QWidget):
             bus.subscribe(Sold, lambda _event: self.refresh())
             bus.subscribe(StockSold, lambda _event: self.refresh())
             bus.subscribe(Unloaded, lambda _event: self.refresh())
+            bus.subscribe(DockQueued, lambda _event: self.refresh())
+            bus.subscribe(DockServed, lambda _event: self.refresh())
             bus.subscribe(RefineFinished, lambda _event: self.refresh())
             bus.subscribe(ContractDelivered, lambda _event: self.refresh())
             bus.subscribe(EnergySpent, lambda _event: self.refresh())
@@ -333,6 +340,7 @@ class HUD(QWidget):
         )
         self.airflow_label.setToolTip("Miners in hot layers / airflow. Overload raises heat gain.")
         self.warehouse_label.setText(f"Warehouse: {int(warehouse_used)}/{int(warehouse_capacity)}")
+        self.dock_label.setText(self._dock_text(engine, int(tick)))
         self.miners_label.setText(f"Miners: {int(miner_count)}/{free_slots}")
         self.tick_label.setText(f"Tick: {int(tick)}")
         self.position_label.setText(f"Pos: ({int(position[0])}, {int(position[1])})")
@@ -344,6 +352,29 @@ class HUD(QWidget):
                 self.speed = int(speed)
                 self.paused = self.speed == 0
                 self._sync_buttons()
+
+    def _dock_text(self, engine: Any, tick: int) -> str:
+        getter = _get(engine, "dock_status")
+        if callable(getter):
+            try:
+                status = getter()
+            except Exception:
+                status = None
+        else:
+            dock = _get(engine, "dock")
+            try:
+                status = dock.status(tick) if dock is not None else None
+            except Exception:
+                status = None
+        if not isinstance(status, dict):
+            return "Dock: free"
+        free = bool(status.get("free", True))
+        queued = int(status.get("queue_length", status.get("queue", 0)) or 0)
+        if free:
+            return "Dock: free"
+        if queued > 0:
+            return f"Dock: busy ({queued} queued)"
+        return "Dock: busy"
 
     def _climate_state(self, engine: Any, miner: Any) -> dict[str, Any]:
         getter = _get(engine, "climate_state")

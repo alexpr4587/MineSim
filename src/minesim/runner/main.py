@@ -120,6 +120,18 @@ _DEFAULT_FUNCTIONS: tuple[dict[str, Any], ...] = (
         "category": "",
     },
     {
+        "name": "dock_free",
+        "signature": "dock_free()",
+        "doc": "Return the surface dock status.",
+        "category": "",
+    },
+    {
+        "name": "dock_rate",
+        "signature": "dock_rate()",
+        "doc": "Return the dock service rate.",
+        "category": "",
+    },
+    {
         "name": "stock",
         "signature": "stock()",
         "doc": "Return the warehouse stock.",

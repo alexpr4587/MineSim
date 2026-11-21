@@ -13,6 +13,8 @@ __all__ = [
     "Charged",
     "ContractExpired",
     "ContractGenerated",
+    "DockQueued",
+    "DockServed",
     "EnergySpent",
     "MinerOverheated",
     "MinerRecovered",
@@ -97,6 +99,23 @@ class Unloaded:
     """A miner moved items into the base warehouse."""
 
     items: dict[str, int] | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class DockQueued:
+    """A miner started waiting for the shared surface dock."""
+
+    miner_id: int = 0
+    units: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class DockServed:
+    """The shared surface dock finished serving a miner."""
+
+    miner_id: int = 0
+    units: int = 0
+    waited_ticks: int = 0
 
 
 @dataclass(frozen=True, slots=True)

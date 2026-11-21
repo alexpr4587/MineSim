@@ -18,8 +18,9 @@ saved as ``artifacts/ui_wardrobe.png``), ``--panel base|market|refinery|contract
 saved as ``artifacts/ui_locked.png``), ``--editor-tabs`` (12 scripts,
 three open tabs and the Open… list, saved as
 ``artifacts/ui_editor_tabs.png``), ``--layer N`` (put the main miner on
-layer N, run a short mining session and save ``artifacts/ui_layer_N.png``)
-and ``--output``.
+layer N, run a short mining session and save ``artifacts/ui_layer_N.png``),
+``--dock`` (queue miners at the shared dock and save
+``artifacts/ui_dock.png``) and ``--output``.
 """
 
 from __future__ import annotations
@@ -34,7 +35,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
-from minesim.core.commands import Mine, Move, Sell  # noqa: E402
+from minesim.core.commands import Mine, Move, Sell, Unload  # noqa: E402
 from minesim.core.direction import Direction  # noqa: E402
 from minesim.core.game import Game  # noqa: E402
 from minesim.ui.main_window import MainWindow  # noqa: E402
@@ -206,6 +207,20 @@ def _setup_editor_tabs(
     app.processEvents()
 
 
+def prepare_dock(game: Game, count: int = 5) -> Game:
+    """Queue several miners at the shared dock for the dock screenshot."""
+    game.progression_state.unlocked_features.add("warehouse")
+    for miner_id in range(max(1, int(count))):
+        if miner_id:
+            miner = game.engine.spawn_miner()
+        else:
+            miner = game.miner
+        miner.x, miner.y = 0, 0
+        miner.inventory = {"stone": 1}
+        game.submit(Unload(), miner_id=miner_id)
+    return game
+
+
 def prepare_layer(game: Game, layer: int) -> Game:
     """Put miner 0 on ``layer`` and run a short mining session there."""
     layer = max(0, int(layer))
@@ -340,6 +355,7 @@ def build_window(
     locked: bool = False,
     editor_tabs: bool = False,
     layer: int | None = None,
+    dock: bool = False,
 ) -> MainWindow:
     """Build the real main window and run ``ticks`` engine ticks."""
     app = QApplication.instance() or QApplication([])
@@ -366,12 +382,14 @@ def build_window(
     if editor_tabs:
         scripts_dir = Path(tempfile.mkdtemp(prefix="minesim_editor_tabs_"))
         _write_editor_scripts(scripts_dir)
-    if panel or miners or layer is not None:
+    if panel or miners or layer is not None or dock:
         unlock_everything(game)
     if panel:
         prepare_economy(game)
     if layer is not None:
         prepare_layer(game, int(layer))
+    if dock:
+        prepare_dock(game)
     if skin:
         game.select_skin(skin)
     for _ in range(max(0, int(fleet))):
@@ -387,12 +405,14 @@ def build_window(
     window.world_view.set_terrain_lighting(not flat, persist=False)
     window.resize(size[0], size[1])
     window.show()
+    if dock:
+        window.game_loop.stop()
     if editor_tabs and scripts_dir is not None:
         window.game_loop.stop()
         _setup_editor_tabs(window, scripts_dir, app)
     if miners:
         _setup_miners(window, game, int(miners), app)
-    if panel is None and not miners and not editor_tabs and layer is None:
+    if panel is None and not miners and not editor_tabs and layer is None and not dock:
         for command in COMMAND_SEQUENCE:
             game.submit(command)
         for _ in range(int(ticks)):
@@ -412,7 +432,7 @@ def build_window(
         window.world_view.center_on_miner()
     window.hud.refresh()
     editor_panel = getattr(window, "editor_panel", None)
-    if editor_panel is not None and panel is None and not miners and layer is None:
+    if editor_panel is not None and panel is None and not miners and layer is None and not dock:
         from minesim.ui.editor_panel import STARTER_SCRIPT
 
         editor = getattr(editor_panel, "editor", None) or getattr(editor_panel, "code_editor", None)
@@ -517,6 +537,11 @@ def main() -> int:
         default=None,
         help="put the main miner on layer N and save artifacts/ui_layer_N.png",
     )
+    parser.add_argument(
+        "--dock",
+        action="store_true",
+        help="queue miners at the shared dock and save artifacts/ui_dock.png",
+    )
     parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args()
     window = build_window(
@@ -532,6 +557,7 @@ def main() -> int:
         locked=args.locked,
         editor_tabs=args.editor_tabs,
         layer=args.layer,
+        dock=args.dock,
     )
     for panel_name in (
         "achievements_panel",
@@ -607,6 +633,8 @@ def main() -> int:
         default_name = "ui_editor_tabs.png"
     if args.layer is not None:
         default_name = f"ui_layer_{int(args.layer)}.png"
+    if args.dock:
+        default_name = "ui_dock.png"
     out = args.output or (Path(__file__).resolve().parents[1] / "artifacts" / default_name)
     out.parent.mkdir(parents=True, exist_ok=True)
     window.grab().save(str(out))

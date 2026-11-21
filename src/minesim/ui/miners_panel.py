@@ -28,6 +28,8 @@ from PySide6.QtWidgets import (
 
 from minesim.core.commands import RemoveMiner, SpawnMiner
 from minesim.core.events import (
+    DockQueued,
+    DockServed,
     MinerOverheated,
     MinerRecovered,
     MinerRemoved,
@@ -67,8 +69,10 @@ def _get(obj: Any, name: str, default: Any = None) -> Any:
 
 
 def miner_state_label(state: Any) -> str:
-    """Map a script state to the panel's Running/Idle/Failed label."""
+    """Map a script state to the panel's Running/Queued/Idle/Failed label."""
     text = str(state or "").upper()
+    if "QUEUE" in text:
+        return "Queued"
     if "RUNNING" in text:
         return "Running"
     if "FAIL" in text or "ERROR" in text:
@@ -202,9 +206,10 @@ class MinerRow(QFrame):
 
     def refresh(self, miner: Any, state: Any, scripts: list[str]) -> None:
         """Update every field from the miner and its script state."""
-        label = miner_state_label(state)
+        dock_state = str(_get(miner, "dock_state", "") or "").lower()
+        label = miner_state_label("QUEUED" if dock_state == "queued" else state)
         self.state_label.setText(label)
-        if label == "Running":
+        if label in ("Running", "Queued"):
             color = ACCENT
         elif label == "Failed":
             color = ERROR
@@ -672,6 +677,8 @@ class MinersPanel(FloatingPanel):
                 OreMined,
                 Sold,
                 Unloaded,
+                DockQueued,
+                DockServed,
             ):
                 bus.subscribe(event_type, lambda _event: self.refresh())
         except Exception:

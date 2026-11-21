@@ -121,6 +121,8 @@ def test_initial_unlock_sets(content):
         "layers",
         "descend",
         "ascend",
+        "dock_free",
+        "dock_rate",
     }
     assert state.unlocked_modules == {"math"}
     assert state.unlocked_upgrades == {
@@ -129,6 +131,7 @@ def test_initial_unlock_sets(content):
         "charger",
         "cooling",
         "ventilation",
+        "dock",
     }
     assert state.unlocked_recipes == set()
     assert state.unlocked_features == set()

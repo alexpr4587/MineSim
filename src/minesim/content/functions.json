@@ -92,20 +92,38 @@
   {
     "name": "sell",
     "signature": "sell()",
-    "doc": "Sell the whole inventory at the base and return the money gained.",
+    "doc": "Sell the whole inventory at the base and return the money gained. Waits for the shared surface dock.",
     "category": "business",
     "unlocked_by": "first_dig",
-    "cost": "2 ticks at the base",
+    "cost": "ceil(units / dock rate) ticks at the base",
     "example": "earned = sell()"
   },
   {
     "name": "unload",
     "signature": "unload()",
-    "doc": "Move the miner inventory into the base warehouse and return {moved, left}.",
+    "doc": "Move the miner inventory into the base warehouse and return {moved, left}. Waits for the shared surface dock.",
     "category": "business",
     "unlocked_by": "storage_unit",
-    "cost": "1 tick at the base",
+    "cost": "ceil(units / dock rate) ticks at the base",
     "example": "result = unload()"
+  },
+  {
+    "name": "dock_free",
+    "signature": "dock_free()",
+    "doc": "Return the surface dock status as {free, queue, eta}.",
+    "category": "business",
+    "unlocked_by": null,
+    "cost": "0 ticks",
+    "example": "status = dock_free()"
+  },
+  {
+    "name": "dock_rate",
+    "signature": "dock_rate()",
+    "doc": "Return how many inventory units the surface dock services per tick.",
+    "category": "business",
+    "unlocked_by": null,
+    "cost": "0 ticks",
+    "example": "rate = dock_rate()"
   },
   {
     "name": "stock",

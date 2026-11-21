@@ -9,6 +9,7 @@
   "move_ticks": 4,
   "mine_tick_base": 3,
   "sell_ticks": 2,
+  "dock_rate": 4,
   "scan_ticks_per_radius": 1,
   "start_capacity": 10,
   "start_tool_power": 1,

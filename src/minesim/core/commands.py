@@ -52,6 +52,8 @@ __all__ = [
     "RefineryStatus",
     "Contracts",
     "Deliver",
+    "DockRate",
+    "DockStatus",
     "MinerId",
     "Miners",
     "RemoveMiner",
@@ -90,6 +92,8 @@ _ZERO_COST_NAMES = {
     "RefineryStatus",
     "Contracts",
     "Deliver",
+    "DockRate",
+    "DockStatus",
     "MinerId",
     "Miners",
     "Stats",
@@ -262,6 +266,30 @@ def _is_surface_base(engine: Any, miner: Any) -> bool:
 def _on_base(engine: Any, miner: Any) -> bool:
     """Backwards-compatible alias for :func:`_is_surface_base`."""
     return _is_surface_base(engine, miner)
+
+
+def _inventory_units(miner: Any) -> int:
+    """Return the number of positive inventory units carried by ``miner``."""
+    return sum(max(0, int(count)) for count in dict(_get(miner, "inventory", {}) or {}).values())
+
+
+def _dock_rate(engine: Any) -> int:
+    """Return the current dock rate, falling back to config or 4."""
+    rate = _get(engine, "dock_rate")
+    if rate is None:
+        dock = _get(engine, "dock")
+        rate = _get(dock, "rate")
+    if rate is None:
+        content = _get(engine, "content")
+        config = _get(content, "config")
+        rate = _get(config, "dock_rate", 4)
+    return max(1, int(rate or 4))
+
+
+def _dock_service_ticks(engine: Any, units: int) -> int:
+    """Return the ticks the dock needs for ``units``."""
+    rate = _dock_rate(engine)
+    return max(1, (max(0, int(units)) + rate - 1) // rate)
 
 
 def _is_station(engine: Any, miner: Any) -> bool:
@@ -1032,9 +1060,20 @@ class Sell:
         if miner is not None and world is not None:
             if not _is_surface_base(ctx["engine"], miner):
                 return 0
+            units = _inventory_units(miner)
+            if units > 0:
+                return _dock_service_ticks(ctx["engine"], units)
         if content is not None:
             return int(content.config.sell_ticks)
         return 2
+
+    def dock_units(self, engine: Any, miner: Any = None) -> int | None:
+        """Return inventory units to serve, or None to skip the dock."""
+        miner = _miner(engine, miner)
+        if not _is_surface_base(engine, miner):
+            return None
+        units = _inventory_units(miner)
+        return units if units > 0 else None
 
     def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
         miner = _miner(engine, miner)
@@ -1089,8 +1128,15 @@ class Unload:
         ctx = _resolve_context(*args, **kwargs)
         miner = ctx["miner"]
         if miner is not None and _is_surface_base(ctx["engine"], miner):
-            return 1
+            return _dock_service_ticks(ctx["engine"], _inventory_units(miner))
         return 0
+
+    def dock_units(self, engine: Any, miner: Any = None) -> int | None:
+        """Return inventory units to serve, or None outside the base."""
+        miner = _miner(engine, miner)
+        if not _is_surface_base(engine, miner):
+            return None
+        return _inventory_units(miner)
 
     def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
         miner = _miner(engine, miner)
@@ -1124,6 +1170,41 @@ class Unload:
             "capacity": int(getattr(warehouse, "capacity", 0)),
             "total": int(warehouse.total()),
         }
+
+
+@dataclass(frozen=True, slots=True)
+class DockStatus:
+    """Return the shared surface dock status."""
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        return 0
+
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        getter = _get(engine, "dock_status")
+        if callable(getter):
+            status = getter()
+        else:
+            dock = _get(engine, "dock")
+            tick = _tick(engine)
+            status = dock.status(tick) if dock is not None else {}
+        return {
+            "ok": True,
+            "free": bool(_get(status, "free", True)),
+            "queue_length": int(_get(status, "queue_length", _get(status, "queue", 0)) or 0),
+            "eta_ticks": int(_get(status, "eta_ticks", _get(status, "eta", 0)) or 0),
+            "rate": max(1, int(_get(status, "rate", _dock_rate(engine)) or 1)),
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class DockRate:
+    """Return how many units per tick the shared surface dock services."""
+
+    def cost_ticks(self, *args: Any, **kwargs: Any) -> int:
+        return 0
+
+    def execute(self, engine: Any, miner: Any = None) -> dict[str, Any]:
+        return {"ok": True, "rate": _dock_rate(engine)}
 
 
 @dataclass(frozen=True, slots=True)
@@ -1525,7 +1606,8 @@ class BuyUpgrade:
         miner.money -= cost
         new_level = level + 1
         upgrades[self.id] = new_level
-        for stat, delta in upgrade.stat_changes().items():
+        changes = upgrade.stat_changes()
+        for stat, delta in changes.items():
             if stat == "move_ticks":
                 miner.move_ticks = max(1, int(miner.move_ticks) + int(delta))
             elif stat == "capacity":
@@ -1550,6 +1632,11 @@ class BuyUpgrade:
                     board.slots = max(1, int(board.slots) + int(delta))
             elif hasattr(miner, stat):
                 setattr(miner, stat, int(getattr(miner, stat)) + int(delta))
+        if "dock_rate" in changes:
+            dock = _get(engine, "dock")
+            rate = _get(engine, "dock_rate")
+            if dock is not None and rate is not None:
+                dock.rate = max(1, int(rate))
         _publish(
             engine,
             UpgradeBought(

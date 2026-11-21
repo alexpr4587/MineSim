@@ -35,6 +35,7 @@ class Config(_ContentModel):
     move_ticks: int = Field(default=4, ge=1)
     mine_tick_base: int = Field(default=3, ge=0)
     sell_ticks: int = Field(default=2, ge=0)
+    dock_rate: int = Field(default=4, ge=1)
     scan_ticks_per_radius: int = Field(default=1, ge=0)
     start_capacity: int = Field(default=10, ge=0)
     start_tool_power: int = Field(default=1, ge=1)

@@ -198,5 +198,20 @@
       16000
     ],
     "unlocked_by": null
+  },
+  {
+    "id": "dock",
+    "name": "Dock",
+    "description": "Service two more units per tick at the surface dock: dock rate +2 per level.",
+    "stat": "dock_rate",
+    "per_level": 2,
+    "max_level": 4,
+    "costs": [
+      400,
+      1200,
+      3000,
+      8000
+    ],
+    "unlocked_by": null
   }
 ]

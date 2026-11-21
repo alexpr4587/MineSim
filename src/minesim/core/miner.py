@@ -170,6 +170,7 @@ class Miner:
     stranded_since: int | None = None
     temperature: float = 0.0
     cooldown_remaining: int = 0
+    dock_state: str | None = None
 
     def __post_init__(self) -> None:
         self.id = int(self.id)

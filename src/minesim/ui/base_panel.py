@@ -290,6 +290,7 @@ class BasePanel(FloatingPanel):
 
         self.warehouse_table: QTableWidget
         self.capacity_bar: QProgressBar
+        self.dock_rate_label: QLabel
         self.sell_everything_button: QPushButton
         self.inventory_label: QLabel
         self.unload_button: QPushButton
@@ -322,6 +323,11 @@ class BasePanel(FloatingPanel):
         self.capacity_bar.setValue(0)
         self.capacity_bar.setTextVisible(True)
         layout.addWidget(self.capacity_bar)
+
+        self.dock_rate_label = QLabel("Dock rate: 4/tick", tab)
+        self.dock_rate_label.setObjectName("base_dock_rate")
+        self.dock_rate_label.setStyleSheet(f"color: {TEXT_DIM};")
+        layout.addWidget(self.dock_rate_label)
 
         self.warehouse_table = QTableWidget(0, 6, tab)
         self.warehouse_table.setHorizontalHeaderLabels(
@@ -633,6 +639,11 @@ class BasePanel(FloatingPanel):
         self.capacity_bar.setRange(0, max(1, capacity))
         self.capacity_bar.setValue(min(used, max(1, capacity)))
         self.capacity_bar.setFormat(f"{used}/{capacity}")
+        engine = _get(self.game, "engine")
+        rate = _get(engine, "dock_rate")
+        if rate is None:
+            rate = _get(_get(engine, "dock"), "rate", 4)
+        self.dock_rate_label.setText(f"Dock rate: {max(1, int(rate or 4))}/tick")
         self.sell_everything_button.setEnabled(bool(items))
 
         miner = self.miner_zero()

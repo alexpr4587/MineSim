@@ -103,6 +103,7 @@ def test_v03_initial_unlock_sets(content):
         "charger",
         "cooling",
         "ventilation",
+        "dock",
     }
     assert state.unlocked_modules == {"math"}
     assert state.unlocked_examples == {"01_hello"}
@@ -121,6 +122,8 @@ def test_v03_initial_unlock_sets(content):
         "layers",
         "descend",
         "ascend",
+        "dock_free",
+        "dock_rate",
     }
 
 

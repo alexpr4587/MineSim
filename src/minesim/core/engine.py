@@ -7,9 +7,12 @@ from typing import Any, Protocol
 
 from minesim.core.commands import Move
 from minesim.core.contracts import ContractBoard
+from minesim.core.dock import Dock, DockJob
 from minesim.core.events import (
     ContractExpired,
     ContractGenerated,
+    DockQueued,
+    DockServed,
     EnergySpent,
     EventBus,
     MinerOverheated,
@@ -61,6 +64,8 @@ _ZERO_COST_NAMES = {
     "Prices",
     "Recipes",
     "RemoveMiner",
+    "DockRate",
+    "DockStatus",
     "Stats",
     "Stock",
     "RefineryStatus",
@@ -170,6 +175,7 @@ class _Entry:
     miner_id: int = 0
     refused_reason: str | None = None
     refused_cost: int = 0
+    dock_job: DockJob | None = None
 
 
 class GameEngine:
@@ -223,6 +229,11 @@ class GameEngine:
         self._miners: dict[int, Any] = {0: miner}
         self._next_id = 1
         config = getattr(self.content, "config", None)
+        dock = kwargs.get("dock")
+        if dock is None:
+            dock = Dock(int(getattr(config, "dock_rate", 4) or 4))
+        self.dock: Dock = dock
+        self._sync_dock_rate()
         self.catalog: ItemCatalog = kwargs.get("catalog") or ItemCatalog(self.content)
         self.warehouse: Warehouse = kwargs.get("warehouse") or Warehouse(
             int(getattr(config, "warehouse_start_capacity", 0) or 0)
@@ -350,6 +361,22 @@ class GameEngine:
         """The current fleet size limit (1 + miner_bay level)."""
         return 1 + int(self.upgrade_levels.get("miner_bay", 0))
 
+    @property
+    def dock_rate(self) -> int:
+        """Units per tick serviced by the shared surface dock."""
+        config = getattr(self.content, "config", None)
+        base = max(1, int(_get_attr(config, "dock_rate", 4) or 4))
+        level = max(0, int(self.upgrade_levels.get("dock", 0) or 0))
+        return max(1, base + level * self._upgrade_change("dock", "dock_rate"))
+
+    def dock_status(self) -> dict[str, int | bool]:
+        """Return the shared dock status at the current tick."""
+        self._sync_dock_rate()
+        return self.dock.status(self.tick)
+
+    def _sync_dock_rate(self) -> None:
+        self.dock.rate = self.dock_rate
+
     # -- fleet ---------------------------------------------------------------
 
     @property
@@ -396,6 +423,7 @@ class GameEngine:
         if miner_id == 0 or miner_id not in self._miners:
             return False
         miner = self._miners.pop(miner_id)
+        self._cancel_dock_job(miner)
         try:
             tile = self.world.tile_at(
                 miner.x, miner.y, self.tick, layer=int(getattr(miner, "layer", 0) or 0)
@@ -419,6 +447,7 @@ class GameEngine:
             pass
         miner.active = None
         miner.busy_timer = 0
+        self._sync_dock_jobs()
         self._events.publish(MinerRemoved(id=miner_id))
         return True
 
@@ -510,6 +539,97 @@ class GameEngine:
         miner.energy = max(0, int(getattr(miner, "energy", 0) or 0) - amount)
         self._events.publish(EnergySpent(miner_id=int(getattr(miner, "id", 0) or 0), amount=amount))
 
+    # -- shared dock ---------------------------------------------------------
+
+    def _command_dock_units(self, command: Any, miner: Any) -> int | None:
+        """Return the dock units a command needs, or None if it skips the dock."""
+        method = getattr(command, "dock_units", None)
+        if not callable(method):
+            return None
+        try:
+            units = method(self, miner)
+        except Exception:
+            return None
+        return None if units is None else max(0, int(units))
+
+    def _enqueue_dock(self, entry: _Entry, miner: Any, units: int) -> None:
+        self._sync_dock_rate()
+        job = DockJob(
+            miner_id=int(getattr(miner, "id", 0) or 0),
+            units=int(units),
+            arrival_tick=int(self.tick),
+            service_ticks=self.dock.service_ticks(units),
+        )
+        started = self.dock.enqueue(job, self.tick)
+        entry.dock_job = job
+        miner.active = entry
+        if started:
+            entry.remaining = job.service_ticks
+            miner.busy_timer = job.service_ticks
+            miner.dock_state = None
+        else:
+            entry.remaining = 0
+            miner.busy_timer = 0
+            miner.dock_state = "queued"
+            self._events.publish(
+                DockQueued(
+                    miner_id=int(getattr(miner, "id", 0) or 0),
+                    units=int(units),
+                )
+            )
+
+    def _sync_dock_jobs(self) -> None:
+        """Refresh busy timers and queued state after the dock advances."""
+        for miner in self._miners.values():
+            active = miner.active
+            job = getattr(active, "dock_job", None)
+            if job is None:
+                continue
+            if job.start_tick is None:
+                active.remaining = 0
+                miner.busy_timer = 0
+                miner.dock_state = "queued"
+                continue
+            remaining = max(0, int(job.service_ticks) - (int(self.tick) - int(job.start_tick)))
+            active.remaining = remaining
+            miner.busy_timer = remaining
+            if miner.dock_state == "queued":
+                miner.dock_state = None
+
+    def _complete_dock_job(self, job: DockJob) -> None:
+        miner = self._miners.get(int(job.miner_id))
+        if miner is None:
+            return
+        active = miner.active
+        if active is None or getattr(active, "dock_job", None) is not job:
+            return
+        started = int(job.start_tick if job.start_tick is not None else job.arrival_tick)
+        waited = max(0, started - int(job.arrival_tick))
+        active.dock_job = None
+        miner.active = None
+        miner.busy_timer = 0
+        miner.dock_state = None
+        self._events.publish(
+            DockServed(
+                miner_id=int(job.miner_id),
+                units=int(job.units),
+                waited_ticks=waited,
+            )
+        )
+        self._execute_now(active)
+        self._activate_next(miner)
+
+    def _cancel_dock_job(self, miner: Any) -> None:
+        active = getattr(miner, "active", None)
+        job = getattr(active, "dock_job", None)
+        if job is not None:
+            self.dock.cancel(job, self.tick)
+            active.dock_job = None
+        try:
+            miner.dock_state = None
+        except Exception:
+            pass
+
     # -- climate -------------------------------------------------------------
 
     def _layer_definition(self, layer: int) -> Any:
@@ -586,6 +706,7 @@ class GameEngine:
         """Refuse the active and queued commands of an overheated miner."""
         entries = []
         if miner.active is not None:
+            self._cancel_dock_job(miner)
             entries.append(miner.active)
             miner.active = None
         entries.extend(miner.queue)
@@ -684,6 +805,10 @@ class GameEngine:
                 miner.busy_timer = 1
                 continue
             self._spend_energy(miner, energy)
+            dock_units = self._command_dock_units(entry.command, miner)
+            if dock_units is not None:
+                self._enqueue_dock(entry, miner, dock_units)
+                continue
             entry.remaining = cost
             miner.active = entry
             miner.busy_timer = cost
@@ -712,6 +837,7 @@ class GameEngine:
     def step(self) -> None:
         """Advance the engine by one tick, processing miners by id."""
         self.tick += 1
+        self._sync_dock_rate()
         self._events.publish(TickAdvanced(tick=self.tick))
         advance_all = getattr(self.world, "advance_all", None)
         if callable(advance_all):
@@ -761,6 +887,8 @@ class GameEngine:
             active = miner.active
             if active is None:
                 continue
+            if getattr(active, "dock_job", None) is not None:
+                continue
             active.remaining -= 1
             miner.busy_timer = max(0, active.remaining)
             if active.remaining <= 0:
@@ -768,6 +896,9 @@ class GameEngine:
                 miner.busy_timer = 0
                 self._execute_now(active)
                 self._activate_next(miner)
+        for job in self.dock.advance(self.tick):
+            self._complete_dock_job(job)
+        self._sync_dock_jobs()
         self._update_stranding()
 
     # -- energy and rescue ---------------------------------------------------

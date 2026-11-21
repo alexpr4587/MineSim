@@ -971,6 +971,61 @@ class WorldView(QWidget):
         finally:
             painter.restore()
 
+    def dock_badge_text(self) -> str:
+        """Return the dock badge text for the surface base (empty when free)."""
+        engine = self.engine or _get(self.game, "engine")
+        inner = _get(engine, "engine")
+        if inner is not None:
+            engine = inner
+        getter = _get(engine, "dock_status")
+        if callable(getter):
+            try:
+                status = getter()
+            except Exception:
+                status = None
+        else:
+            dock = _get(engine, "dock")
+            try:
+                status = dock.status(self._tick()) if dock is not None else None
+            except Exception:
+                status = None
+        if not isinstance(status, dict):
+            return ""
+        queued = int(status.get("queue_length", status.get("queue", 0)) or 0)
+        if queued > 0:
+            return f"Dock {queued}"
+        if not bool(status.get("free", True)):
+            return "Dock"
+        return ""
+
+    def _draw_dock_badge(self, painter: QPainter, x0: float, y0: float, x1: float) -> None:
+        """Draw the surface dock queue badge above the base."""
+        text = self.dock_badge_text()
+        if not text:
+            return
+        painter.save()
+        try:
+            font = QFont(FONT_FAMILY)
+            font.setBold(True)
+            font.setPointSize(max(7, self.tile_px // 3))
+            painter.setFont(font)
+            metrics = painter.fontMetrics()
+            width = metrics.horizontalAdvance(text) + 10
+            height = metrics.height() + 4
+            left = int(round((x0 + x1) / 2.0 - width / 2.0))
+            top = int(round(y0 - height - 2))
+            painter.setPen(QPen(QColor(MINER_DETAIL), 1))
+            painter.setBrush(QColor(BASE_LABEL))
+            painter.drawRoundedRect(QRect(left, top, width, height), 4, 4)
+            painter.setPen(QPen(QColor(MINER_DETAIL)))
+            painter.drawText(
+                QRect(left, top, width, height),
+                int(Qt.AlignmentFlag.AlignCenter),
+                text,
+            )
+        finally:
+            painter.restore()
+
     def _draw_base(self, painter: QPainter) -> None:
         """Draw the surface base or the shaft station of the viewed layer."""
         config = _get(self.content, "config")
@@ -1005,7 +1060,9 @@ class WorldView(QWidget):
             font.setPointSize(max(8, self.tile_px // 2))
             painter.setFont(font)
             painter.drawText(int(x0) + 4, int(y0) + max(12, self.tile_px), label)
-        if not surface:
+        if surface:
+            self._draw_dock_badge(painter, x0, y0, x1)
+        else:
             self._draw_shaft_badge(painter, x0, y0, x1)
 
     def _draw_shaft_badge(self, painter: QPainter, x0: float, y0: float, x1: float) -> None:
