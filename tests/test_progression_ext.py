@@ -14,14 +14,23 @@ from minesim.core.content import load_content
 from minesim.core.direction import Direction
 from minesim.core.events import (
     ApiCalled,
+    Charged,
     ContractDelivered,
+    DockServed,
+    EnergySpent,
     EstimateSubmitted,
+    LayerChanged,
     MineAttempted,
+    MinerOverheated,
+    MinerRescued,
+    MinerStranded,
     Moved,
+    MoveRefused,
     OreMined,
     ScriptFinished,
     ScriptStarted,
     Sold,
+    TemperatureChanged,
     TileRegenerated,
     UpgradeBought,
     WorldEventStarted,
@@ -474,6 +483,21 @@ def test_headless_scripted_session_moves_every_documented_counter(content):
     game.events.publish(OreMined(ore_id="stone", amount=2, in_rich_vein=True))
     game.events.publish(Moved(x=0, y=0, in_slow_zone=True))
     game.events.publish(ApiCalled(function="move", miner_id=0))
+
+    # v0.4 counters.
+    game.events.publish(LayerChanged(miner_id=0, from_layer=0, to_layer=2))
+    game.events.publish(LayerChanged(miner_id=1, from_layer=0, to_layer=3))
+    game.events.publish(LayerChanged(miner_id=2, from_layer=0, to_layer=2))
+    game.events.publish(OreMined(ore_id="stone", amount=1, layer=1))
+    game.events.publish(EnergySpent(miner_id=0, amount=10))
+    game.events.publish(Charged(miner_id=0, amount=20))
+    game.events.publish(MinerStranded(miner_id=0))
+    game.events.publish(MinerRescued(miner_id=0))
+    game.events.publish(MinerOverheated(miner_id=0))
+    game.events.publish(TemperatureChanged(miner_id=0, temperature=81.0))
+    game.events.publish(DockServed(miner_id=0, units=4, waited_ticks=2))
+    game.events.publish(MoveRefused(miner_id=0, reason="low_energy"))
+    game.events.publish(MoveRefused(miner_id=0, reason="overheated"))
 
     # Upgrade.
     game.miner.money = 10**6
