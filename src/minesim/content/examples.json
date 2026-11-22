@@ -94,5 +94,53 @@
     "title": "Fleet Manager",
     "file": "16_fleet_manager.py",
     "unlocked_by": "message_board"
+  },
+  {
+    "id": "17_energy_budget",
+    "title": "Energy Budget",
+    "file": "17_energy_budget.py",
+    "unlocked_by": null
+  },
+  {
+    "id": "18_go_deep",
+    "title": "Go Deep",
+    "file": "18_go_deep.py",
+    "unlocked_by": null
+  },
+  {
+    "id": "19_climate_watch",
+    "title": "Climate Watch",
+    "file": "19_climate_watch.py",
+    "unlocked_by": null
+  },
+  {
+    "id": "20_dock_etiquette",
+    "title": "Dock Etiquette",
+    "file": "20_dock_etiquette.py",
+    "unlocked_by": null
+  },
+  {
+    "id": "21_night_shift",
+    "title": "Night Shift",
+    "file": "21_night_shift.py",
+    "unlocked_by": null
+  },
+  {
+    "id": "22_layer_prospector",
+    "title": "Layer Prospector",
+    "file": "22_layer_prospector.py",
+    "unlocked_by": null
+  },
+  {
+    "id": "23_vent_manager",
+    "title": "Vent Manager",
+    "file": "23_vent_manager.py",
+    "unlocked_by": null
+  },
+  {
+    "id": "24_full_automation",
+    "title": "Full Automation",
+    "file": "24_full_automation.py",
+    "unlocked_by": null
   }
 ]

@@ -432,6 +432,17 @@ _KNOWN_COUNTERS = {
     "events_started",
     "rich_vein_mined",
     "slow_zone_moves",
+    "max_layer",
+    "descents",
+    "energy_used",
+    "charges",
+    "strandings",
+    "rescues",
+    "overheats",
+    "peak_temp",
+    "dock_wait_ticks",
+    "dock_units",
+    "peak_deep_miners",
 }
 
 _KNOWN_FAIL_REASONS = {
@@ -440,6 +451,8 @@ _KNOWN_FAIL_REASONS = {
     "tool_too_weak",
     "inventory_full",
     "nothing_to_mine",
+    "low_energy",
+    "overheated",
 }
 
 _KNOWN_SCRIPT_FEATURES = {
@@ -560,6 +573,13 @@ def _cross_validate(
                     raise ContentError(
                         f"achievements.json: $.{ach_index}.criteria.counter: "
                         f"unknown ore id '{ore_id}'"
+                    )
+            elif isinstance(counter, str) and counter.startswith("mined_layer:"):
+                layer_text = counter[len("mined_layer:") :]
+                if not layer_text.isdigit() or int(layer_text) not in layers:
+                    raise ContentError(
+                        f"achievements.json: $.{ach_index}.criteria.counter: "
+                        f"unknown layer index '{layer_text}'"
                     )
             elif isinstance(counter, str) and counter.startswith("attempts:"):
                 ore_id = counter[len("attempts:") :]

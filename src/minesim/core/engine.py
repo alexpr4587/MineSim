@@ -21,7 +21,9 @@ from minesim.core.events import (
     MinerRescued,
     MinerSpawned,
     MinerStranded,
+    MoveRefused,
     RefineFinished,
+    TemperatureChanged,
     TickAdvanced,
     TileRegenerated,
     WorldEventEnded,
@@ -517,6 +519,16 @@ class GameEngine:
                 "cost": int(entry.refused_cost),
                 "energy": int(getattr(miner, "energy", 0) or 0),
             }
+            if isinstance(entry.command, Move) and entry.refused_reason in {
+                "low_energy",
+                "overheated",
+            }:
+                self._events.publish(
+                    MoveRefused(
+                        miner_id=int(getattr(miner, "id", entry.miner_id) or entry.miner_id),
+                        reason=str(entry.refused_reason),
+                    )
+                )
         else:
             result = entry.command.execute(self, miner)
         entry.ticket.result = result
@@ -762,11 +774,19 @@ class GameEngine:
         gain *= 1.0 + self.overload()
         gain *= 1.0 - self._cooling_reduction()
         overheat_at = max(1, int(_get_attr(config, "overheat_at", 100) or 100))
+        previous = temperature
         temperature = min(float(overheat_at), temperature + gain)
         miner.temperature = temperature
         if temperature >= overheat_at:
             self._start_overheat(miner)
             return True
+        if temperature > previous:
+            self._events.publish(
+                TemperatureChanged(
+                    miner_id=int(_get_attr(miner, "id", 0) or 0),
+                    temperature=temperature,
+                )
+            )
         return False
 
     def _activate_next(self, miner: Any) -> None:

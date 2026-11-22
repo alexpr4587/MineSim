@@ -7,12 +7,20 @@ from typing import Any
 from minesim.core.events import (
     AchievementUnlocked,
     ApiCalled,
+    Charged,
     ContractDelivered,
+    DockServed,
+    EnergySpent,
     EstimateSubmitted,
     EventBus,
+    LayerChanged,
     MineAttempted,
+    MinerOverheated,
     MinerRemoved,
+    MinerRescued,
     MinerSpawned,
+    MinerStranded,
+    MoveRefused,
     Moved,
     OreMined,
     RefineFinished,
@@ -20,6 +28,7 @@ from minesim.core.events import (
     ScriptStarted,
     Sold,
     StockSold,
+    TemperatureChanged,
     TickAdvanced,
     TileRegenerated,
     Unloaded,
@@ -125,6 +134,7 @@ class ProgressionService:
         self._tick = 0
         self._current_streak = int(getattr(self._state, "current_streak", 0) or 0)
         self._current_fail_streak = int(getattr(self._state, "current_fail_streak", 0) or 0)
+        self._deep_miners: set[int] = set()
         self._checking = False
         self._subscribed_bus: Any = None
         self._subscribe(self._events)
@@ -308,6 +318,15 @@ class ProgressionService:
             bus.subscribe(MinerRemoved, self._on_miner_removed)
             bus.subscribe(WorldEventStarted, self._on_world_event_started)
             bus.subscribe(ApiCalled, self._on_api_called)
+            bus.subscribe(LayerChanged, self._on_layer_changed)
+            bus.subscribe(EnergySpent, self._on_energy_spent)
+            bus.subscribe(Charged, self._on_charged)
+            bus.subscribe(MinerStranded, self._on_miner_stranded)
+            bus.subscribe(MinerRescued, self._on_miner_rescued)
+            bus.subscribe(MinerOverheated, self._on_miner_overheated)
+            bus.subscribe(TemperatureChanged, self._on_temperature_changed)
+            bus.subscribe(DockServed, self._on_dock_served)
+            bus.subscribe(MoveRefused, self._on_move_refused)
         except Exception:
             return
         self._subscribed_bus = bus
@@ -352,6 +371,77 @@ class ProgressionService:
             self._state.counters[counter] = 1
         self._check_achievements()
 
+    def _on_layer_changed(self, event: Any) -> None:
+        from_layer = int(_get(event, "from_layer", 0) or 0)
+        to_layer = int(_get(event, "to_layer", 0) or 0)
+        if to_layer > self._state.get_counter("max_layer"):
+            self._state.counters["max_layer"] = to_layer
+        if to_layer > from_layer:
+            self._state.add_counter("descents", 1)
+        miner_id = int(_get(event, "miner_id", 0) or 0)
+        if self._layer_heat(to_layer) > 0:
+            self._deep_miners.add(miner_id)
+        else:
+            self._deep_miners.discard(miner_id)
+        self._update_peak_deep_miners()
+        self._check_achievements()
+
+    def _layer_heat(self, layer: int) -> int:
+        layers = _get(self._content, "layers") if self._content is not None else None
+        if isinstance(layers, dict):
+            entry = layers.get(int(layer))
+        else:
+            entry = None
+        return int(_get(entry, "heat", 0) or 0)
+
+    def _update_peak_deep_miners(self) -> None:
+        alive = len(self._deep_miners)
+        if alive > self._state.get_counter("peak_deep_miners"):
+            self._state.counters["peak_deep_miners"] = alive
+
+    def _on_energy_spent(self, event: Any) -> None:
+        amount = max(0, int(_get(event, "amount", 0) or 0))
+        if amount > 0:
+            self._state.add_counter("energy_used", amount)
+        self._check_achievements()
+
+    def _on_charged(self, event: Any) -> None:
+        self._state.add_counter("charges", 1)
+        self._check_achievements()
+
+    def _on_miner_stranded(self, event: Any) -> None:
+        self._state.add_counter("strandings", 1)
+        self._check_achievements()
+
+    def _on_miner_rescued(self, event: Any) -> None:
+        self._state.add_counter("rescues", 1)
+        self._check_achievements()
+
+    def _on_miner_overheated(self, event: Any) -> None:
+        self._state.add_counter("overheats", 1)
+        self._check_achievements()
+
+    def _on_temperature_changed(self, event: Any) -> None:
+        temperature = int(float(_get(event, "temperature", 0.0) or 0.0))
+        if temperature > self._state.get_counter("peak_temp"):
+            self._state.counters["peak_temp"] = temperature
+        self._check_achievements()
+
+    def _on_dock_served(self, event: Any) -> None:
+        waited = max(0, int(_get(event, "waited_ticks", 0) or 0))
+        units = max(0, int(_get(event, "units", 0) or 0))
+        if waited > 0:
+            self._state.add_counter("dock_wait_ticks", waited)
+        if units > 0:
+            self._state.add_counter("dock_units", units)
+        self._check_achievements()
+
+    def _on_move_refused(self, event: Any) -> None:
+        reason = str(_get(event, "reason", "") or "")
+        if reason:
+            self._state.add_counter(f"fail:{reason}", 1)
+        self._check_achievements()
+
     def _on_mine_attempted(self, event: Any) -> None:
         ore_id = _get(event, "ore_id")
         success = bool(_get(event, "success", False))
@@ -388,6 +478,9 @@ class ProgressionService:
             if amount > 0 and self._state.get_counter(f"mined:{ore_id}") == 0:
                 self._state.add_counter("unique_ores_mined", 1)
             self._state.add_counter(f"mined:{ore_id}", amount)
+        layer = int(_get(event, "layer", 0) or 0)
+        if amount > 0:
+            self._state.add_counter(f"mined_layer:{layer}", amount)
         if bool(_get(event, "in_rich_vein", False)) and amount > 0:
             self._state.add_counter("rich_vein_mined", amount)
         self._check_achievements()
@@ -503,12 +596,16 @@ class ProgressionService:
         alive = self._miner_count()
         if alive > self._state.get_counter("max_miners_alive"):
             self._state.counters["max_miners_alive"] = alive
+        self._update_peak_deep_miners()
         self._check_achievements()
 
     def _on_miner_removed(self, event: Any) -> None:
+        miner_id = int(_get(event, "id", 0) or 0)
+        self._deep_miners.discard(miner_id)
         alive = self._miner_count()
         if alive > self._state.get_counter("max_miners_alive"):
             self._state.counters["max_miners_alive"] = alive
+        self._update_peak_deep_miners()
         self._check_achievements()
 
     def _on_world_event_started(self, event: Any) -> None:
@@ -572,6 +669,24 @@ class ProgressionService:
             self._on_world_event_started(event)
         elif isinstance(event, ApiCalled):
             self._on_api_called(event)
+        elif isinstance(event, LayerChanged):
+            self._on_layer_changed(event)
+        elif isinstance(event, EnergySpent):
+            self._on_energy_spent(event)
+        elif isinstance(event, Charged):
+            self._on_charged(event)
+        elif isinstance(event, MinerStranded):
+            self._on_miner_stranded(event)
+        elif isinstance(event, MinerRescued):
+            self._on_miner_rescued(event)
+        elif isinstance(event, MinerOverheated):
+            self._on_miner_overheated(event)
+        elif isinstance(event, TemperatureChanged):
+            self._on_temperature_changed(event)
+        elif isinstance(event, DockServed):
+            self._on_dock_served(event)
+        elif isinstance(event, MoveRefused):
+            self._on_move_refused(event)
         else:
             name = type(event).__name__
             if name == "Moved":
@@ -610,6 +725,24 @@ class ProgressionService:
                 self._on_world_event_started(event)
             elif name == "ApiCalled":
                 self._on_api_called(event)
+            elif name == "LayerChanged":
+                self._on_layer_changed(event)
+            elif name == "EnergySpent":
+                self._on_energy_spent(event)
+            elif name == "Charged":
+                self._on_charged(event)
+            elif name == "MinerStranded":
+                self._on_miner_stranded(event)
+            elif name == "MinerRescued":
+                self._on_miner_rescued(event)
+            elif name == "MinerOverheated":
+                self._on_miner_overheated(event)
+            elif name == "TemperatureChanged":
+                self._on_temperature_changed(event)
+            elif name == "DockServed":
+                self._on_dock_served(event)
+            elif name == "MoveRefused":
+                self._on_move_refused(event)
 
     def handle(self, event: Any) -> None:
         """Alias for :meth:`handle_event`."""

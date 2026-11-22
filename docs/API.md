@@ -910,13 +910,24 @@ shared_set('goal', 20)
 
 Move the miner to ``(x, y)``, one tile at a time.
 
+The helper stops cleanly when the miner cannot continue (for
+example because the battery is empty). Low-energy refusals are
+retried once after a charge on a station.
+
+Tick cost: one :func:`move` per tile.
+Energy cost: the per-move energy of the current layer per tile.
+
 Example::
 
-goto(start_x + 3, start_y)
+if goto(start_x + 3, start_y):
+        print("arrived")
 
 ### `minerlib.go_home`
 
 Move the miner back to the base at ``(0, 0)``.
+
+Tick cost: one :func:`move` per tile.
+Energy cost: the per-move energy of the current layer per tile.
 
 Example::
 
@@ -928,7 +939,11 @@ Yield positions in serpentine (boustrophedon) order.
 
 Yields ``(x, y)`` for ``y`` in ``range(height)``; even rows go
 left-to-right (``x`` in ``range(width)``) and odd rows go
-right-to-left, so consecutive positions are always adjacent.
+right-to-left, so consecutive positions are always adjacent. The
+generator stops early when the known battery is empty.
+
+Tick cost: 0 ticks (pure Python).
+Energy cost: 0 energy.
 
 Example::
 
@@ -942,7 +957,11 @@ Yield positions in an infinite square spiral from ``(0, 0)``.
 Starts at ``(0, 0)`` and spirals outwards (east, south, west,
 north, ...) with segment lengths 1, 1, 2, 2, 3, 3, ... so the
 first positions are ``(0, 0)``, ``(1, 0)``, ``(1, 1)``,
-``(0, 1)``, ``(-1, 1)``, ... The generator never ends.
+``(0, 1)``, ``(-1, 1)``, ... The generator stops early when the
+known battery is empty, otherwise it never ends.
+
+Tick cost: 0 ticks (pure Python).
+Energy cost: 0 energy.
 
 Example::
 
@@ -955,7 +974,11 @@ Yield the offsets on the square ring of Chebyshev radius ``radius``.
 
 The offsets are relative to the miner's starting point (``(0, 0)``
 when used with :func:`goto`). ``ring(0)`` yields just ``(0, 0)``;
-``ring(1)`` yields the eight surrounding tiles.
+``ring(1)`` yields the eight surrounding tiles. The generator stops
+early when the known battery is empty.
+
+Tick cost: 0 ticks (pure Python).
+Energy cost: 0 energy.
 
 Example::
 
@@ -1004,7 +1027,11 @@ result = mine_here()
 Mine the current tile until ``n`` successes or it is exhausted.
 
 Returns the number of successful mines. A miss keeps trying; an
-empty, locked, too-hard or full-inventory tile stops the loop.
+empty, locked, too-hard, full-inventory, low-energy or overheated
+tile stops the loop cleanly.
+
+Tick cost: the normal :func:`mine` cost per attempt.
+Energy cost: the normal :func:`mine` energy per attempt.
 
 Example::
 
@@ -1012,7 +1039,14 @@ successes = mine_until(3)
 
 ### `minerlib.haul`
 
-Go home, sell the inventory, return to the previous spot, return money.
+Go home, sell the inventory, charge, then return to the previous spot.
+
+The sale is skipped (but the trip still happens) when :func:`sell`
+is locked; the helper then tries :func:`unload`. Charging happens
+after selling, as the station is only left afterwards.
+
+Tick cost: walking plus the normal :func:`sell` cost.
+Energy cost: the per-move energy of the current layer per tile.
 
 Example::
 
@@ -1023,8 +1057,12 @@ earned = haul()
 Sweep outward mining only ``ore`` and hauling when the bag is full.
 
 Visits at most ``max_tiles`` positions of a square spiral around the
-starting point and returns the number of mined items. The miner
-ends back on the last visited tile.
+starting point and returns the number of mined items. The helper
+stops cleanly when there is not enough energy left to return home.
+The miner ends back on the last visited tile.
+
+Tick cost: moving plus the normal :func:`mine` cost per attempt.
+Energy cost: the per-move and per-mine energy of the current layer.
 
 Example::
 
@@ -1043,6 +1081,7 @@ detour is shorter. Returned values can be passed straight to
 
 Tick cost: one :func:`move` per returned step (4 ticks per tile by
 default, more inside slow zones).
+Energy cost: the per-move energy of the current layer per step.
 
 Example::
 
@@ -1053,7 +1092,11 @@ for direction in route(4, 0):
 
 Walk to ``(x, y)`` using the slow-zone aware :func:`route`.
 
+Stops cleanly and returns False when a move is refused or the
+battery cannot pay for the next step.
+
 Tick cost: one :func:`move` per route step.
+Energy cost: the per-move energy of the current layer per step.
 
 Example::
 
@@ -1071,6 +1114,184 @@ Example::
 
 for offset, ore in ore_map(2).items():
         print(offset, ore)
+
+### `minerlib.energy_to`
+
+Return the energy needed to walk to ``(x, y)`` on this layer.
+
+The value comes from the length of :func:`route` multiplied by the
+current per-move energy cost. A miner on the target already needs
+no energy.
+
+Tick cost: 0 ticks (path planning only).
+Energy cost: 0 energy (this is a query).
+
+Example::
+
+need = energy_to(10, 0)
+    energy, capacity = battery()
+    if energy >= need:
+        goto(10, 0)
+
+### `minerlib.can_return`
+
+Return True when the battery can still carry the miner home.
+
+``margin`` is a fraction of the trip energy kept as a safety
+buffer (``0.1`` means ten percent). When :func:`battery` is locked
+the helper assumes the miner can continue.
+
+Tick cost: 0 ticks.
+Energy cost: 0 energy (this is a query).
+
+Example::
+
+while can_return():
+        mine_until(1)
+    haul()
+
+### `minerlib.charge_full`
+
+Charge the battery fully on the current station.
+
+Returns False when the miner is not on a station or :func:`charge`
+is locked.
+
+Tick cost: the normal :func:`charge` duration.
+Energy cost: 0 energy.
+
+Example::
+
+go_home()
+    charge_full()
+
+### `minerlib.safe_farm`
+
+Farm ``ore`` while always keeping enough energy to return home.
+
+Before each tile the helper checks that the round trip fits in the
+battery. When it does not, the miner returns to the station, charges
+(and cools) and tries again. A full inventory is hauled first.
+
+Tick cost: moving, mining, hauling and charging as needed.
+Energy cost: the per-move and per-mine energy of the current layer.
+
+Example::
+
+mined = safe_farm("stone", max_tiles=60)
+    print("mined", mined)
+
+### `minerlib.to_station`
+
+Walk to the station of the current layer at ``(0, 0)``.
+
+Tick cost: one :func:`move` per tile.
+Energy cost: the per-move energy of the current layer per tile.
+
+Example::
+
+if to_station():
+        charge_full()
+
+### `minerlib.go_down`
+
+Descend ``n`` layers from shaft stations.
+
+The miner walks to the station of its layer, charges when the shaft
+ride would not fit in the battery and then descends. Returns False
+when the shaft is too shallow or a station cannot be reached.
+
+Tick cost: walking plus 20 ticks per shaft ride.
+Energy cost: the per-move energy plus 15 energy per shaft ride.
+
+Example::
+
+go_down(2)
+
+### `minerlib.go_up`
+
+Ascend ``n`` layers from shaft stations.
+
+Already being on the surface counts as success.
+
+Tick cost: walking plus 20 ticks per shaft ride.
+Energy cost: the per-move energy plus 15 energy per shaft ride.
+
+Example::
+
+go_up(1)
+
+### `minerlib.dive`
+
+Travel to ``layer`` and leave the caller standing on its station.
+
+Layers above the current one use :func:`go_down`; layers below use
+:func:`go_up`. Returns False when the target is not reachable.
+
+Tick cost: walking plus 20 ticks per shaft ride.
+Energy cost: the per-move energy plus 15 energy per shaft ride.
+
+Example::
+
+dive(2)
+    print("now on layer", layer())
+
+### `minerlib.cool_down`
+
+Walk to the station and cool down to ``target`` temperature.
+
+Tick cost: walking plus the normal :func:`cool` duration.
+Energy cost: the per-move energy per tile.
+
+Example::
+
+cool_down(30)
+
+### `minerlib.heat_budget`
+
+Return a rough number of work ticks left before overheating.
+
+With :func:`temperature` unlocked the estimate uses the current
+temperature, the layer heat and the airflow overload. Without it
+the helper returns ``1`` as a conservative one-tick budget.
+
+Tick cost: 0 ticks.
+Energy cost: 0 energy.
+
+Example::
+
+if heat_budget() < 20:
+        cool_down(30)
+
+### `minerlib.smart_unload`
+
+Unload when the dock is free, otherwise wait with a stagger.
+
+The wait before each retry is :func:`stagger` of the own miner id.
+The helper returns the number of ticks it waited; when
+:func:`dock_free` is locked it unloads immediately.
+
+Tick cost: the wait ticks plus the normal :func:`unload` duration.
+Energy cost: 0 energy.
+
+Example::
+
+waited = smart_unload()
+    print("waited", waited, "ticks for the dock")
+
+### `minerlib.stagger`
+
+Return a small deterministic backoff for a miner id.
+
+The values cycle between 1 and 4 ticks, so several miners do not
+all knock on the dock in the same tick.
+
+Tick cost: 0 ticks.
+Energy cost: 0 energy.
+
+Example::
+
+wait(stagger(miner_id()))
 
 ### `minerlib.sma`
 
@@ -1242,6 +1463,26 @@ class Counter(Worker):
 
 Counter("counter").run(3)
 
+### `minerlib.EnergyAwareWorker`
+
+A worker loop that works, rests, unloads and keeps energy in reserve.
+
+Subclasses override :meth:`work` (return ``False`` to stop, or a
+``mine()`` result to trigger an unload on ``inventory_full``).
+:meth:`run` checks :meth:`needs_rest` before each step, calls
+:meth:`rest` when needed and unloads at the dock when the bag fills.
+
+Tick cost: whatever :meth:`work`, :meth:`rest` and unloading use.
+Energy cost: whatever :meth:`work` and walking use.
+
+Example::
+
+class Digger(EnergyAwareWorker):
+        def work(self):
+            return mine()
+
+Digger("digger").run(50)
+
 ### `minerlib.MinerWorker`
 
 A worker that mines one ore type until the bag is full, then hauls.
@@ -1309,6 +1550,8 @@ Player scripts may import the standard-library modules below once the required a
 | `enum` | unlocks with the **Inheritance** achievement |
 | `bisect` | unlocks with the **Chartist** achievement |
 | `operator` | unlocks with the **Trend Follower** achievement |
+| `json` | available from the start |
+| `copy` | available from the start |
 
 ## Deprecated
 

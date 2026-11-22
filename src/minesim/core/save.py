@@ -31,7 +31,7 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-CURRENT_VERSION = 12
+CURRENT_VERSION = 13
 SAVE_VERSION = CURRENT_VERSION
 DEFAULT_SKIN = "rusty_bot"
 
@@ -215,6 +215,17 @@ def _migrate_v11_to_v12(data: dict[str, Any]) -> dict[str, Any]:
     return migrated
 
 
+def _migrate_v12_to_v13(data: dict[str, Any]) -> dict[str, Any]:
+    """Add the v0.4 progression counters in version 13.
+
+    The new counters (layers, energy, climate and dock) default to 0
+    when absent, so the payload only needs the version bump.
+    """
+    migrated = dict(data)
+    migrated["version"] = 13
+    return migrated
+
+
 MIGRATIONS: dict[int, Callable[[dict[str, Any]], dict[str, Any]]] = {
     1: _migrate_v1_to_v2,
     2: _migrate_v2_to_v3,
@@ -227,6 +238,7 @@ MIGRATIONS: dict[int, Callable[[dict[str, Any]], dict[str, Any]]] = {
     9: _migrate_v9_to_v10,
     10: _migrate_v10_to_v11,
     11: _migrate_v11_to_v12,
+    12: _migrate_v12_to_v13,
 }
 
 
@@ -267,7 +279,7 @@ def migrate(data: Any) -> dict[str, Any]:
 
 
 class SaveGame(BaseModel):
-    """A serialised game state (save file schema, version 12)."""
+    """A serialised game state (save file schema, version 13)."""
 
     model_config = ConfigDict(extra="ignore")
 

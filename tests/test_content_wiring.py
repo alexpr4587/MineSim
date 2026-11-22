@@ -124,7 +124,7 @@ def test_initial_unlock_sets(content):
         "dock_free",
         "dock_rate",
     }
-    assert state.unlocked_modules == {"math"}
+    assert state.unlocked_modules == {"math", "json", "copy"}
     assert state.unlocked_upgrades == {
         "shaft",
         "battery",
@@ -136,7 +136,17 @@ def test_initial_unlock_sets(content):
     assert state.unlocked_recipes == set()
     assert state.unlocked_features == set()
     assert state.unlocked_skins == {"rusty_bot"}
-    assert state.unlocked_examples == {"01_hello"}
+    assert state.unlocked_examples == {
+        "01_hello",
+        "17_energy_budget",
+        "18_go_deep",
+        "19_climate_watch",
+        "20_dock_etiquette",
+        "21_night_shift",
+        "22_layer_prospector",
+        "23_vent_manager",
+        "24_full_automation",
+    }
 
 
 def _find_biome(game: Game, biome_id: str) -> tuple[int, int]:

@@ -255,7 +255,7 @@ def test_climate_upgrades_can_be_bought(content):
 def test_v11_save_fixture_migrates_temperature():
     path = FIXTURES / "save_v11.json"
     savegame = SaveGame.load(path)
-    assert savegame.version == CURRENT_VERSION == 12
+    assert savegame.version == CURRENT_VERSION == 13
     assert savegame.fleet[0]["temperature"] == 0.0
     assert savegame.fleet[0]["cooldown_remaining"] == 0
     assert savegame.player_stats["money"] == 43

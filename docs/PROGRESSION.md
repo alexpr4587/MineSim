@@ -4,7 +4,7 @@
 script events. Achievement criteria of type `counter` read the counter
 named by `counter`; `script_feature` criteria read the internal
 `script_feature:<feature>` counters. All counters are stored in the
-save file (save version 9) and default to `0` when a save predates them.
+save file (save version 13) and default to `0` when a save predates them.
 
 | Counter | Event | Meaning |
 |---|---|---|
@@ -17,7 +17,7 @@ save file (save version 9) and default to `0` when a save predates them.
 | `unique_ores_mined` | `OreMined` | Number of distinct ores mined at least once. |
 | `attempts:any` | `MineAttempted` | Mining attempts that rolled the dice (success or `miss`). |
 | `attempts:<ore_id>` | `MineAttempted` | Dice-rolled attempts on one ore. |
-| `fail:<reason>` | `MineAttempted` | Every non-success outcome, including `miss` and rule failures (`locked_ore`, `tool_too_weak`, `inventory_full`, `nothing_to_mine`). |
+| `fail:<reason>` | `MineAttempted`, `MoveRefused` | Every non-success outcome, including `miss` and rule failures (`locked_ore`, `tool_too_weak`, `inventory_full`, `nothing_to_mine`, `low_energy`, `overheated`). |
 | `streak` | `MineAttempted` | Best run of consecutive successful attempts. |
 | `fail_streak` | `MineAttempted` | Best run of consecutive `miss` attempts. |
 | `sales` | `Sold` | Sales that earned money. |
@@ -42,6 +42,20 @@ save file (save version 9) and default to `0` when a save predates them.
 | `events_started` | `WorldEventStarted` | Random world events that started. |
 | `rich_vein_mined` | `OreMined` | Ore items mined while a rich vein was active. |
 | `slow_zone_moves` | `Moved` | Moves made into or inside a slow zone. |
+| `max_layer` | `LayerChanged` | Deepest layer ever reached. |
+| `descents` | `LayerChanged` | Moves to a deeper layer. |
+| `mined_layer:<n>` | `OreMined` | Ore items mined on layer `<n>`. |
+| `energy_used` | `EnergySpent` | Total energy spent starting actions. |
+| `charges` | `Charged` | Recharge actions that restored energy. |
+| `strandings` | `MinerStranded` | Miners that ran out of energy away from a station. |
+| `rescues` | `MinerRescued` | Stranded miners towed back to a station. |
+| `overheats` | `MinerOverheated` | Miners that reached the overheat threshold. |
+| `peak_temp` | `TemperatureChanged` | Highest whole-degree temperature reached without overheating. |
+| `dock_wait_ticks` | `DockServed` | Total ticks miners waited in the dock queue. |
+| `dock_units` | `DockServed` | Units served by the shared dock. |
+| `peak_deep_miners` | `LayerChanged`, `MinerSpawned`, `MinerRemoved`, `TickAdvanced` | Largest number of miners at the same time on layers with `heat > 0`. |
+| `fail:low_energy` | `MineAttempted`, `MoveRefused` | Rule failures or refused moves caused by an empty battery. |
+| `fail:overheated` | `MineAttempted`, `MoveRefused` | Rule failures or refused moves caused by an overheated miner. |
 | `api:<function>` | `ApiCalled` | Successful calls to the player API function `<function>`. |
 
 ## Features and recipe unlocks
@@ -78,6 +92,9 @@ The legacy criteria type `script_defines_function` is an alias of the
 
 A `mine()` that rolls the dice is an attempt, whether it succeeds or
 misses. A rule failure (`locked_ore`, `tool_too_weak`,
-`inventory_full`, `nothing_to_mine`) is not an attempt, but it still
-increments `fail:<reason>`. Rule failures do not break a success or
-miss streak because they are not attempts.
+`inventory_full`, `nothing_to_mine`, `low_energy`, `overheated`) is not
+an attempt, but it still increments `fail:<reason>`. A `Move` refused
+because the battery is empty or the miner is overheated publishes
+`MoveRefused` and increments the same `fail:<reason>` counter. Rule
+failures do not break a success or miss streak because they are not
+attempts.

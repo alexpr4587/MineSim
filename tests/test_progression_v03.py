@@ -187,7 +187,7 @@ def test_uses_inheritance_feature():
 def test_save_v7_migrates_and_new_unlock_sets_default(content):
     data = {"version": 7, "seed": 1, "progression": {"counters": {"unloads": 3}}}
     migrated = migrate(data)
-    assert migrated["version"] == 12
+    assert migrated["version"] == 13
     state = ProgressionState.from_dict(migrated["progression"], content=content)
     assert state.get_counter("unloads") == 3
     assert state.unlocked_recipes == {

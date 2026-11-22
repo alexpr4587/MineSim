@@ -131,7 +131,7 @@ def test_v0_2_0_save_fixture_migrates() -> None:
     assert raw["version"] == 3
 
     migrated = migrate(raw)
-    assert CURRENT_VERSION == 12
+    assert CURRENT_VERSION == 13
     assert migrated["version"] == CURRENT_VERSION
     assert migrated["player_stats"]["money"] == 43
     assert migrated["fleet"] == [

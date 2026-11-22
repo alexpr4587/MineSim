@@ -50,5 +50,13 @@
   {
     "name": "operator",
     "unlocked_by": "trend_follower"
+  },
+  {
+    "name": "json",
+    "unlocked_by": null
+  },
+  {
+    "name": "copy",
+    "unlocked_by": null
   }
 ]

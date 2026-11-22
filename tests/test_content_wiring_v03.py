@@ -105,8 +105,18 @@ def test_v03_initial_unlock_sets(content):
         "ventilation",
         "dock",
     }
-    assert state.unlocked_modules == {"math"}
-    assert state.unlocked_examples == {"01_hello"}
+    assert state.unlocked_modules == {"math", "json", "copy"}
+    assert state.unlocked_examples == {
+        "01_hello",
+        "17_energy_budget",
+        "18_go_deep",
+        "19_climate_watch",
+        "20_dock_etiquette",
+        "21_night_shift",
+        "22_layer_prospector",
+        "23_vent_manager",
+        "24_full_automation",
+    }
     assert state.unlocked_functions == {
         "move",
         "mine",

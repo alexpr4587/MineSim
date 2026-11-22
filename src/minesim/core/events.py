@@ -26,6 +26,7 @@ __all__ = [
     "EventBus",
     "LayerChanged",
     "MineAttempted",
+    "MoveRefused",
     "Moved",
     "OreMined",
     "RefineFinished",
@@ -35,6 +36,7 @@ __all__ = [
     "ScriptStarted",
     "Sold",
     "StockSold",
+    "TemperatureChanged",
     "TickAdvanced",
     "TileRegenerated",
     "Unloaded",
@@ -54,6 +56,14 @@ class Moved:
     layer: int = 0
     direction: str | None = None
     in_slow_zone: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class MoveRefused:
+    """A move was refused before it started."""
+
+    miner_id: int = 0
+    reason: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -207,6 +217,14 @@ class MinerRecovered:
     """An overheated miner cooled down and restarted."""
 
     miner_id: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class TemperatureChanged:
+    """A miner's temperature changed without overheating."""
+
+    miner_id: int = 0
+    temperature: float = 0.0
 
 
 @dataclass(frozen=True, slots=True)

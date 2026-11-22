@@ -303,11 +303,11 @@ def test_saved_version_1_fixture_migrates(tmp_path):
     path = FIXTURES / "save_v1.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     migrated = migrate(data)
-    assert migrated["version"] == 12
+    assert migrated["version"] == 13
     assert migrated["selected_skin"] == DEFAULT_SKIN
 
     savegame = SaveGame.load(path)
-    assert savegame.version == 12
+    assert savegame.version == 13
     assert savegame.selected_skin == DEFAULT_SKIN
 
     game = Game.load(path)
@@ -321,10 +321,10 @@ def test_saved_version_2_fixture_migrates(content):
     path = FIXTURES / "save_v2.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     migrated = migrate(data)
-    assert migrated["version"] == 12
+    assert migrated["version"] == 13
 
     savegame = SaveGame.load(path)
-    assert savegame.version == 12
+    assert savegame.version == 13
     assert savegame.selected_skin == "steel_walker"
     assert savegame.progression["counters"]["tiles_moved"] == 12
 

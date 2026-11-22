@@ -96,6 +96,10 @@ _PARAM_TYPES: dict[str, str] = {
     "y": "int",
     "width": "int",
     "height": "int",
+    "margin": "float",
+    "rest_margin": "float",
+    "assignments": "dict[int, int]",
+    "max_in_hot_layers": "int",
     "script_name": "str",
     "miner_id": "int",
     "key": "str",
@@ -147,8 +151,8 @@ _RETURN_TYPES: dict[str, str] = {
     "assign": "None",
     "shared_get": "Any",
     "shared_set": "None",
-    "goto": "None",
-    "go_home": "None",
+    "goto": "bool",
+    "go_home": "bool",
     "sweep": "Any",
     "spiral": "Any",
     "ring": "Any",
@@ -156,8 +160,20 @@ _RETURN_TYPES: dict[str, str] = {
     "nearest": "tuple[int, int] | None",
     "goto_nearest": "bool",
     "route": "list[str]",
-    "goto_route": "None",
+    "goto_route": "bool",
     "ore_map": "dict[tuple[int, int], str]",
+    "energy_to": "int",
+    "can_return": "bool",
+    "charge_full": "bool",
+    "safe_farm": "int",
+    "to_station": "bool",
+    "go_down": "bool",
+    "go_up": "bool",
+    "dive": "bool",
+    "cool_down": "bool",
+    "heat_budget": "int",
+    "smart_unload": "int",
+    "stagger": "int",
     "sma": "float",
     "trend": "float",
     "sell_if": "int",
@@ -389,9 +405,18 @@ def generate_stub_text(content: Any = None) -> str:
     lines.append("")
     lines.append("class Worker:")
     lines.append('    def __init__(self, name: str = "worker") -> None: ...')
-    lines.append("    def goto(self, x: int, y: int) -> None: ...")
+    lines.append("    def goto(self, x: int, y: int) -> bool: ...")
     lines.append("    def haul(self) -> int: ...")
     lines.append("    def step(self) -> bool: ...")
+    lines.append("    def run(self, steps: int = 100) -> int: ...")
+    lines.append("")
+    lines.append("class EnergyAwareWorker(Worker):")
+    lines.append(
+        '    def __init__(self, name: str = "worker", rest_margin: float = 0.2) -> None: ...'
+    )
+    lines.append("    def work(self) -> Any: ...")
+    lines.append("    def needs_rest(self) -> bool: ...")
+    lines.append("    def rest(self) -> bool: ...")
     lines.append("    def run(self, steps: int = 100) -> int: ...")
     lines.append("")
     lines.append("class MinerWorker(Worker):")
@@ -407,6 +432,8 @@ def generate_stub_text(content: Any = None) -> str:
     lines.append("    def kill_all(self) -> list[int]: ...")
     lines.append("    def broadcast(self, key: str, value: Any) -> None: ...")
     lines.append("    def gather(self, key: str) -> Any: ...")
+    lines.append("    def assign_layers(self, assignments: dict[int, int]) -> dict[int, int]: ...")
+    lines.append("    def balance_load(self, max_in_hot_layers: int) -> dict[int, int]: ...")
     lines.append("")
     lines.append("class Samples:")
     lines.append("    def __init__(self) -> None: ...")

@@ -841,7 +841,15 @@
     "current_streak": 1,
     "unlocked_examples": [
       "01_hello",
-      "02_sweep_and_sell"
+      "02_sweep_and_sell",
+      "17_energy_budget",
+      "18_go_deep",
+      "19_climate_watch",
+      "20_dock_etiquette",
+      "21_night_shift",
+      "22_layer_prospector",
+      "23_vent_manager",
+      "24_full_automation"
     ],
     "unlocked_features": [],
     "unlocked_functions": [
@@ -865,6 +873,8 @@
       "temperature"
     ],
     "unlocked_modules": [
+      "copy",
+      "json",
       "math"
     ],
     "unlocked_ores": [

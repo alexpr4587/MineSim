@@ -166,6 +166,18 @@ def generate_api_md(output: str | Path | None = None) -> Path:
         "route",
         "goto_route",
         "ore_map",
+        "energy_to",
+        "can_return",
+        "charge_full",
+        "safe_farm",
+        "to_station",
+        "go_down",
+        "go_up",
+        "dive",
+        "cool_down",
+        "heat_budget",
+        "smart_unload",
+        "stagger",
         "sma",
         "trend",
         "sell_if",
@@ -190,7 +202,15 @@ def generate_api_md(output: str | Path | None = None) -> Path:
             lines.append("*No documentation.*")
             lines.append("")
 
-    class_names = ("Forecast", "Worker", "MinerWorker", "HaulerWorker", "Fleet", "Samples")
+    class_names = (
+        "Forecast",
+        "Worker",
+        "EnergyAwareWorker",
+        "MinerWorker",
+        "HaulerWorker",
+        "Fleet",
+        "Samples",
+    )
     for name in class_names:
         doc = _minerlib_doc(name)
         lines.append(f"### `minerlib.{name}`")

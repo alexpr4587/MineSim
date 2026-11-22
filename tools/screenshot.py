@@ -356,6 +356,7 @@ def build_window(
     editor_tabs: bool = False,
     layer: int | None = None,
     dock: bool = False,
+    api: bool = False,
 ) -> MainWindow:
     """Build the real main window and run ``ticks`` engine ticks."""
     app = QApplication.instance() or QApplication([])
@@ -382,7 +383,7 @@ def build_window(
     if editor_tabs:
         scripts_dir = Path(tempfile.mkdtemp(prefix="minesim_editor_tabs_"))
         _write_editor_scripts(scripts_dir)
-    if panel or miners or layer is not None or dock:
+    if panel or miners or layer is not None or dock or api:
         unlock_everything(game)
     if panel:
         prepare_economy(game)
@@ -542,6 +543,11 @@ def main() -> int:
         action="store_true",
         help="queue miners at the shared dock and save artifacts/ui_dock.png",
     )
+    parser.add_argument(
+        "--api",
+        action="store_true",
+        help="show the API reference panel and save artifacts/ui_api.png",
+    )
     parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args()
     window = build_window(
@@ -558,6 +564,7 @@ def main() -> int:
         editor_tabs=args.editor_tabs,
         layer=args.layer,
         dock=args.dock,
+        api=args.api,
     )
     for panel_name in (
         "achievements_panel",
@@ -583,7 +590,17 @@ def main() -> int:
                 panel.hide_panel()
             except Exception:
                 panel.hide()
-    if args.wardrobe:
+    if args.api:
+        try:
+            window.api_panel.show_panel()
+        except Exception:
+            window.api_panel.show()
+        window.api_panel.resize(620, 620)
+        window.api_panel.move(330, 40)
+        window.api_panel.text_edit.find("safe_farm")
+        scroll = window.api_panel.text_edit.verticalScrollBar()
+        scroll.setValue(scroll.value() + 120)
+    elif args.wardrobe:
         try:
             window.show_wardrobe()
         except Exception:
@@ -635,6 +652,8 @@ def main() -> int:
         default_name = f"ui_layer_{int(args.layer)}.png"
     if args.dock:
         default_name = "ui_dock.png"
+    if args.api:
+        default_name = "ui_api.png"
     out = args.output or (Path(__file__).resolve().parents[1] / "artifacts" / default_name)
     out.parent.mkdir(parents=True, exist_ok=True)
     window.grab().save(str(out))
