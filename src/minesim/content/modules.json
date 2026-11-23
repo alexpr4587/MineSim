@@ -53,10 +53,10 @@
   },
   {
     "name": "json",
-    "unlocked_by": null
+    "unlocked_by": "power_user"
   },
   {
     "name": "copy",
-    "unlocked_by": null
+    "unlocked_by": "galleries_veteran"
   }
 ]

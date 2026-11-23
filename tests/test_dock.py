@@ -112,6 +112,7 @@ def test_empty_sell_keeps_the_old_two_tick_cost() -> None:
 def test_dock_upgrade_raises_the_rate_and_speeds_up_service() -> None:
     game = _game()
     game.player_stats.money = 1000
+    game.progression_state.unlock_upgrade("dock")
     ticket = game.submit(BuyUpgrade("dock"))
     assert ticket.done
     assert ticket.result["ok"] is True

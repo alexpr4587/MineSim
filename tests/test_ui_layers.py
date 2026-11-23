@@ -155,6 +155,7 @@ def test_hud_panel_and_upgrade_show_the_layer(qapp, content, tmp_path) -> None:
     assert "Old Galleries (1)" in hud.layer_label.text()
 
     game.miner.layer = 2
+    game.progression_state.unlock_upgrade("shaft")
     panel = MinersPanel(game=game, scripts_dir=tmp_path, world_view=view, parent=None)
     panel.refresh()
     assert panel.rows[0].layer_label.text() == "Layer: 2"

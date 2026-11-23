@@ -31,6 +31,8 @@ TABS = {
     "fleet",
     "explorer",
     "data",
+    "engineering",
+    "depths",
 }
 
 
@@ -39,8 +41,8 @@ def content():
     return load_content()
 
 
-def test_content_validation_passes_and_has_eight_tabs(content):
-    assert len(content.achievements) == 69
+def test_content_validation_passes_and_has_ten_tabs(content):
+    assert len(content.achievements) == 86
     assert {achievement.tab for achievement in content.achievements.values()} == TABS
 
 
@@ -106,47 +108,13 @@ def test_every_unlockable_thing_has_exactly_one_unlocking_achievement(content):
 def test_initial_unlock_sets(content):
     state = ProgressionState(content)
     assert state.unlocked_ores == {"stone"}
-    assert state.unlocked_functions == {
-        "move",
-        "mine",
-        "peek",
-        "position",
-        "battery",
-        "charge",
-        "energy_cost",
-        "temperature",
-        "cool",
-        "climate",
-        "layer",
-        "layers",
-        "descend",
-        "ascend",
-        "dock_free",
-        "dock_rate",
-    }
-    assert state.unlocked_modules == {"math", "json", "copy"}
-    assert state.unlocked_upgrades == {
-        "shaft",
-        "battery",
-        "charger",
-        "cooling",
-        "ventilation",
-        "dock",
-    }
+    assert state.unlocked_functions == {"move", "mine", "peek", "position"}
+    assert state.unlocked_modules == {"math"}
+    assert state.unlocked_upgrades == set()
     assert state.unlocked_recipes == set()
     assert state.unlocked_features == set()
     assert state.unlocked_skins == {"rusty_bot"}
-    assert state.unlocked_examples == {
-        "01_hello",
-        "17_energy_budget",
-        "18_go_deep",
-        "19_climate_watch",
-        "20_dock_etiquette",
-        "21_night_shift",
-        "22_layer_prospector",
-        "23_vent_manager",
-        "24_full_automation",
-    }
+    assert state.unlocked_examples == {"01_hello"}
 
 
 def _find_biome(game: Game, biome_id: str) -> tuple[int, int]:

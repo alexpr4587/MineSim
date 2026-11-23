@@ -33,6 +33,8 @@ _TAB_ORDER = (
     "fleet",
     "explorer",
     "data",
+    "engineering",
+    "depths",
 )
 _TAB_TITLES = {
     "code": "Code",
@@ -43,6 +45,8 @@ _TAB_TITLES = {
     "fleet": "Fleet",
     "explorer": "Explorer",
     "data": "Data",
+    "engineering": "Engineering",
+    "depths": "Depths",
 }
 
 
@@ -345,10 +349,10 @@ def generate_guide_md(output: str | Path | None = None) -> Path:
     lines.append("# MineSim Achievement Guide")
     lines.append("")
     lines.append(
-        "Every achievement belongs to one of eight tabs: Code, Mining, Business, "
-        "Trading, Industry, Fleet, Explorer and Data. An achievement becomes "
-        "available once its parent is completed. Completing it grants the rewards "
-        "and unlocks listed below."
+        "Every achievement belongs to one of ten tabs: Code, Mining, Business, "
+        "Trading, Industry, Fleet, Explorer, Data, Engineering and Depths. An "
+        "achievement becomes available once its parent is completed. Completing it "
+        "grants the rewards and unlocks listed below."
     )
     lines.append("")
 

@@ -12,16 +12,16 @@ Functions are called directly, e.g. `move(East)`, `mine()`, `sell()`. Locked fun
 | `mine` | `mine()` | Mine the tile the miner stands on. Returns a dict with ok, and reason or ore when relevant. | ceil(hardness * 3 / tool power) ticks | `result = mine()` | available from the start |
 | `peek` | `peek()` | Return the ore on the current tile, None if empty, or 'unknown' if the ore is locked. | 0 ticks | `ore = peek()` | available from the start |
 | `position` | `position()` | Return the miner position as (x, y). | 0 ticks | `x, y = position()` | available from the start |
-| `battery` | `battery()` | Return the miner battery as (energy, capacity). | 0 ticks | `energy, capacity = battery()` | available from the start |
-| `charge` | `charge()` | Recharge the battery on a base or shaft station and return {ok, energy, capacity, charged}. | ceil(missing energy / charge rate) ticks | `charge()` | available from the start |
-| `energy_cost` | `energy_cost(action, arg=None)` | Return the energy an action would cost right now. For 'scan', arg is the radius; for 'mine' the ore under the miner is used. | 0 ticks | `energy_cost('mine')` | available from the start |
-| `temperature` | `temperature()` | Return the miner temperature as {ok, temperature, overheated, cooldown, layer, heat}. | 0 ticks | `temperature()['temperature']` | available from the start |
-| `cool` | `cool(target=30)` | Cool down on a base or shaft station until the temperature reaches target. | ceil((temperature - target) / cool rate) ticks | `cool(30)` | available from the start |
-| `climate` | `climate()` | Return the layer climate as {layer, heat, airflow, miners_in_hot_layers, overload}. | 0 ticks | `climate()['airflow']` | available from the start |
+| `battery` | `battery()` | Return the miner battery as (energy, capacity). | 0 ticks | `energy, capacity = battery()` | unlocks with the **Out of Juice** achievement |
+| `charge` | `charge()` | Recharge the battery on a base or shaft station and return {ok, energy, capacity, charged}. | ceil(missing energy / charge rate) ticks | `charge()` | unlocks with the **Out of Juice** achievement |
+| `energy_cost` | `energy_cost(action, arg=None)` | Return the energy an action would cost right now. For 'scan', arg is the radius; for 'mine' the ore under the miner is used. | 0 ticks | `energy_cost('mine')` | unlocks with the **Out of Juice** achievement |
+| `temperature` | `temperature()` | Return the miner temperature as {ok, temperature, overheated, cooldown, layer, heat}. | 0 ticks | `temperature()['temperature']` | unlocks with the **Feel the Heat** achievement |
+| `cool` | `cool(target=30)` | Cool down on a base or shaft station until the temperature reaches target. | ceil((temperature - target) / cool rate) ticks | `cool(30)` | unlocks with the **Feel the Heat** achievement |
+| `climate` | `climate()` | Return the layer climate as {layer, heat, airflow, miners_in_hot_layers, overload}. | 0 ticks | `climate()['airflow']` | unlocks with the **Feel the Heat** achievement |
 | `sell` | `sell()` | Sell the whole inventory at the base and return the money gained. Waits for the shared surface dock. | ceil(units / dock rate) ticks at the base | `earned = sell()` | unlocks with the **First Dig** achievement |
 | `unload` | `unload()` | Move the miner inventory into the base warehouse and return {moved, left}. Waits for the shared surface dock. | ceil(units / dock rate) ticks at the base | `result = unload()` | unlocks with the **Storage Unit** achievement |
-| `dock_free` | `dock_free()` | Return the surface dock status as {free, queue, eta}. | 0 ticks | `status = dock_free()` | available from the start |
-| `dock_rate` | `dock_rate()` | Return how many inventory units the surface dock services per tick. | 0 ticks | `rate = dock_rate()` | available from the start |
+| `dock_free` | `dock_free()` | Return the surface dock status as {free, queue, eta}. | 0 ticks | `status = dock_free()` | unlocks with the **Traffic Jam** achievement |
+| `dock_rate` | `dock_rate()` | Return how many inventory units the surface dock services per tick. | 0 ticks | `rate = dock_rate()` | unlocks with the **Traffic Jam** achievement |
 | `stock` | `stock()` | Return the warehouse contents and capacity as {items, capacity, used, free}. | 0 ticks | `stock()['items']` | unlocks with the **Storage Unit** achievement |
 | `sell_stock` | `sell_stock(item, amount=None)` | Sell items from the warehouse at market prices and return the money gained. | 2 ticks at the base | `earned = sell_stock('stone', 10)` | unlocks with the **Storage Unit** achievement |
 | `price` | `price(item)` | Return the current market price of an unlocked item, or None. | 0 ticks | `price('stone')` | unlocks with the **Market Watcher** achievement |
@@ -35,10 +35,10 @@ Functions are called directly, e.g. `move(East)`, `mine()`, `sell()`. Locked fun
 | `tick` | `tick()` | Return the current game tick. | 0 ticks | `now = tick()` | unlocks with the **Clockwork** achievement |
 | `events` | `events()` | Return the active world events as dicts with kind, x, y, radius, ends_in, item and direction ('shortage' or 'glut' for market news). The exact price factor is never included. | 0 ticks | `for event in events(): print(event['kind'])` | unlocks with the **News Reader** achievement |
 | `distance` | `distance()` | Return the Chebyshev distance from the base at (0, 0). | 0 ticks | `d = distance()` | unlocks with the **Far From Home** achievement |
-| `layer` | `layer()` | Return the index of the layer the miner is on (0 is the surface). | 0 ticks | `here = layer()` | available from the start |
-| `layers` | `layers()` | Return the underground layers as a list of {index, name, accessible} dicts. | 0 ticks | `for level in layers(): print(level['name'])` | available from the start |
-| `descend` | `descend()` | Descend one layer from a shaft station. Requires a deep enough shaft upgrade and returns {ok, layer, reason}. | 20 ticks | `result = descend()` | available from the start |
-| `ascend` | `ascend()` | Ascend one layer from a shaft station and return {ok, layer, reason}. | 20 ticks | `result = ascend()` | available from the start |
+| `layer` | `layer()` | Return the index of the layer the miner is on (0 is the surface). | 0 ticks | `here = layer()` | unlocks with the **Deep Ambition** achievement |
+| `layers` | `layers()` | Return the underground layers as a list of {index, name, accessible} dicts. | 0 ticks | `for level in layers(): print(level['name'])` | unlocks with the **Deep Ambition** achievement |
+| `descend` | `descend()` | Descend one layer from a shaft station. Requires a deep enough shaft upgrade and returns {ok, layer, reason}. | 20 ticks | `result = descend()` | unlocks with the **Deep Ambition** achievement |
+| `ascend` | `ascend()` | Ascend one layer from a shaft station and return {ok, layer, reason}. | 20 ticks | `result = ascend()` | unlocks with the **Deep Ambition** achievement |
 | `biome` | `biome()` | Return the id of the biome under the miner. | 0 ticks | `here = biome()` | unlocks with the **Deep Diver** achievement |
 | `ore_info` | `ore_info(ore_id)` | Return {id, name, tier, hardness, base_value, regen_ticks} for a known ore, or None when it is unknown or locked. The mining probability is never included. | 0 ticks | `info = ore_info('coal')` | unlocks with the **Appraiser** achievement |
 | `inspect` | `inspect()` | Return {ore, mineable, reason, regrows_in} for the current tile. | 0 ticks | `seen = inspect()` | unlocks with the **Know Your Limits** achievement |
@@ -144,7 +144,7 @@ x, y = position()
 energy, capacity = battery()
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Out of Juice** achievement
 
 ### `charge`
 
@@ -162,7 +162,7 @@ energy, capacity = battery()
 charge()
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Out of Juice** achievement
 
 ### `energy_cost`
 
@@ -180,7 +180,7 @@ charge()
 energy_cost('mine')
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Out of Juice** achievement
 
 ### `temperature`
 
@@ -198,7 +198,7 @@ energy_cost('mine')
 temperature()['temperature']
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Feel the Heat** achievement
 
 ### `cool`
 
@@ -216,7 +216,7 @@ temperature()['temperature']
 cool(30)
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Feel the Heat** achievement
 
 ### `climate`
 
@@ -234,7 +234,7 @@ cool(30)
 climate()['airflow']
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Feel the Heat** achievement
 
 ### `sell`
 
@@ -288,7 +288,7 @@ result = unload()
 status = dock_free()
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Traffic Jam** achievement
 
 ### `dock_rate`
 
@@ -306,7 +306,7 @@ status = dock_free()
 rate = dock_rate()
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Traffic Jam** achievement
 
 ### `stock`
 
@@ -558,7 +558,7 @@ d = distance()
 here = layer()
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Deep Ambition** achievement
 
 ### `layers`
 
@@ -576,7 +576,7 @@ here = layer()
 for level in layers(): print(level['name'])
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Deep Ambition** achievement
 
 ### `descend`
 
@@ -594,7 +594,7 @@ for level in layers(): print(level['name'])
 result = descend()
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Deep Ambition** achievement
 
 ### `ascend`
 
@@ -612,7 +612,7 @@ result = descend()
 result = ascend()
 ```
 
-**Unlocked by:** available from the start
+**Unlocked by:** unlocks with the **Deep Ambition** achievement
 
 ### `biome`
 
@@ -1550,8 +1550,8 @@ Player scripts may import the standard-library modules below once the required a
 | `enum` | unlocks with the **Inheritance** achievement |
 | `bisect` | unlocks with the **Chartist** achievement |
 | `operator` | unlocks with the **Trend Follower** achievement |
-| `json` | available from the start |
-| `copy` | available from the start |
+| `json` | unlocks with the **Power User** achievement |
+| `copy` | unlocks with the **Gallery Veteran** achievement |
 
 ## Deprecated
 

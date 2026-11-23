@@ -59,6 +59,7 @@ def test_hud_reports_the_dock_queue(qapp) -> None:
 def test_base_panel_shows_the_dock_rate(qapp) -> None:
     game = Game.new(seed=12345)
     game.player_stats.money = 1000
+    game.progression_state.unlock_upgrade("dock")
     game.submit(BuyUpgrade("dock"))
     panel = BasePanel(game=game)
     panel.show()

@@ -1,16 +1,17 @@
-"""Headless balance report for the v0.3 achievement chain.
+"""Headless balance report for the v0.4 achievement chain.
 
-Runs three strategies for 300,000 ticks on the default seed and writes
+Runs four strategies for 400,000 ticks on the default seed and writes
 ``docs/BALANCE.md`` with the tick at which every achievement completes (or
-``never``). The third strategy exercises the warehouse, the dynamic market,
-the refinery and a second miner, driven in lockstep. This is a reporting tool
-only: it never changes gameplay numbers.
+``never``). The last strategy exercises the warehouse, the dynamic market,
+the refinery, a deep shaft, the climate system and a four-miner fleet driven in
+lockstep. This is a reporting tool only: it never changes gameplay numbers.
 
 Usage: ``python tools/balance_sim.py``
 """
 
 from __future__ import annotations
 
+import math
 import random
 import sys
 from pathlib import Path
@@ -22,8 +23,12 @@ if _SRC.is_dir() and str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
 from minesim.core.commands import (  # noqa: E402
+    Ascend,
     BuyUpgrade,
+    Charge,
+    Cool,
     Deliver,
+    Descend,
     Mine,
     Move,
     Refine,
@@ -40,6 +45,7 @@ _DOCS = _ROOT / "docs"
 
 __all__ = [
     "DEFAULT_TICKS",
+    "DeepFleet",
     "FleetTrader",
     "RandomWalker",
     "SerpentineSweeper",
@@ -48,7 +54,7 @@ __all__ = [
     "run_strategy",
 ]
 
-DEFAULT_TICKS = 300_000
+DEFAULT_TICKS = 400_000
 DEFAULT_SEED = 12345
 _DIRECTIONS = (Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST)
 _UPGRADE_ORDER = ("backpack", "pickaxe", "motor", "scanner")
@@ -61,6 +67,8 @@ _TAB_ORDER = (
     "fleet",
     "explorer",
     "data",
+    "engineering",
+    "depths",
 )
 
 
@@ -375,6 +383,160 @@ class FleetTrader:
         return None
 
 
+class DeepFleet(FleetTrader):
+    """Run a five-miner fleet across the surface and the underground layers.
+
+    Miner 0 keeps the surface economy running. The other miners descend once
+    the shaft is available, mine layer quotas, charge and cool at stations, and
+    unload at the surface dock. Miner 3 is deliberately reckless until it has
+    overheated once and reached the temperature achievement, which exercises
+    stranding, rescue and the climate counters.
+    """
+
+    name = "Deep fleet"
+
+    def __init__(self, radius: int = 70, sell_index: float = 1.05) -> None:
+        super().__init__(radius=radius, sell_index=sell_index)
+        self._target_fleet = 5
+        self._upgrade_order = (
+            "pickaxe",
+            "miner_bay",
+            "backpack",
+            "shaft",
+            "charger",
+            "battery",
+            "cooling",
+            "ventilation",
+            "dock",
+            "furnace",
+            "motor",
+            "scanner",
+            "contract_board",
+            "warehouse",
+        )
+
+    def _is_reckless(self, game: Game, miner: Any) -> bool:
+        if int(getattr(miner, "id", 0)) != 3:
+            return False
+        state = game.progression_state
+        return state.get_counter("overheats") < 1 or state.get_counter("peak_temp") < 80
+
+    def _layer_multiplier(self, game: Game, layer: int) -> float:
+        entry = game.content.layers.get(int(layer))
+        return max(0.01, float(getattr(entry, "energy_multiplier", 1.0) or 1.0))
+
+    def _shaft_cost(self, game: Game, miner: Any) -> int:
+        base = int(getattr(game.content.config, "energy_shaft", 15) or 15)
+        return int(math.ceil(base * self._layer_multiplier(game, int(miner.layer))))
+
+    def _needs_charge(self, game: Game, miner: Any) -> bool:
+        if self._is_reckless(game, miner):
+            return False
+        capacity = max(1, int(getattr(miner, "battery_capacity", 0) or 0))
+        energy = int(getattr(miner, "energy", 0) or 0)
+        layer = int(getattr(miner, "layer", 0) or 0)
+        move = max(1, int(getattr(game.content.config, "energy_move", 1) or 1))
+        distance = abs(int(miner.x)) + abs(int(miner.y))
+        reserve = (
+            int(math.ceil(distance * move * self._layer_multiplier(game, layer)))
+            + 2 * self._shaft_cost(game, miner)
+            + 20
+        )
+        return energy < max(50, int(math.ceil(capacity * 0.15)), reserve)
+
+    def _needs_cool(self, game: Game, miner: Any) -> bool:
+        if self._is_reckless(game, miner):
+            return False
+        return float(getattr(miner, "temperature", 0.0) or 0.0) >= 70.0
+
+    def _target_layer(self, game: Game, miner_id: int) -> int:
+        shaft = int(game.player_stats.upgrades.get("shaft", 0) or 0)
+        if int(miner_id) == 0 or shaft <= 0:
+            return 0
+        if shaft == 1:
+            return 1
+        if int(miner_id) == 1 and game.progression_state.get_counter("mined_layer:1") < 120:
+            return 1
+        if shaft == 2:
+            return 2
+        if int(miner_id) in (3, 4):
+            return 3
+        return 2
+
+    def _command_for(self, game: Game, miner: Any) -> Any:
+        if int(getattr(miner, "cooldown_remaining", 0) or 0) > 0:
+            return None
+        layer = int(getattr(miner, "layer", 0) or 0)
+        tile = game.world.tile_at(miner.x, miner.y, game.tick, layer=layer)
+        on_station = bool(tile.is_base)
+        target = self._target_layer(game, int(miner.id))
+        full = miner.inventory_size >= miner.capacity
+        energy = int(getattr(miner, "energy", 0) or 0)
+        capacity = max(1, int(getattr(miner, "battery_capacity", 0) or 0))
+
+        if on_station and layer == 0:
+            if miner.inventory:
+                return self._sell_or_unload(game, miner)
+            if int(miner.id) == 0:
+                command = super()._base_command(game, miner)
+                if command is not None:
+                    return command
+            if self._needs_charge(game, miner) or energy < capacity * 0.8:
+                return Charge()
+            if target > 0:
+                return Descend()
+            return self._field_command(game, miner)
+
+        if on_station:
+            if full:
+                if self._needs_charge(game, miner) or energy < self._shaft_cost(game, miner):
+                    return Charge()
+                return Ascend()
+            if target != layer:
+                if self._needs_charge(game, miner) or energy < self._shaft_cost(game, miner):
+                    return Charge()
+                return Descend() if target > layer else Ascend()
+            if self._needs_charge(game, miner):
+                return Charge()
+            if self._needs_cool(game, miner):
+                return Cool(30.0)
+            return self._field_command(game, miner)
+
+        if (
+            full
+            or target != layer
+            or self._needs_charge(game, miner)
+            or self._needs_cool(game, miner)
+        ):
+            return _step_towards(miner.x, miner.y, 0, 0)
+        return self._field_command(game, miner)
+
+    def _sell_or_unload(self, game: Game, miner: Any) -> Any:
+        if not self._wants_unload(game, miner):
+            return Sell()
+        warehouse = game.engine.warehouse
+        if game.is_feature_unlocked("warehouse") and warehouse is not None and warehouse.free > 0:
+            return Unload()
+        return Sell()
+
+    def _wants_unload(self, game: Game, miner: Any) -> bool:
+        return game.progression_state.get_counter("money_earned") >= 9000
+
+    def _spawn_command(self, game: Game) -> SpawnMiner | None:
+        if not game.is_feature_unlocked("miners"):
+            return None
+        miners = game.engine.miners
+        if len(miners) >= self._target_fleet or game.engine.max_miners <= len(miners):
+            return None
+        costs = list(game.content.config.miner_costs)
+        extra = max(0, len(miners) - 1)
+        if extra >= len(costs):
+            return None
+        if game.player_stats.money < int(costs[extra]):
+            return None
+        return SpawnMiner()
+
+
 def _next_commands(strategy: Any, game: Game) -> list[tuple[int, Any]]:
     producer = getattr(strategy, "next_commands", None)
     if callable(producer):
@@ -426,7 +588,7 @@ def build_report(results: list[tuple[str, Game]], ticks: int, seed: int) -> str:
     lines.append("")
     lines.append(
         f"Generated by `tools/balance_sim.py` from a headless {ticks:,}-tick simulation "
-        f"of three strategies on seed {seed}. This is a report only; no gameplay "
+        f"of four strategies on seed {seed}. This is a report only; no gameplay "
         "numbers were tuned."
     )
     lines.append("")
@@ -444,6 +606,11 @@ def build_report(results: list[tuple[str, Game]], ticks: int, seed: int) -> str:
         "when the market index is at least 1.1, refines every unlocked recipe it can, "
         "delivers contracts, buys upgrades and spawns a second miner. Both miners run "
         "in lockstep."
+    )
+    lines.append(
+        "- **Deep fleet**: keeps the warehouse trader economy, expands to five miners, "
+        "buys the shaft and climate upgrades, sends miners to layer quotas, charges and "
+        "cools at stations, and deliberately lets one miner overheat and run dry."
     )
     lines.append("")
     lines.append("## Strategy totals")
@@ -484,7 +651,7 @@ def main(argv: list[str] | None = None) -> int:
     seed = int(args[1]) if len(args) > 1 else DEFAULT_SEED
     results = [
         (strategy.name, run_strategy(strategy, ticks=ticks, seed=seed))
-        for strategy in (RandomWalker(), SerpentineSweeper(), FleetTrader())
+        for strategy in (RandomWalker(), SerpentineSweeper(), FleetTrader(), DeepFleet())
     ]
     report = build_report(results, ticks, seed)
     print(report)

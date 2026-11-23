@@ -40,7 +40,7 @@
     "signature": "battery()",
     "doc": "Return the miner battery as (energy, capacity).",
     "category": "energy",
-    "unlocked_by": null,
+    "unlocked_by": "out_of_juice",
     "cost": "0 ticks",
     "example": "energy, capacity = battery()"
   },
@@ -49,7 +49,7 @@
     "signature": "charge()",
     "doc": "Recharge the battery on a base or shaft station and return {ok, energy, capacity, charged}.",
     "category": "energy",
-    "unlocked_by": null,
+    "unlocked_by": "out_of_juice",
     "cost": "ceil(missing energy / charge rate) ticks",
     "example": "charge()"
   },
@@ -58,7 +58,7 @@
     "signature": "energy_cost(action, arg=None)",
     "doc": "Return the energy an action would cost right now. For 'scan', arg is the radius; for 'mine' the ore under the miner is used.",
     "category": "energy",
-    "unlocked_by": null,
+    "unlocked_by": "out_of_juice",
     "cost": "0 ticks",
     "example": "energy_cost('mine')"
   },
@@ -67,7 +67,7 @@
     "signature": "temperature()",
     "doc": "Return the miner temperature as {ok, temperature, overheated, cooldown, layer, heat}.",
     "category": "climate",
-    "unlocked_by": null,
+    "unlocked_by": "feel_the_heat",
     "cost": "0 ticks",
     "example": "temperature()['temperature']"
   },
@@ -76,7 +76,7 @@
     "signature": "cool(target=30)",
     "doc": "Cool down on a base or shaft station until the temperature reaches target.",
     "category": "climate",
-    "unlocked_by": null,
+    "unlocked_by": "feel_the_heat",
     "cost": "ceil((temperature - target) / cool rate) ticks",
     "example": "cool(30)"
   },
@@ -85,7 +85,7 @@
     "signature": "climate()",
     "doc": "Return the layer climate as {layer, heat, airflow, miners_in_hot_layers, overload}.",
     "category": "climate",
-    "unlocked_by": null,
+    "unlocked_by": "feel_the_heat",
     "cost": "0 ticks",
     "example": "climate()['airflow']"
   },
@@ -112,7 +112,7 @@
     "signature": "dock_free()",
     "doc": "Return the surface dock status as {free, queue, eta}.",
     "category": "business",
-    "unlocked_by": null,
+    "unlocked_by": "traffic_jam",
     "cost": "0 ticks",
     "example": "status = dock_free()"
   },
@@ -121,7 +121,7 @@
     "signature": "dock_rate()",
     "doc": "Return how many inventory units the surface dock services per tick.",
     "category": "business",
-    "unlocked_by": null,
+    "unlocked_by": "traffic_jam",
     "cost": "0 ticks",
     "example": "rate = dock_rate()"
   },
@@ -247,7 +247,7 @@
     "signature": "layer()",
     "doc": "Return the index of the layer the miner is on (0 is the surface).",
     "category": "world",
-    "unlocked_by": null,
+    "unlocked_by": "deep_ambition",
     "cost": "0 ticks",
     "example": "here = layer()"
   },
@@ -256,7 +256,7 @@
     "signature": "layers()",
     "doc": "Return the underground layers as a list of {index, name, accessible} dicts.",
     "category": "world",
-    "unlocked_by": null,
+    "unlocked_by": "deep_ambition",
     "cost": "0 ticks",
     "example": "for level in layers(): print(level['name'])"
   },
@@ -265,7 +265,7 @@
     "signature": "descend()",
     "doc": "Descend one layer from a shaft station. Requires a deep enough shaft upgrade and returns {ok, layer, reason}.",
     "category": "movement",
-    "unlocked_by": null,
+    "unlocked_by": "deep_ambition",
     "cost": "20 ticks",
     "example": "result = descend()"
   },
@@ -274,7 +274,7 @@
     "signature": "ascend()",
     "doc": "Ascend one layer from a shaft station and return {ok, layer, reason}.",
     "category": "movement",
-    "unlocked_by": null,
+    "unlocked_by": "deep_ambition",
     "cost": "20 ticks",
     "example": "result = ascend()"
   },

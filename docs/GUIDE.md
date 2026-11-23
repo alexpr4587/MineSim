@@ -1,6 +1,6 @@
 # MineSim Achievement Guide
 
-Every achievement belongs to one of eight tabs: Code, Mining, Business, Trading, Industry, Fleet, Explorer and Data. An achievement becomes available once its parent is completed. Completing it grants the rewards and unlocks listed below.
+Every achievement belongs to one of ten tabs: Code, Mining, Business, Trading, Industry, Fleet, Explorer, Data, Engineering and Depths. An achievement becomes available once its parent is completed. Completing it grants the rewards and unlocks listed below.
 
 ## Code
 
@@ -829,3 +829,205 @@ Make 2000 mining attempts.
 **Rewards:** +400 money
 
 **Unlocks:** Nothing.
+
+## Engineering
+
+### Out of Juice (`out_of_juice`)
+
+Run out of energy while trying to act.
+
+**Criteria:** `fail:low_energy` reaches 1.
+
+**Rewards:** function `battery`; function `charge`; function `energy_cost`; upgrade `battery`
+
+**Unlocks:** function `battery`; function `charge`; function `energy_cost`; upgrade `battery`
+
+### Power User (`power_user`)
+
+Spend 5000 energy.
+
+**Requires:** Out of Juice
+
+**Criteria:** `energy_used` reaches 5000.
+
+**Rewards:** module `json`; example `17_energy_budget`
+
+**Unlocks:** module `json`; example `17_energy_budget`
+
+### Plugged In (`first_charge`)
+
+Charge your battery five times.
+
+**Requires:** Out of Juice
+
+**Criteria:** `charges` reaches 5.
+
+**Rewards:** upgrade `charger`
+
+**Unlocks:** upgrade `charger`
+
+### Call a Tow (`rescued`)
+
+Get rescued after running out of energy.
+
+**Requires:** Out of Juice
+
+**Criteria:** `rescues` reaches 1.
+
+**Rewards:** +100 money
+
+**Unlocks:** Nothing.
+
+### Efficiency Expert (`efficiency_expert`)
+
+Check the energy cost of an action 50 times.
+
+**Requires:** Power User
+
+**Criteria:** `api:energy_cost` reaches 50.
+
+**Rewards:** example `21_night_shift`
+
+**Unlocks:** example `21_night_shift`
+
+### Traffic Jam (`traffic_jam`)
+
+Wait 50 ticks in the dock queue.
+
+**Criteria:** `dock_wait_ticks` reaches 50.
+
+**Rewards:** function `dock_free`; function `dock_rate`; upgrade `dock`
+
+**Unlocks:** function `dock_free`; function `dock_rate`; upgrade `dock`
+
+### Dock Master (`dock_master`)
+
+Have the dock serve 2000 units.
+
+**Requires:** Traffic Jam
+
+**Criteria:** `dock_units` reaches 2000.
+
+**Rewards:** example `20_dock_etiquette`; +500 money
+
+**Unlocks:** example `20_dock_etiquette`
+
+## Depths
+
+### Deep Ambition (`deep_ambition`)
+
+Earn 8000 money from selling ore.
+
+**Criteria:** `money_earned` reaches 8000.
+
+**Rewards:** function `layer`; function `layers`; function `descend`; function `ascend`; upgrade `shaft`
+
+**Unlocks:** function `layer`; function `layers`; function `descend`; function `ascend`; upgrade `shaft`
+
+### First Descent (`first_descent`)
+
+Reach the first underground layer.
+
+**Requires:** Deep Ambition
+
+**Criteria:** `max_layer` reaches 1.
+
+**Rewards:** example `18_go_deep`; +300 money
+
+**Unlocks:** example `18_go_deep`
+
+### Gallery Veteran (`galleries_veteran`)
+
+Mine 100 units on layer 1.
+
+**Requires:** First Descent
+
+**Criteria:** `mined_layer:1` reaches 100.
+
+**Rewards:** module `copy`; +500 money
+
+**Unlocks:** module `copy`
+
+### Feel the Heat (`feel_the_heat`)
+
+Reach the deep level.
+
+**Requires:** First Descent
+
+**Criteria:** `max_layer` reaches 2.
+
+**Rewards:** function `temperature`; function `cool`; function `climate`; upgrade `cooling`; upgrade `ventilation`
+
+**Unlocks:** function `temperature`; function `cool`; function `climate`; upgrade `cooling`; upgrade `ventilation`
+
+### Cool Head (`cool_head`)
+
+Reach a temperature of 80 without overheating.
+
+**Requires:** Feel the Heat
+
+**Criteria:** `peak_temp` reaches 80.
+
+**Rewards:** example `19_climate_watch`
+
+**Unlocks:** example `19_climate_watch`
+
+### Meltdown (`meltdown`)
+
+Overheat a miner.
+
+**Requires:** Feel the Heat
+
+**Criteria:** `overheats` reaches 1.
+
+**Rewards:** +150 money
+
+**Unlocks:** Nothing.
+
+### Deep Miner (`deep_miner`)
+
+Mine 200 units on layer 2.
+
+**Requires:** Feel the Heat
+
+**Criteria:** `mined_layer:2` reaches 200.
+
+**Rewards:** +1500 money
+
+**Unlocks:** Nothing.
+
+### Fresh Air (`fresh_air`)
+
+Have three miners in hot layers at once.
+
+**Requires:** Feel the Heat
+
+**Criteria:** `peak_deep_miners` reaches 3.
+
+**Rewards:** example `23_vent_manager`
+
+**Unlocks:** example `23_vent_manager`
+
+### Into the Abyss (`abyss_gazer`)
+
+Reach the abyssal rock layer.
+
+**Requires:** Deep Miner
+
+**Criteria:** `max_layer` reaches 3.
+
+**Rewards:** example `22_layer_prospector`
+
+**Unlocks:** example `22_layer_prospector`
+
+### Abyssal Haul (`abyssal_haul`)
+
+Mine 100 units on layer 3.
+
+**Requires:** Into the Abyss
+
+**Criteria:** `mined_layer:3` reaches 100.
+
+**Rewards:** example `24_full_automation`; +5000 money
+
+**Unlocks:** example `24_full_automation`

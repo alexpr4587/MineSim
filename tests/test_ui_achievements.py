@@ -55,11 +55,11 @@ def test_layout_tree_no_overlaps_parents_left():
     assert pos["b"][1] != pos["c"][1]  # siblings never overlap
 
 
-def test_panel_has_eight_tabs_without_overlaps(qapp):
+def test_panel_has_ten_tabs_without_overlaps(qapp):
     game = Game.new()
     panel = AchievementsPanel(game=game)
     panel.refresh()
-    assert panel.tabs.count() == 8
+    assert panel.tabs.count() == 10
     labels = [panel.tabs.tabText(index) for index in range(panel.tabs.count())]
     assert labels == [
         "Code",
@@ -70,6 +70,8 @@ def test_panel_has_eight_tabs_without_overlaps(qapp):
         "Fleet",
         "Explorer",
         "Data",
+        "Engineering",
+        "Depths",
     ]
     assert panel.tabs.tabBar().usesScrollButtons()
     for tab_id, view in panel._views.items():

@@ -20,6 +20,8 @@ TABS = {
     "fleet",
     "explorer",
     "data",
+    "engineering",
+    "depths",
 }
 
 
@@ -28,8 +30,8 @@ def content():
     return load_content()
 
 
-def test_v03_achievements_exist_with_eight_tabs(content):
-    assert len(content.achievements) == 69
+def test_v03_achievements_exist_with_ten_tabs(content):
+    assert len(content.achievements) == 86
     assert {achievement.tab for achievement in content.achievements.values()} == TABS
     assert content.achievements["storage_unit"].tab == "trading"
     assert content.achievements["smelter"].tab == "industry"
@@ -97,44 +99,10 @@ def test_v03_initial_unlock_sets(content):
     state = ProgressionState(content)
     assert state.unlocked_recipes == set()
     assert state.unlocked_features == set()
-    assert state.unlocked_upgrades == {
-        "shaft",
-        "battery",
-        "charger",
-        "cooling",
-        "ventilation",
-        "dock",
-    }
-    assert state.unlocked_modules == {"math", "json", "copy"}
-    assert state.unlocked_examples == {
-        "01_hello",
-        "17_energy_budget",
-        "18_go_deep",
-        "19_climate_watch",
-        "20_dock_etiquette",
-        "21_night_shift",
-        "22_layer_prospector",
-        "23_vent_manager",
-        "24_full_automation",
-    }
-    assert state.unlocked_functions == {
-        "move",
-        "mine",
-        "peek",
-        "position",
-        "battery",
-        "charge",
-        "energy_cost",
-        "temperature",
-        "cool",
-        "climate",
-        "layer",
-        "layers",
-        "descend",
-        "ascend",
-        "dock_free",
-        "dock_rate",
-    }
+    assert state.unlocked_upgrades == set()
+    assert state.unlocked_modules == {"math"}
+    assert state.unlocked_examples == {"01_hello"}
+    assert state.unlocked_functions == {"move", "mine", "peek", "position"}
 
 
 def test_scripted_headless_session_unlocks_a_chain_across_tabs():

@@ -415,6 +415,8 @@ class Achievement(_ContentModel):
         "fleet",
         "explorer",
         "data",
+        "engineering",
+        "depths",
     ]
     parent: str | None = None
     title: str = Field(min_length=1)

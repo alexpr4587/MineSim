@@ -1408,5 +1408,383 @@
         "amount": 200
       }
     ]
+  },
+  {
+    "id": "out_of_juice",
+    "tab": "engineering",
+    "parent": null,
+    "title": "Out of Juice",
+    "description": "Run out of energy while trying to act.",
+    "criteria": {
+      "type": "counter",
+      "counter": "fail:low_energy",
+      "target": 1
+    },
+    "rewards": [
+      {
+        "type": "unlock_function",
+        "id": "battery"
+      },
+      {
+        "type": "unlock_function",
+        "id": "charge"
+      },
+      {
+        "type": "unlock_function",
+        "id": "energy_cost"
+      },
+      {
+        "type": "unlock_upgrade",
+        "id": "battery"
+      }
+    ]
+  },
+  {
+    "id": "power_user",
+    "tab": "engineering",
+    "parent": "out_of_juice",
+    "title": "Power User",
+    "description": "Spend 5000 energy.",
+    "criteria": {
+      "type": "counter",
+      "counter": "energy_used",
+      "target": 5000
+    },
+    "rewards": [
+      {
+        "type": "unlock_module",
+        "id": "json"
+      },
+      {
+        "type": "unlock_example",
+        "id": "17_energy_budget"
+      }
+    ]
+  },
+  {
+    "id": "first_charge",
+    "tab": "engineering",
+    "parent": "out_of_juice",
+    "title": "Plugged In",
+    "description": "Charge your battery five times.",
+    "criteria": {
+      "type": "counter",
+      "counter": "charges",
+      "target": 5
+    },
+    "rewards": [
+      {
+        "type": "unlock_upgrade",
+        "id": "charger"
+      }
+    ]
+  },
+  {
+    "id": "rescued",
+    "tab": "engineering",
+    "parent": "out_of_juice",
+    "title": "Call a Tow",
+    "description": "Get rescued after running out of energy.",
+    "criteria": {
+      "type": "counter",
+      "counter": "rescues",
+      "target": 1
+    },
+    "rewards": [
+      {
+        "type": "money",
+        "amount": 100
+      }
+    ]
+  },
+  {
+    "id": "efficiency_expert",
+    "tab": "engineering",
+    "parent": "power_user",
+    "title": "Efficiency Expert",
+    "description": "Check the energy cost of an action 50 times.",
+    "criteria": {
+      "type": "counter",
+      "counter": "api:energy_cost",
+      "target": 50
+    },
+    "rewards": [
+      {
+        "type": "unlock_example",
+        "id": "21_night_shift"
+      }
+    ]
+  },
+  {
+    "id": "traffic_jam",
+    "tab": "engineering",
+    "parent": null,
+    "title": "Traffic Jam",
+    "description": "Wait 50 ticks in the dock queue.",
+    "criteria": {
+      "type": "counter",
+      "counter": "dock_wait_ticks",
+      "target": 50
+    },
+    "rewards": [
+      {
+        "type": "unlock_function",
+        "id": "dock_free"
+      },
+      {
+        "type": "unlock_function",
+        "id": "dock_rate"
+      },
+      {
+        "type": "unlock_upgrade",
+        "id": "dock"
+      }
+    ]
+  },
+  {
+    "id": "dock_master",
+    "tab": "engineering",
+    "parent": "traffic_jam",
+    "title": "Dock Master",
+    "description": "Have the dock serve 2000 units.",
+    "criteria": {
+      "type": "counter",
+      "counter": "dock_units",
+      "target": 2000
+    },
+    "rewards": [
+      {
+        "type": "unlock_example",
+        "id": "20_dock_etiquette"
+      },
+      {
+        "type": "money",
+        "amount": 500
+      }
+    ]
+  },
+  {
+    "id": "deep_ambition",
+    "tab": "depths",
+    "parent": null,
+    "title": "Deep Ambition",
+    "description": "Earn 8000 money from selling ore.",
+    "criteria": {
+      "type": "counter",
+      "counter": "money_earned",
+      "target": 8000
+    },
+    "rewards": [
+      {
+        "type": "unlock_function",
+        "id": "layer"
+      },
+      {
+        "type": "unlock_function",
+        "id": "layers"
+      },
+      {
+        "type": "unlock_function",
+        "id": "descend"
+      },
+      {
+        "type": "unlock_function",
+        "id": "ascend"
+      },
+      {
+        "type": "unlock_upgrade",
+        "id": "shaft"
+      }
+    ]
+  },
+  {
+    "id": "first_descent",
+    "tab": "depths",
+    "parent": "deep_ambition",
+    "title": "First Descent",
+    "description": "Reach the first underground layer.",
+    "criteria": {
+      "type": "counter",
+      "counter": "max_layer",
+      "target": 1
+    },
+    "rewards": [
+      {
+        "type": "unlock_example",
+        "id": "18_go_deep"
+      },
+      {
+        "type": "money",
+        "amount": 300
+      }
+    ]
+  },
+  {
+    "id": "galleries_veteran",
+    "tab": "depths",
+    "parent": "first_descent",
+    "title": "Gallery Veteran",
+    "description": "Mine 100 units on layer 1.",
+    "criteria": {
+      "type": "counter",
+      "counter": "mined_layer:1",
+      "target": 100
+    },
+    "rewards": [
+      {
+        "type": "unlock_module",
+        "id": "copy"
+      },
+      {
+        "type": "money",
+        "amount": 500
+      }
+    ]
+  },
+  {
+    "id": "feel_the_heat",
+    "tab": "depths",
+    "parent": "first_descent",
+    "title": "Feel the Heat",
+    "description": "Reach the deep level.",
+    "criteria": {
+      "type": "counter",
+      "counter": "max_layer",
+      "target": 2
+    },
+    "rewards": [
+      {
+        "type": "unlock_function",
+        "id": "temperature"
+      },
+      {
+        "type": "unlock_function",
+        "id": "cool"
+      },
+      {
+        "type": "unlock_function",
+        "id": "climate"
+      },
+      {
+        "type": "unlock_upgrade",
+        "id": "cooling"
+      },
+      {
+        "type": "unlock_upgrade",
+        "id": "ventilation"
+      }
+    ]
+  },
+  {
+    "id": "cool_head",
+    "tab": "depths",
+    "parent": "feel_the_heat",
+    "title": "Cool Head",
+    "description": "Reach a temperature of 80 without overheating.",
+    "criteria": {
+      "type": "counter",
+      "counter": "peak_temp",
+      "target": 80
+    },
+    "rewards": [
+      {
+        "type": "unlock_example",
+        "id": "19_climate_watch"
+      }
+    ]
+  },
+  {
+    "id": "meltdown",
+    "tab": "depths",
+    "parent": "feel_the_heat",
+    "title": "Meltdown",
+    "description": "Overheat a miner.",
+    "criteria": {
+      "type": "counter",
+      "counter": "overheats",
+      "target": 1
+    },
+    "rewards": [
+      {
+        "type": "money",
+        "amount": 150
+      }
+    ]
+  },
+  {
+    "id": "deep_miner",
+    "tab": "depths",
+    "parent": "feel_the_heat",
+    "title": "Deep Miner",
+    "description": "Mine 200 units on layer 2.",
+    "criteria": {
+      "type": "counter",
+      "counter": "mined_layer:2",
+      "target": 200
+    },
+    "rewards": [
+      {
+        "type": "money",
+        "amount": 1500
+      }
+    ]
+  },
+  {
+    "id": "fresh_air",
+    "tab": "depths",
+    "parent": "feel_the_heat",
+    "title": "Fresh Air",
+    "description": "Have three miners in hot layers at once.",
+    "criteria": {
+      "type": "counter",
+      "counter": "peak_deep_miners",
+      "target": 3
+    },
+    "rewards": [
+      {
+        "type": "unlock_example",
+        "id": "23_vent_manager"
+      }
+    ]
+  },
+  {
+    "id": "abyss_gazer",
+    "tab": "depths",
+    "parent": "deep_miner",
+    "title": "Into the Abyss",
+    "description": "Reach the abyssal rock layer.",
+    "criteria": {
+      "type": "counter",
+      "counter": "max_layer",
+      "target": 3
+    },
+    "rewards": [
+      {
+        "type": "unlock_example",
+        "id": "22_layer_prospector"
+      }
+    ]
+  },
+  {
+    "id": "abyssal_haul",
+    "tab": "depths",
+    "parent": "abyss_gazer",
+    "title": "Abyssal Haul",
+    "description": "Mine 100 units on layer 3.",
+    "criteria": {
+      "type": "counter",
+      "counter": "mined_layer:3",
+      "target": 100
+    },
+    "rewards": [
+      {
+        "type": "unlock_example",
+        "id": "24_full_automation"
+      },
+      {
+        "type": "money",
+        "amount": 5000
+      }
+    ]
   }
 ]

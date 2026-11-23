@@ -136,7 +136,7 @@
       3000,
       12000
     ],
-    "unlocked_by": null
+    "unlocked_by": "deep_ambition"
   },
   {
     "id": "battery",
@@ -152,7 +152,7 @@
       4000,
       9000
     ],
-    "unlocked_by": null
+    "unlocked_by": "out_of_juice"
   },
   {
     "id": "charger",
@@ -166,7 +166,7 @@
       900,
       2500
     ],
-    "unlocked_by": null
+    "unlocked_by": "first_charge"
   },
   {
     "id": "cooling",
@@ -181,7 +181,7 @@
       3000,
       7000
     ],
-    "unlocked_by": null
+    "unlocked_by": "feel_the_heat"
   },
   {
     "id": "ventilation",
@@ -197,7 +197,7 @@
       8000,
       16000
     ],
-    "unlocked_by": null
+    "unlocked_by": "feel_the_heat"
   },
   {
     "id": "dock",
@@ -212,6 +212,6 @@
       3000,
       8000
     ],
-    "unlocked_by": null
+    "unlocked_by": "traffic_jam"
   }
 ]

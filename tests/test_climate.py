@@ -81,7 +81,7 @@ def test_config_upgrades_and_functions(content):
     assert ventilation.stat_changes() == {"airflow_bonus": 2}
     for name in ("temperature", "cool", "climate"):
         function = content.functions[name]
-        assert function.unlocked_by is None
+        assert function.unlocked_by == "feel_the_heat"
 
 
 def test_hot_layers_heat_only_while_working(content):

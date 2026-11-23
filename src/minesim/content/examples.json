@@ -99,48 +99,48 @@
     "id": "17_energy_budget",
     "title": "Energy Budget",
     "file": "17_energy_budget.py",
-    "unlocked_by": null
+    "unlocked_by": "power_user"
   },
   {
     "id": "18_go_deep",
     "title": "Go Deep",
     "file": "18_go_deep.py",
-    "unlocked_by": null
+    "unlocked_by": "first_descent"
   },
   {
     "id": "19_climate_watch",
     "title": "Climate Watch",
     "file": "19_climate_watch.py",
-    "unlocked_by": null
+    "unlocked_by": "cool_head"
   },
   {
     "id": "20_dock_etiquette",
     "title": "Dock Etiquette",
     "file": "20_dock_etiquette.py",
-    "unlocked_by": null
+    "unlocked_by": "dock_master"
   },
   {
     "id": "21_night_shift",
     "title": "Night Shift",
     "file": "21_night_shift.py",
-    "unlocked_by": null
+    "unlocked_by": "efficiency_expert"
   },
   {
     "id": "22_layer_prospector",
     "title": "Layer Prospector",
     "file": "22_layer_prospector.py",
-    "unlocked_by": null
+    "unlocked_by": "abyss_gazer"
   },
   {
     "id": "23_vent_manager",
     "title": "Vent Manager",
     "file": "23_vent_manager.py",
-    "unlocked_by": null
+    "unlocked_by": "fresh_air"
   },
   {
     "id": "24_full_automation",
     "title": "Full Automation",
     "file": "24_full_automation.py",
-    "unlocked_by": null
+    "unlocked_by": "abyssal_haul"
   }
 ]

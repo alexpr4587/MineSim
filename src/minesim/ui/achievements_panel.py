@@ -48,6 +48,8 @@ _TAB_LABELS = {
     "fleet": "Fleet",
     "explorer": "Explorer",
     "data": "Data",
+    "engineering": "Engineering",
+    "depths": "Depths",
 }
 
 _TAB_ORDER = (
@@ -59,6 +61,8 @@ _TAB_ORDER = (
     "fleet",
     "explorer",
     "data",
+    "engineering",
+    "depths",
 )
 
 

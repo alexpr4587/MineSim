@@ -109,8 +109,8 @@ def _lock(monkeypatch, *names):
 
 
 def test_v04_modules_and_examples(content):
-    assert content.modules["json"].unlocked_by is None
-    assert content.modules["copy"].unlocked_by is None
+    assert content.modules["json"].unlocked_by == "power_user"
+    assert content.modules["copy"].unlocked_by == "galleries_veteran"
     expected = {
         "17_energy_budget",
         "18_go_deep",
@@ -123,9 +123,19 @@ def test_v04_modules_and_examples(content):
     }
     assert expected <= set(content.examples)
     examples_dir = ROOT / "src" / "minesim" / "examples"
+    unlocked_by = {
+        "17_energy_budget": "power_user",
+        "18_go_deep": "first_descent",
+        "19_climate_watch": "cool_head",
+        "20_dock_etiquette": "dock_master",
+        "21_night_shift": "efficiency_expert",
+        "22_layer_prospector": "abyss_gazer",
+        "23_vent_manager": "fresh_air",
+        "24_full_automation": "abyssal_haul",
+    }
     for example_id in expected:
         example = content.examples[example_id]
-        assert example.unlocked_by is None
+        assert example.unlocked_by == unlocked_by[example_id]
         path = examples_dir / example.file
         assert path.is_file()
         source = path.read_text(encoding="utf-8")
