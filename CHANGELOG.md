@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.4.0] - 2026-11-24
+
+### Added
+
+- Underground layers: the surface, the old galleries, the deep level and the
+  abyssal rock, reached through the new shaft and its stations (`layers`,
+  `layer`, `descend` and `ascend`, plus `PageUp`/`PageDown` in the world view).
+- Energy and rescue: every miner has a battery, charges at the base or a
+  station (`battery`, `charge`, `energy_cost`) and is towed back to the
+  station when it runs dry, losing its inventory.
+- Heat and shared ventilation: hot layers warm miners, ventilation limits how
+  many can work there without overloading the airflow (`temperature`, `cool`,
+  `climate`), and overheated miners shut down until they cool.
+- The shared dock: a queued, tick-based unloading point (`dock_free`,
+  `dock_rate`) that serves the whole fleet.
+- The expanded `minerlib` library with energy-aware helpers for energy budgets,
+  charging, layers, shafts, cooling, climate and dock staggering; the existing
+  helpers now account for the battery.
+- Eight new example scripts: energy budget, going deep, climate watching, dock
+  etiquette, night shift, layer prospecting, vent management and full
+  automation.
+- 17 new achievements in the new Depths and Engineering tabs, for 86
+  achievements in 10 tabs in total.
+- Save format version 13, with automatic migration of v0.3.0 and v0.3.1
+  saves; layers, batteries, temperature and the new counters are persisted.
+
 ## [0.3.1] - 2026-11-17
 
 ### Added

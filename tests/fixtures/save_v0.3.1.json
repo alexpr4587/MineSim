@@ -1,0 +1,111 @@
+{
+  "version": 9,
+  "seed": 12345,
+  "tick": 55,
+  "selected_skin": "rusty_bot",
+  "fleet": [
+    {
+      "id": 0,
+      "x": 2,
+      "y": 1,
+      "facing": "north",
+      "inventory": {
+        "stone": 1
+      },
+      "script": ""
+    },
+    {
+      "id": 1,
+      "x": -1,
+      "y": 2,
+      "facing": "west",
+      "inventory": {},
+      "script": "main.py"
+    }
+  ],
+  "player_stats": {
+    "money": 120,
+    "capacity": 12,
+    "tool_power": 1,
+    "tool_tier": 0,
+    "move_ticks": 4,
+    "scan_radius": 2,
+    "estimates": {},
+    "stats": {
+      "attempts": {},
+      "sales": 1,
+      "successes": {},
+      "tiles_moved": 8,
+      "total_earned": 12,
+      "total_mined": 3
+    },
+    "upgrades": {
+      "miner_bay": 1
+    }
+  },
+  "progression": {
+    "completed": {
+      "first_miner": 50
+    },
+    "counters": {
+      "miners_spawned": 1,
+      "tiles_moved": 8
+    },
+    "current_fail_streak": 0,
+    "current_streak": 2,
+    "unlocked_examples": [
+      "01_hello",
+      "12_two_miners"
+    ],
+    "unlocked_features": [
+      "miners"
+    ],
+    "unlocked_functions": [
+      "mine",
+      "miner_id",
+      "miners",
+      "move",
+      "spawn_miner"
+    ],
+    "unlocked_modules": [
+      "math"
+    ],
+    "unlocked_ores": [
+      "stone"
+    ],
+    "unlocked_recipes": [],
+    "unlocked_skins": [
+      "rusty_bot"
+    ],
+    "unlocked_upgrades": [
+      "miner_bay"
+    ]
+  },
+  "warehouse": {
+    "capacity": 100,
+    "items": {
+      "stone": 1
+    }
+  },
+  "market": {
+    "step": 0
+  },
+  "refinery": {
+    "jobs": [],
+    "slots": 1,
+    "tick": 0
+  },
+  "contracts": {
+    "contracts": [],
+    "generation": 0,
+    "next_id": 1,
+    "slots": 3,
+    "tick": 0
+  },
+  "shared_memory": {
+    "goal": 10
+  },
+  "world_delta": {
+    "delta": {}
+  }
+}

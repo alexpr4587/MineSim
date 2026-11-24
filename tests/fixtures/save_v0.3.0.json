@@ -1,0 +1,103 @@
+{
+  "version": 8,
+  "seed": 12345,
+  "tick": 42,
+  "selected_skin": "rusty_bot",
+  "fleet": [
+    {
+      "id": 0,
+      "x": 1,
+      "y": 2,
+      "facing": "east",
+      "inventory": {
+        "stone": 2
+      },
+      "script": "main.py"
+    }
+  ],
+  "player_stats": {
+    "money": 43,
+    "capacity": 10,
+    "tool_power": 1,
+    "tool_tier": 0,
+    "move_ticks": 4,
+    "scan_radius": 2,
+    "estimates": {},
+    "stats": {
+      "attempts": {},
+      "sales": 0,
+      "successes": {},
+      "tiles_moved": 4,
+      "total_earned": 0,
+      "total_mined": 2
+    },
+    "upgrades": {
+      "drone_bay": 1
+    }
+  },
+  "progression": {
+    "completed": {
+      "first_drone": 40
+    },
+    "counters": {
+      "drones_spawned": 1,
+      "tiles_moved": 4
+    },
+    "current_fail_streak": 0,
+    "current_streak": 1,
+    "unlocked_examples": [
+      "01_hello",
+      "12_two_drones"
+    ],
+    "unlocked_features": [
+      "miners"
+    ],
+    "unlocked_functions": [
+      "drone_id",
+      "drones",
+      "mine",
+      "move",
+      "spawn_drone"
+    ],
+    "unlocked_modules": [
+      "math"
+    ],
+    "unlocked_ores": [
+      "stone"
+    ],
+    "unlocked_recipes": [],
+    "unlocked_skins": [
+      "rusty_bot"
+    ],
+    "unlocked_upgrades": [
+      "drone_bay"
+    ]
+  },
+  "warehouse": {
+    "capacity": 100,
+    "items": {
+      "stone": 3
+    }
+  },
+  "market": {
+    "step": 0
+  },
+  "refinery": {
+    "jobs": [],
+    "slots": 1,
+    "tick": 0
+  },
+  "contracts": {
+    "contracts": [],
+    "generation": 0,
+    "next_id": 1,
+    "slots": 3,
+    "tick": 0
+  },
+  "shared_memory": {
+    "goal": 5
+  },
+  "world_delta": {
+    "delta": {}
+  }
+}

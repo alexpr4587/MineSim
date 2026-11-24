@@ -8,6 +8,18 @@ functions, ores, upgrades and Python modules.
 
 ## Screenshots
 
+Underground layers with the shaft, its station and per-layer terrain:
+
+![MineSim underground layers](docs/screenshot-layers.png)
+
+The energy and climate HUD: battery, temperature and shared airflow:
+
+![MineSim energy and climate HUD](docs/screenshot-climate.png)
+
+Miner fleet with battery, temperature, scripts and consoles per miner:
+
+![MineSim miners](docs/screenshot-miners.png)
+
 Base panel with the warehouse, refinery and contracts:
 
 ![MineSim base panel](docs/screenshot.png)
@@ -16,36 +28,39 @@ Market chart with live prices and price history:
 
 ![MineSim market chart](docs/screenshot-market.png)
 
-Miner fleet with a script and console per miner:
-
-![MineSim miners](docs/screenshot-miners.png)
-
 ## Features
 
 - Infinite, procedurally generated and regenerating world with biomes and
   per-ore mining probabilities.
+- Four underground layers — surface, old galleries, deep level and abyssal
+  rock — with a shaft, a station on every layer and soft transitions.
 - A fleet of miners, each running its own Python script and sharing a typed
   key/value memory with the rest of the fleet.
+- Energy and rescue: every miner has a battery, charges at the base or a
+  station and is towed back when it runs dry.
+- Heat and shared ventilation: hot layers warm miners, the airflow limits how
+  many can work there and overheated miners shut down until they cool.
+- A shared dock with a tick-based queue for fleet-wide unloading.
 - Base warehouse with per-miner unloading and stock, a dynamic market with
   price history and a chart, a refinery with six recipes and delivery
   contracts.
 - World events: rich veins, slow zones and market news.
 - Lit 2.5D terrain renderer that can be toggled with `H`.
-- 69 achievements in eight tabs (Code, Mining, Business, Trading, Industry,
-  Fleet, Explorer and Data) that unlock API functions, ores, upgrades, modules,
-  features, recipes and example scripts.
+- 86 achievements in ten tabs (Code, Mining, Business, Trading, Industry,
+  Fleet, Explorer, Data, Depths and Engineering) that unlock API functions,
+  ores, upgrades, modules, features, recipes and example scripts.
 - Miner skins and pixel-art sprites, selected in the wardrobe panel (`K`).
 - Floating script editor with syntax highlighting (`Ctrl+R` run, `Ctrl+.` stop),
   closable tabs, a searchable **Open…** list, rename/duplicate/delete with a
   recoverable trash, per-tab autosave and running-script indicators (`Ctrl+W`
   closes a tab, `Ctrl+Shift+T` reopens the last one), plus an API reference,
   console, HUD, fleet consoles and achievement toasts.
-- 35 player API functions, the `minerlib` helper module (including route,
-  trading, data and OOP helpers) and 16 example scripts.
-- Data-driven content, deterministic seeded worlds and save format v9 with
-  autosave and migration of v0.1.0, v0.2.0 and later saves.
+- 47 player API functions, the `minerlib` helper module (including route,
+  trading, data, OOP, energy, layer and dock helpers) and 24 example scripts.
+- Data-driven content, deterministic seeded worlds and save format v13 with
+  autosave and migration of v0.1.0, v0.2.0, v0.3.0 and v0.3.1 saves.
 - One-dir PyInstaller builds for Windows and Linux, with multi-miner scripts
-  supported in the frozen build.
+  on several layers supported in the frozen build.
 
 ## Documentation
 
@@ -59,7 +74,8 @@ Miner fleet with a script and console per miner:
 Single-letter keys (`E F L U K B M T H C G Space 1-5`) work while the world
 view has focus. While the code editor has focus, letters are typed as code —
 press `Esc` (or click the world) first, or use the **View** menu, which works
-from anywhere. In the editor, use the tab close buttons, middle-click, `Ctrl+W`
+from anywhere. Use `PageUp` and `PageDown` in the world to look at the layer
+above or below. In the editor, use the tab close buttons, middle-click, `Ctrl+W`
 or `Ctrl+Shift+T` to manage scripts; the `⋯` menu renames, duplicates, deletes
 and restores files.
 
@@ -74,6 +90,7 @@ and restores files.
 | `M` / `Ctrl+M` or View menu | Toggle the market panel and price chart |
 | `T` / `Ctrl+T` or View menu | Toggle the miners panel and fleet view |
 | `H` or View menu | Toggle lit 2.5D terrain lighting |
+| `PageUp` / `PageDown` | View the layer above / below |
 | `C` | Recenter the world on the miner |
 | `G` | Toggle the world grid |
 | `F10` / `Alt+V` | Open the File / View menu |

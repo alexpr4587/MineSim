@@ -20,7 +20,9 @@ three open tabs and the Open… list, saved as
 ``artifacts/ui_editor_tabs.png``), ``--layer N`` (put the main miner on
 layer N, run a short mining session and save ``artifacts/ui_layer_N.png``),
 ``--dock`` (queue miners at the shared dock and save
-``artifacts/ui_dock.png``) and ``--output``.
+``artifacts/ui_dock.png``), ``--climate`` (a hot layer, a low battery and the
+energy/climate HUD with the miners panel, saved as ``artifacts/ui_climate.png``)
+and ``--output``.
 """
 
 from __future__ import annotations
@@ -47,6 +49,7 @@ __all__ = [
     "build_window",
     "main",
     "parse_size",
+    "prepare_climate",
     "prepare_economy",
     "unlock_everything",
 ]
@@ -252,6 +255,35 @@ def prepare_layer(game: Game, layer: int) -> Game:
     return game
 
 
+def prepare_climate(game: Game, count: int = 4) -> Game:
+    """Show a hot layer, a low battery and the energy/climate HUD."""
+    count = max(1, int(count))
+    game.progression_state.unlock_upgrade("shaft")
+    game.progression_state.unlock_upgrade("ventilation")
+    game.player_stats.upgrades["shaft"] = max(
+        int(game.player_stats.upgrades.get("shaft", 0) or 0), 2
+    )
+    game.player_stats.upgrades["miner_bay"] = max(
+        int(game.player_stats.upgrades.get("miner_bay", 0) or 0), count - 1
+    )
+    game.player_stats.money = 10000
+    for _ in range(count - 1):
+        game.engine.spawn_miner()
+    offsets = ((2, 0), (-2, 0), (0, 2), (0, -2), (3, 2), (-3, -2))
+    for index, miner_id in enumerate(sorted(game.engine.miners)):
+        miner = game.engine.miner_by_id(miner_id)
+        if index == 0:
+            miner.layer = 2
+            miner.x, miner.y = 0, 0
+            miner.energy = max(0, int(miner.battery_capacity) - 10)
+            miner.temperature = 100.0
+        else:
+            dx, dy = offsets[(index - 1) % len(offsets)]
+            miner.layer = 0
+            miner.x, miner.y = dx, dy
+    return game
+
+
 def _find_rich_vein(game: Game) -> object | None:
     """Return the first active rich vein for the screenshot."""
     world_events = getattr(game.engine, "world_events", None)
@@ -357,6 +389,7 @@ def build_window(
     layer: int | None = None,
     dock: bool = False,
     api: bool = False,
+    climate: bool = False,
 ) -> MainWindow:
     """Build the real main window and run ``ticks`` engine ticks."""
     app = QApplication.instance() or QApplication([])
@@ -383,12 +416,14 @@ def build_window(
     if editor_tabs:
         scripts_dir = Path(tempfile.mkdtemp(prefix="minesim_editor_tabs_"))
         _write_editor_scripts(scripts_dir)
-    if panel or miners or layer is not None or dock or api:
+    if panel or miners or layer is not None or dock or api or climate:
         unlock_everything(game)
     if panel:
         prepare_economy(game)
     if layer is not None:
         prepare_layer(game, int(layer))
+    if climate:
+        prepare_climate(game)
     if dock:
         prepare_dock(game)
     if skin:
@@ -413,7 +448,14 @@ def build_window(
         _setup_editor_tabs(window, scripts_dir, app)
     if miners:
         _setup_miners(window, game, int(miners), app)
-    if panel is None and not miners and not editor_tabs and layer is None and not dock:
+    if (
+        panel is None
+        and not miners
+        and not editor_tabs
+        and layer is None
+        and not dock
+        and not climate
+    ):
         for command in COMMAND_SEQUENCE:
             game.submit(command)
         for _ in range(int(ticks)):
@@ -427,13 +469,26 @@ def build_window(
         window.world_view.center_on_miner()
         window.world_view.set_viewed_layer(int(layer))
         window.world_view.finish_layer_transition()
+    elif climate:
+        window.game_loop.stop()
+        window.world_view.snap_visual_to_miner()
+        window.world_view.center_on_miner()
+        window.world_view.set_viewed_layer(2)
+        window.world_view.finish_layer_transition()
     elif not miners:
         window.game_loop.stop()
         window.world_view.snap_visual_to_miner()
         window.world_view.center_on_miner()
     window.hud.refresh()
     editor_panel = getattr(window, "editor_panel", None)
-    if editor_panel is not None and panel is None and not miners and layer is None and not dock:
+    if (
+        editor_panel is not None
+        and panel is None
+        and not miners
+        and layer is None
+        and not dock
+        and not climate
+    ):
         from minesim.ui.editor_panel import STARTER_SCRIPT
 
         editor = getattr(editor_panel, "editor", None) or getattr(editor_panel, "code_editor", None)
@@ -548,6 +603,12 @@ def main() -> int:
         action="store_true",
         help="show the API reference panel and save artifacts/ui_api.png",
     )
+    parser.add_argument(
+        "--climate",
+        action="store_true",
+        help="show a hot layer and the energy/climate HUD with the miners panel, "
+        "saved as artifacts/ui_climate.png",
+    )
     parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args()
     window = build_window(
@@ -565,6 +626,7 @@ def main() -> int:
         layer=args.layer,
         dock=args.dock,
         api=args.api,
+        climate=args.climate,
     )
     for panel_name in (
         "achievements_panel",
@@ -581,6 +643,8 @@ def main() -> int:
         if args.wardrobe and panel_name == "wardrobe_panel":
             continue
         if args.miners and panel_name in ("miners_panel", "editor_panel"):
+            continue
+        if args.climate and panel_name == "miners_panel":
             continue
         if args.editor_tabs and panel_name == "editor_panel":
             continue
@@ -605,6 +669,13 @@ def main() -> int:
             window.show_wardrobe()
         except Exception:
             window.wardrobe_panel.show_panel()
+    elif args.climate:
+        try:
+            window.show_miners()
+        except Exception:
+            window.miners_panel.show_panel()
+        window.miners_panel.move(8, 44)
+        window.miners_panel.resize(350, 440)
     if args.locked and not args.panel:
         try:
             window.show_market()
@@ -654,6 +725,8 @@ def main() -> int:
         default_name = "ui_dock.png"
     if args.api:
         default_name = "ui_api.png"
+    if args.climate:
+        default_name = "ui_climate.png"
     out = args.output or (Path(__file__).resolve().parents[1] / "artifacts" / default_name)
     out.parent.mkdir(parents=True, exist_ok=True)
     window.grab().save(str(out))
