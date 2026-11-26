@@ -20,15 +20,17 @@ Steps to reproduce the behavior:
 
 A clear and concise description of what you expected to happen.
 
-## Screenshots
+## Environment (please complete)
 
-If applicable, add screenshots to help explain your problem.
+- MineSim version: [e.g. v0.4.0, or the version shown in Help → About]
+- Operating system: [e.g. Windows 11, Ubuntu 24.04]
+- Install type: [release build, run from source, or a custom build]
+- Python version (only when running from source): [e.g. 3.12]
 
-## Environment
+## Screenshots or logs
 
-- OS: [e.g. Ubuntu 22.04, Windows 11]
-- MineSim version: [e.g. v0.1.0]
-- Python version: [e.g. 3.12]
+If applicable, add screenshots, a console excerpt or the script that caused the
+problem. Remove any personal paths or tokens before posting.
 
 ## Additional context
 

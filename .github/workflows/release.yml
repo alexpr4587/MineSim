@@ -26,13 +26,13 @@ jobs:
       - run: uv run pytest -q
       - run: uv run pyinstaller minesim.spec --distpath dist/minesim --workpath build/minesim
       - if: runner.os == 'Linux'
-        run: dist/minesim/minesim/minesim --selftest
+        run: dist/minesim/minesim/MineSim --selftest
       - if: runner.os == 'Linux'
-        run: dist/minesim/minesim/minesim --selftest-ui
+        run: dist/minesim/minesim/MineSim --selftest-ui
       - if: runner.os == 'Windows'
-        run: dist/minesim/minesim/minesim.exe --selftest
+        run: dist/minesim/minesim/MineSim.exe --selftest
       - if: runner.os == 'Windows'
-        run: dist/minesim/minesim/minesim.exe --selftest-ui
+        run: dist/minesim/minesim/MineSim.exe --selftest-ui
       - name: Package (Linux)
         if: runner.os == 'Linux'
         run: tar -czf minesim-linux.tar.gz -C dist/minesim minesim

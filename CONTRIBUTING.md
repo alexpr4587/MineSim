@@ -1,14 +1,15 @@
 # Contributing to MineSim
 
-MineSim is an open-source 2D top-down programming game. Contributions are
-welcome: bug fixes, features, content, documentation and translations.
+MineSim is an open-source 2D top-down programming game. Bug fixes, features,
+content, documentation and translations are welcome. Please read the
+[code of conduct](.github/CODE_OF_CONDUCT.md) first.
 
 ## Setup
 
-1. Clone the repository:
+1. Clone the repository and enter it:
    ```sh
-   git clone <repo-url>
-   cd minesim
+   git clone https://github.com/alexpr4587/MineSim.git
+   cd MineSim
    ```
 2. Install [uv](https://astral.sh/) and sync the project:
    ```sh
@@ -32,7 +33,16 @@ uv run pytest -q
 
 Tests use `QT_QPA_PLATFORM=offscreen`. UI changes must also save a PNG with
 `tools/screenshot.py` into `artifacts/` (and describe what it shows in the
-commit).
+commit). For the README and press images, regenerate the deterministic scenes:
+
+```sh
+uv run python tools/screenshot.py --preset hero
+uv run python tools/social_preview.py
+```
+
+Available presets: `hero`, `editor`, `layers`, `market`, `miners` and `base`.
+Each one writes a 1920x1080 image and a 1080x1920 portrait variant into
+`docs/press/`.
 
 ## Architecture
 

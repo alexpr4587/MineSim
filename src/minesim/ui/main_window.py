@@ -5,20 +5,22 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QKeySequence, QShortcut
+from PySide6.QtCore import Qt, QTimer, QUrl
+from PySide6.QtGui import QDesktopServices, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QFileDialog,
     QLineEdit,
     QMainWindow,
     QMenu,
     QMenuBar,
+    QMessageBox,
     QPlainTextEdit,
     QTextEdit,
     QVBoxLayout,
     QWidget,
 )
 
+from minesim import __version__
 from minesim.core.game import Game
 from minesim.core.save import default_save_path
 from minesim.ui.achievements_panel import AchievementsPanel
@@ -28,6 +30,11 @@ from minesim.ui.editor_panel import EditorPanel, default_scripts_dir
 from minesim.ui.floating_panel import ensure_settings_names
 from minesim.ui.game_loop import GameLoop
 from minesim.ui.hud import HUD
+from minesim.ui.links import (
+    BUG_REPORT_URL,
+    FEEDBACK_URL,
+    PROJECT_PAGE_URL,
+)
 from minesim.ui.market_panel import MarketPanel
 from minesim.ui.miners_panel import MinersPanel
 from minesim.ui.toasts import ToastManager
@@ -607,12 +614,55 @@ class MainWindow(QMainWindow):
         self.world_view.terrain_lighting_changed.connect(self._sync_terrain_action)
         menu_bar.addMenu(view_menu)
         self._view_menu = view_menu
+        self._build_help_menu(menu_bar)
         self.setMenuBar(menu_bar)
         self._file_menu = file_menu
         # F10 opens the File menu.
         self._f10_shortcut = QShortcut(QKeySequence(Qt.Key.Key_F10), self)
         self._f10_shortcut.activated.connect(self._open_file_menu)
         self._sync_view_actions()
+
+    def _build_help_menu(self, menu_bar: QMenuBar) -> None:
+        """Add the Help menu with bug, feedback, project and About entries."""
+        help_menu = QMenu("&Help", self)
+        self._report_bug_action = help_menu.addAction("Report a bug")
+        self._report_bug_action.setData(BUG_REPORT_URL)
+        self._report_bug_action.triggered.connect(
+            lambda _checked=False: self._open_url(BUG_REPORT_URL)
+        )
+        self._feedback_action = help_menu.addAction("Send feedback")
+        self._feedback_action.setData(FEEDBACK_URL)
+        self._feedback_action.triggered.connect(lambda _checked=False: self._open_url(FEEDBACK_URL))
+        self._project_page_action = help_menu.addAction("Open the project page")
+        self._project_page_action.setData(PROJECT_PAGE_URL)
+        self._project_page_action.triggered.connect(
+            lambda _checked=False: self._open_url(PROJECT_PAGE_URL)
+        )
+        help_menu.addSeparator()
+        self._about_action = help_menu.addAction("About MineSim")
+        self._about_action.triggered.connect(self.show_about)
+        menu_bar.addMenu(help_menu)
+        self._help_menu = help_menu
+
+    def _open_url(self, url: str) -> None:
+        """Open ``url`` in the user's browser."""
+        QDesktopServices.openUrl(QUrl(url))
+
+    def about_text(self) -> str:
+        """Return the text shown in the About MineSim dialog."""
+        seed = getattr(self.game, "seed", 0)
+        return (
+            f"MineSim {__version__}\n\n"
+            "Automate a mining operation by writing real Python.\n\n"
+            f"World seed: {seed}\n"
+            "License: MIT\n\n"
+            "Player scripts run in a separate subprocess with a restricted\n"
+            "namespace. This is not a security sandbox: only run scripts you trust."
+        )
+
+    def show_about(self) -> None:
+        """Show the About MineSim dialog with version, seed and license."""
+        QMessageBox.about(self, "About MineSim", self.about_text())
 
     def _open_file_menu(self) -> None:
         menu = getattr(self, "_file_menu", None)

@@ -21,20 +21,24 @@ three open tabs and the Open… list, saved as
 layer N, run a short mining session and save ``artifacts/ui_layer_N.png``),
 ``--dock`` (queue miners at the shared dock and save
 ``artifacts/ui_dock.png``), ``--climate`` (a hot layer, a low battery and the
-energy/climate HUD with the miners panel, saved as ``artifacts/ui_climate.png``)
-and ``--output``.
+energy/climate HUD with the miners panel, saved as ``artifacts/ui_climate.png``),
+``--preset hero|editor|layers|market|miners|base`` (deterministic press scenes
+saved at 1920x1080 and 1080x1920 into ``docs/press/``) and ``--output``.
 """
 
 from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import tempfile
 import time
 from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+os.environ.setdefault("QT_SCALE_FACTOR", "1")
 
+from PySide6.QtCore import QSettings, Qt  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from minesim.core.commands import Mine, Move, Sell, Unload  # noqa: E402
@@ -46,11 +50,15 @@ from minesim.ui.theme import apply_theme  # noqa: E402
 __all__ = [
     "COMMAND_SEQUENCE",
     "MINER_SCRIPT",
+    "PRESS_PRESETS",
+    "PRESS_SIZES",
+    "build_press_window",
     "build_window",
     "main",
     "parse_size",
     "prepare_climate",
     "prepare_economy",
+    "render_preset",
     "unlock_everything",
 ]
 
@@ -125,6 +133,12 @@ def unlock_everything(game: Game) -> Game:
         state.unlocked_modules.add(module.name)
     for recipe in game.content.recipes.values():
         state.unlocked_recipes.add(recipe.id)
+    for ore in game.content.ores.values():
+        state.unlock_ore(ore.id)
+    for skin in game.content.skins.values():
+        state.unlock_skin(skin.id)
+    for upgrade in game.content.upgrades.values():
+        state.unlock_upgrade(upgrade.id)
     return game
 
 
@@ -374,6 +388,436 @@ def _setup_miners(window: MainWindow, game: Game, count: int, app: QApplication)
     app.processEvents()
 
 
+PRESS_SEED = 12345
+PRESS_SIZES: tuple[tuple[int, int], ...] = ((1920, 1080), (1080, 1920))
+PRESS_PRESETS: tuple[str, ...] = ("hero", "editor", "layers", "market", "miners", "base")
+PRESS_OUTPUT_NAMES: dict[str, tuple[str, str]] = {
+    "hero": ("hero.png", "hero-vertical.png"),
+    "editor": ("editor.png", "editor-vertical.png"),
+    "layers": ("layers.png", "layers-vertical.png"),
+    "market": ("market.png", "market-vertical.png"),
+    "miners": ("miners.png", "miners-vertical.png"),
+    "base": ("base.png", "base-vertical.png"),
+}
+
+PRESS_SCRIPTS: dict[str, str] = {
+    "fleet.py": (
+        "# Keep the whole fleet mining the nearest ore, then unload at the base.\n"
+        "from minerlib import nearest, goto, mine_until, go_home\n\n"
+        "for miner in miners():\n"
+        '    assign(miner, "target", nearest_ore(miner))\n\n'
+        "while True:\n"
+        "    ore = nearest_ore(miner_id())\n"
+        "    if ore is not None:\n"
+        "        goto(ore.x, ore.y)\n"
+        '        mine_until("full")\n'
+        "    go_home()\n"
+        "    unload()\n"
+    ),
+    "market.py": (
+        "# Sell when the market is above its recent average.\n"
+        'prices = price_history("gold", 30)\n'
+        "average = sum(prices) / max(1, len(prices))\n"
+        'if price("gold") > average * 1.08:\n'
+        '    sell_stock("gold")\n'
+        "else:\n"
+        "    wait(10)\n"
+    ),
+    "sweep.py": (
+        "# Sweep east, mine every ore, and return before the battery is empty.\n"
+        "for step in range(24):\n"
+        "    if peek() is not None:\n"
+        "        mine()\n"
+        '    if battery() < energy_cost("home") + 20:\n'
+        "        go_home()\n"
+        "        charge()\n"
+        "        break\n"
+        "    move(East)\n"
+    ),
+    "worker.py": (
+        "# A small worker class that remembers what it has mined.\n"
+        "class Worker:\n"
+        "    def __init__(self, name):\n"
+        "        self.name = name\n"
+        "        self.mined = 0\n\n"
+        "    def step(self):\n"
+        "        if peek() is not None:\n"
+        "            mine()\n"
+        "            self.mined += 1\n"
+        "        move(East)\n\n"
+        'worker = Worker(f"miner-{miner_id()}")\n'
+        "for _ in range(20):\n"
+        "    worker.step()\n"
+    ),
+    "main.py": (
+        "# Main script: read the shared fleet memory and keep mining.\n"
+        'print("fleet online", miners())\n'
+        "while True:\n"
+        "    if peek() is not None:\n"
+        "        mine()\n"
+        "    move(East)\n"
+    ),
+}
+
+PRESS_CONSOLE_LINES: tuple[tuple[str, str], ...] = (
+    ("fleet online: 6 miners", "out"),
+    ("miner 1 assigned to fleet.py", "info"),
+    ("copper +3, iron +1", "out"),
+    ("market: gold up 8.2%", "info"),
+    ("dock: 2 jobs queued", "out"),
+)
+
+
+def _write_press_scripts(scripts_dir: Path) -> None:
+    """Write the small, readable scripts shown in the press screenshots."""
+    scripts_dir.mkdir(parents=True, exist_ok=True)
+    for name, source in PRESS_SCRIPTS.items():
+        (scripts_dir / name).write_text(source, encoding="utf-8")
+
+
+def _press_positions(
+    game: Game,
+    layer: int,
+    count: int,
+    center: tuple[int, int] = (0, 0),
+) -> list[tuple[int, int]]:
+    """Return deterministic ore tiles near ``center`` on ``layer``."""
+    cx, cy = int(center[0]), int(center[1])
+    positions: list[tuple[int, int]] = []
+    taken: set[tuple[int, int]] = set()
+    for radius in range(1, 18):
+        for dy in range(-radius, radius + 1):
+            for dx in range(-radius, radius + 1):
+                if max(abs(dx), abs(dy)) != radius:
+                    continue
+                x, y = cx + dx, cy + dy
+                if (x, y) in taken:
+                    continue
+                try:
+                    tile = game.world.tile_at(x, y, game.tick, layer=layer)
+                except Exception:
+                    continue
+                if tile is None or tile.ore_id is None or getattr(tile, "depleted", False):
+                    continue
+                if any(max(abs(x - px), abs(y - py)) < 3 for px, py in positions):
+                    continue
+                taken.add((x, y))
+                positions.append((x, y))
+                if len(positions) >= count:
+                    return positions
+    fallback = ((2, 0), (-2, 0), (0, 2), (0, -2), (3, 2), (-3, -2), (2, -3), (-2, 3))
+    for dx, dy in fallback:
+        if len(positions) >= count:
+            break
+        x, y = cx + dx, cy + dy
+        if (x, y) not in taken:
+            taken.add((x, y))
+            positions.append((x, y))
+    return positions
+
+
+def _prepare_press_game(preset: str) -> Game:
+    """Build one deterministic, fully populated game state for a preset."""
+    game = Game.new(seed=PRESS_SEED)
+    unlock_everything(game)
+    prepare_economy(game, ticks=3200)
+    game.player_stats.money = 14850
+    game.player_stats.upgrades["miner_bay"] = 8
+    game.player_stats.upgrades["shaft"] = 2
+    game.player_stats.upgrades["dock"] = 1
+    game.player_stats.upgrades["ventilation"] = 1
+    warehouse = game.engine.warehouse
+    warehouse.capacity = max(500, int(warehouse.capacity))
+    for item, amount in (
+        ("stone", 64),
+        ("coal", 48),
+        ("copper", 36),
+        ("iron", 28),
+        ("silver", 14),
+        ("gold", 8),
+        ("ruby", 3),
+        ("copper_bar", 12),
+        ("iron_bar", 8),
+    ):
+        warehouse.add(item, amount)
+    layer = 3 if preset == "layers" else 2 if preset in ("hero", "editor", "miners") else 0
+    center = (8, 8) if preset in ("hero", "editor", "miners", "layers") else (0, 0)
+    positions = _press_positions(game, layer, 6, center)
+    for _ in range(5):
+        game.engine.spawn_miner()
+    miners = [game.engine.miner_by_id(miner_id) for miner_id in sorted(game.engine.miners)]
+    directions = (Direction.EAST, Direction.SOUTH, Direction.WEST, Direction.NORTH)
+    inventories = (
+        {"copper": 4, "stone": 3, "coal": 2},
+        {"iron": 3, "stone": 2},
+        {"gold": 1, "copper": 2},
+        {"coal": 4},
+        {"silver": 2, "stone": 1},
+        {"stone": 2},
+    )
+    script_names = ("fleet.py", "fleet.py", "sweep.py", "market.py", "worker.py", "main.py")
+    for index, miner in enumerate(miners):
+        x, y = positions[index % len(positions)] if positions else (index, 0)
+        if preset == "base" and index == 0:
+            x, y = 0, 0
+        miner.layer = layer
+        miner.x, miner.y = int(x), int(y)
+        miner.facing = directions[index % len(directions)]
+        miner.inventory = dict(inventories[index % len(inventories)])
+        miner.energy = max(0, int(miner.battery_capacity) - index * 17)
+        miner.temperature = 8.0 + index * 6.5
+        miner.script = script_names[index % len(script_names)]
+        command = Mine() if index % 3 == 0 else Move(directions[(index + 1) % len(directions)])
+        game.submit(command, miner_id=miner.id)
+    for _ in range(1):
+        game.step()
+    game.start_refine("iron_bar", 5)
+    return game
+
+
+def _hide_all_press_panels(window: MainWindow) -> None:
+    """Hide every floating panel before composing a preset scene."""
+    for panel_name in (
+        "achievements_panel",
+        "upgrades_panel",
+        "wardrobe_panel",
+        "editor_panel",
+        "api_panel",
+        "base_panel",
+        "market_panel",
+        "miners_panel",
+    ):
+        panel = getattr(window, panel_name, None)
+        if panel is None:
+            continue
+        try:
+            panel.hide_panel()
+        except Exception:
+            try:
+                panel.hide()
+            except Exception:
+                pass
+
+
+def _setup_press_editor(
+    window: MainWindow,
+    scripts_dir: Path,
+    open_names: tuple[str, ...],
+    current_name: str,
+) -> None:
+    """Open a few readable scripts in the editor and fill the console."""
+    panel = getattr(window, "editor_panel", None)
+    if panel is None:
+        return
+    panel.close_all_tabs(save=False, remember=False)
+    for name in open_names:
+        path = Path(scripts_dir) / name
+        if path.is_file():
+            panel.add_file(path)
+    index = panel.tab_index(current_name)
+    if index >= 0:
+        panel.tabs.setCurrentIndex(index)
+    console = getattr(window, "console_panel", None)
+    if console is not None:
+        try:
+            console.clear()
+        except Exception:
+            pass
+        for text, kind in PRESS_CONSOLE_LINES:
+            console.append_line(text, kind)
+    window.hud.refresh()
+
+
+def _fit_press_hud(window: MainWindow, size: tuple[int, int]) -> None:
+    """Hide the least important HUD labels on the narrow portrait canvas."""
+    labels = (
+        "tick_label",
+        "position_label",
+        "warehouse_label",
+        "dock_label",
+        "miners_label",
+        "airflow_label",
+    )
+    if size[0] >= 1400:
+        return
+    for name in labels:
+        label = getattr(window.hud, name, None)
+        if label is not None:
+            label.hide()
+
+
+def _configure_press_window(window: MainWindow, preset: str, size: tuple[int, int]) -> None:
+    """Show the panels and geometry that make each preset readable."""
+    width, height = size
+    landscape = width >= height
+    margin = 24 if landscape else 20
+    top = 72 if landscape else 84
+    _hide_all_press_panels(window)
+    _fit_press_hud(window, size)
+    if preset in ("hero", "editor", "miners"):
+        window.show_editor()
+        editor = window.editor_panel
+        if landscape:
+            editor.move(int(width * 0.53), top)
+            editor.resize(int(width * 0.44), int(height * 0.68))
+        else:
+            editor.move(margin, int(height * 0.55))
+            editor.resize(width - 2 * margin, int(height * 0.41))
+    if preset in ("miners", "layers"):
+        window.show_miners()
+        panel = window.miners_panel
+        if landscape:
+            panel.move(margin, top)
+            panel.resize(int(width * 0.25), int(height * 0.64))
+        else:
+            panel.move(margin, top)
+            panel.resize(width - 2 * margin, int(height * 0.26))
+    if preset == "editor":
+        window.show_api_panel()
+        api = window.api_panel
+        if landscape:
+            api.move(margin, top)
+            api.resize(int(width * 0.24), int(height * 0.66))
+        else:
+            api.move(margin, top)
+            api.resize(width - 2 * margin, int(height * 0.26))
+        api.text_edit.find("mine")
+    if preset == "market":
+        window.show_market()
+        panel = window.market_panel
+        if landscape:
+            panel.move(int(width * 0.46), top)
+            panel.resize(int(width * 0.51), int(height * 0.78))
+        else:
+            panel.move(margin, int(height * 0.30))
+            panel.resize(width - 2 * margin, int(height * 0.62))
+        panel.select_item("gold")
+    if preset == "base":
+        window.show_base()
+        panel = window.base_panel
+        if landscape:
+            panel.move(int(width * 0.46), top)
+            panel.resize(int(width * 0.51), int(height * 0.78))
+        else:
+            panel.move(margin, int(height * 0.30))
+            panel.resize(width - 2 * margin, int(height * 0.62))
+        panel.select_tab("warehouse")
+    if preset == "miners":
+        try:
+            window.miners_panel.select_miner(2)
+            if window.console_panel is not None:
+                window.console_panel.set_miner(2)
+                window.console_panel.clear()
+                for text, kind in PRESS_CONSOLE_LINES:
+                    window.console_panel.append_line(text, kind)
+        except Exception:
+            pass
+    window.hud.set_speed(2)
+    window.world_view.setFocus()
+
+
+def build_press_window(
+    preset: str,
+    size: tuple[int, int] = PRESS_SIZES[0],
+    scripts_dir: Path | None = None,
+) -> MainWindow:
+    """Build one deterministic press preset window at ``size``."""
+    if preset not in PRESS_PRESETS:
+        raise ValueError(f"unknown preset: {preset!r}")
+    QSettings("MineSim", "MineSim").clear()
+    if scripts_dir is None:
+        scripts_dir = Path(tempfile.mkdtemp(prefix="minesim_press_"))
+        _write_press_scripts(scripts_dir)
+    app = QApplication.instance() or QApplication([])
+    apply_theme(app)
+    game = _prepare_press_game(preset)
+    window = MainWindow(game, scripts_dir=scripts_dir)
+    window.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
+    window.game_loop.stop()
+    try:
+        window._autosave_timer.stop()
+    except Exception:
+        pass
+    try:
+        window.world_view._anim_timer.stop()
+    except Exception:
+        pass
+    window.world_view.set_terrain_lighting(True, persist=False)
+    window.world_view.set_tile_px(40 if size[0] >= 1400 else 36)
+    window.resize(int(size[0]), int(size[1]))
+    window.show()
+    layer = 3 if preset == "layers" else 2 if preset in ("hero", "editor", "miners") else 0
+    if preset in ("hero", "editor", "miners", "layers"):
+        center = (8.0, 8.0)
+    elif preset == "base" and size[0] >= size[1]:
+        center = (8.0, 0.0)
+    elif preset == "base":
+        center = (0.0, 22.0)
+    else:
+        center = (0.0, 0.0)
+    window.world_view.snap_visual_to_miner()
+    window.world_view.center_on_miner()
+    window.world_view.set_viewed_layer(layer)
+    window.world_view.finish_layer_transition()
+    window.world_view.snap_visual_to_miner()
+    window.world_view.camera_x = center[0]
+    window.world_view.camera_y = center[1]
+    if preset in ("hero", "editor", "miners"):
+        if preset == "miners":
+            names = ("worker.py", "fleet.py", "main.py")
+        elif preset == "editor":
+            names = ("fleet.py", "market.py", "sweep.py", "main.py")
+        else:
+            names = ("fleet.py", "market.py", "main.py")
+        _setup_press_editor(window, scripts_dir, names, names[0])
+    _configure_press_window(window, preset, size)
+    window.hud.refresh()
+    window.world_view.update()
+    app.processEvents()
+    window.resize(int(size[0]), int(size[1]))
+    app.processEvents()
+    return window
+
+
+def render_preset(
+    preset: str,
+    output_dir: Path | None = None,
+    sizes: tuple[tuple[int, int], ...] = PRESS_SIZES,
+) -> list[Path]:
+    """Render one preset at every size and return the saved paths."""
+    root = Path(__file__).resolve().parents[1]
+    target_dir = Path(output_dir) if output_dir is not None else root / "docs" / "press"
+    target_dir.mkdir(parents=True, exist_ok=True)
+    scripts_dir = Path(tempfile.mkdtemp(prefix="minesim_press_"))
+    _write_press_scripts(scripts_dir)
+    saved: list[Path] = []
+    try:
+        for index, size in enumerate(sizes):
+            window = build_press_window(preset, size, scripts_dir)
+            try:
+                pixmap = window.grab()
+                if (pixmap.width(), pixmap.height()) != (int(size[0]), int(size[1])):
+                    pixmap = pixmap.scaled(
+                        int(size[0]),
+                        int(size[1]),
+                        Qt.AspectRatioMode.IgnoreAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation,
+                    )
+                names = PRESS_OUTPUT_NAMES[preset]
+                name = names[min(index, len(names) - 1)]
+                out = target_dir / name
+                pixmap.save(str(out))
+                saved.append(out)
+            finally:
+                window.close()
+                app = QApplication.instance()
+                if app is not None:
+                    app.processEvents()
+    finally:
+        shutil.rmtree(scripts_dir, ignore_errors=True)
+    return saved
+
+
 def build_window(
     ticks: int = 300,
     size: tuple[int, int] = (1024, 768),
@@ -609,8 +1053,20 @@ def main() -> int:
         help="show a hot layer and the energy/climate HUD with the miners panel, "
         "saved as artifacts/ui_climate.png",
     )
+    parser.add_argument(
+        "--preset",
+        choices=PRESS_PRESETS,
+        default=None,
+        help="build a press scene and save docs/press/<preset>.png plus its "
+        "1080x1920 portrait variant",
+    )
+    parser.add_argument("--output-dir", type=Path, default=None)
     parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args()
+    if args.preset:
+        for path in render_preset(args.preset, output_dir=args.output_dir):
+            print(path)
+        return 0
     window = build_window(
         ticks=args.ticks,
         size=args.size,

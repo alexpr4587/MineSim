@@ -113,4 +113,6 @@
 
 ## [Unreleased]
 
-- Bootstrap repository.
+- Showcase-ready README, press kit, deterministic screenshot presets, a Help
+  menu with bug/feedback links and an About dialog, and refreshed issue
+  templates.
