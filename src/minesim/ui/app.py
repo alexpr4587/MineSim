@@ -43,6 +43,26 @@ def _migrate_legacy_settings() -> None:
     logger.info("Migrated settings from DigScript to MineSim")
 
 
+def _setup_audio(window: Any) -> None:
+    """Create the audio manager and warm the cache in the background."""
+    try:
+        from minesim.audio.backend import select_backend
+        from minesim.audio.cache import AudioCache
+        from minesim.audio.manager import AudioManager
+        from minesim.audio.settings import AudioSettings
+
+        cache = AudioCache()
+        backend = select_backend(cache)
+        manager = AudioManager(AudioSettings.load(), backend, cache)
+        window.audio = manager
+        window.audio_cache = cache
+        window.audio_warm_thread = cache.warm_async(
+            lambda: manager.set_mood("surface", fade_ms=1500)
+        )
+    except Exception:
+        logger.warning("Could not start audio", exc_info=True)
+
+
 def main() -> int:
     """Start the UI and return the exit code."""
     from PySide6.QtWidgets import QApplication
@@ -62,6 +82,7 @@ def main() -> int:
     apply_theme(app)
     game = load_game_or_new()
     window = MainWindow(game)
+    _setup_audio(window)
     window.show()
     return app.exec()
 

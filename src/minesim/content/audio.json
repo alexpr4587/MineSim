@@ -1,0 +1,10 @@
+{
+  "max_voices": 12,
+  "min_interval_ms": {
+    "ui_click": 30,
+    "mine_thunk": 90,
+    "coin": 60,
+    "chime_achievement": 400,
+    "drip": 120
+  }
+}

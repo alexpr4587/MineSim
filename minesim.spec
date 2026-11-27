@@ -26,6 +26,7 @@ a = Analysis(
         "minesim.scripting.host",
         "minesim.scripting.stubs",
         "numpy",
+        "PySide6.QtMultimedia",
     ],
     hookspath=[],
     hooksconfig={},

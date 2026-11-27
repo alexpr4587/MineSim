@@ -480,8 +480,83 @@ class Skin(_ContentModel):
         return value
 
 
+class AudioSfxRecipe(_ContentModel):
+    """A synthesized sound effect recipe (audio_sfx.json)."""
+
+    id: str = Field(min_length=1)
+    kind: Literal[
+        "thunk",
+        "pluck",
+        "bell",
+        "chime",
+        "coin",
+        "click",
+        "whoosh",
+        "pad",
+        "drip",
+        "hum",
+        "crackle",
+    ]
+    params: dict[str, float] = Field(default_factory=dict)
+    variants: int = Field(default=1, ge=1, le=16)
+    pitch_jitter: float = Field(default=0.0, ge=0.0, le=1.0)
+    gain: float = Field(default=1.0, ge=0.0, le=4.0)
+
+    @field_validator("params")
+    @classmethod
+    def _check_params(cls, value: dict[str, float]) -> dict[str, float]:
+        for key, number in value.items():
+            if not key:
+                raise ValueError("parameter names must not be empty")
+            if number != number or number in (float("inf"), float("-inf")):
+                raise ValueError(f"parameter '{key}' must be finite")
+        return value
+
+
+class AudioMood(_ContentModel):
+    """A generative background music mood (audio_music.json)."""
+
+    id: str = Field(min_length=1)
+    root_note: int = Field(ge=0, le=127)
+    scale: list[int] = Field(min_length=1)
+    bpm: float = Field(gt=0)
+    chords: list[list[int]] = Field(min_length=1)
+    pad_gain: float = Field(default=0.6, ge=0.0)
+    melody_density: float = Field(default=0.4, ge=0.0, le=1.0)
+    bass: float = Field(default=0.4, ge=0.0)
+    brightness: float = Field(default=0.5, ge=0.0, le=1.0)
+
+    @field_validator("chords")
+    @classmethod
+    def _check_chords(cls, value: list[list[int]]) -> list[list[int]]:
+        for chord in value:
+            if not chord:
+                raise ValueError("chords must not contain an empty chord")
+        return value
+
+
+class AudioProtections(_ContentModel):
+    """Voice and interval limits for the audio engine (audio.json)."""
+
+    max_voices: int = Field(default=12, ge=1)
+    min_interval_ms: dict[str, int] = Field(default_factory=dict)
+
+    @field_validator("min_interval_ms")
+    @classmethod
+    def _check_intervals(cls, value: dict[str, int]) -> dict[str, int]:
+        for sound_id, milliseconds in value.items():
+            if not sound_id:
+                raise ValueError("min_interval_ms keys must not be empty")
+            if milliseconds < 0:
+                raise ValueError("min_interval_ms values must be >= 0")
+        return value
+
+
 __all__ = [
     "Achievement",
+    "AudioMood",
+    "AudioProtections",
+    "AudioSfxRecipe",
     "Biome",
     "Config",
     "ContentError",

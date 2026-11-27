@@ -1,0 +1,46 @@
+[
+  {
+    "id": "surface",
+    "root_note": 60,
+    "scale": [0, 2, 4, 7, 9],
+    "bpm": 72,
+    "chords": [[0, 2, 4], [3, 5, 0], [4, 6, 1], [0, 2, 4]],
+    "pad_gain": 0.55,
+    "melody_density": 0.5,
+    "bass": 0.35,
+    "brightness": 0.7
+  },
+  {
+    "id": "galleries",
+    "root_note": 57,
+    "scale": [0, 2, 3, 5, 7, 9, 10],
+    "bpm": 64,
+    "chords": [[0, 2, 4], [3, 5, 0], [4, 6, 1], [0, 2, 4]],
+    "pad_gain": 0.5,
+    "melody_density": 0.4,
+    "bass": 0.4,
+    "brightness": 0.5
+  },
+  {
+    "id": "deep",
+    "root_note": 45,
+    "scale": [0, 3, 5, 7, 10],
+    "bpm": 56,
+    "chords": [[0, 2, 4], [0, 3, 4], [2, 4, 0], [0, 2, 4]],
+    "pad_gain": 0.6,
+    "melody_density": 0.25,
+    "bass": 0.5,
+    "brightness": 0.35
+  },
+  {
+    "id": "abyss",
+    "root_note": 33,
+    "scale": [0, 3, 5, 7, 10],
+    "bpm": 48,
+    "chords": [[0], [3], [4], [0]],
+    "pad_gain": 0.7,
+    "melody_density": 0.12,
+    "bass": 0.55,
+    "brightness": 0.18
+  }
+]

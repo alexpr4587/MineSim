@@ -141,12 +141,41 @@ def _run_selftest_ui() -> int:
     return 0
 
 
+def _run_selftest_audio() -> int:
+    """Render one SFX and one music loop, then exercise the manager silently."""
+    from minesim.audio.backend import NullBackend
+    from minesim.audio.cache import AudioCache
+    from minesim.audio.manager import AudioManager
+    from minesim.audio.settings import AudioSettings
+
+    with tempfile.TemporaryDirectory(prefix="minesim-audio-") as tmp:
+        root = Path(tmp)
+        cache = AudioCache(cache_dir=root / "cache", data_dir=root / "data")
+        cache.render_sfx("ui_click")
+        cache.render_music("surface", bars=1)
+        if not cache.sfx_path("ui_click", 0).is_file():
+            raise RuntimeError("selftest-audio: sound effect was not rendered")
+        if not cache.music_path("surface").is_file():
+            raise RuntimeError("selftest-audio: music loop was not rendered")
+        backend = NullBackend()
+        manager = AudioManager(AudioSettings(), backend, cache)
+        if not manager.play("ui_click"):
+            raise RuntimeError("selftest-audio: the manager refused a sound")
+        if not manager.set_mood("surface", fade_ms=10):
+            raise RuntimeError("selftest-audio: the manager refused the music")
+        if not backend.sfx_calls or not backend.music_calls:
+            raise RuntimeError("selftest-audio: the backend did not receive the calls")
+    print("OK: audio")
+    return 0
+
+
 def main() -> None:
     """Start MineSim."""
     multiprocessing.freeze_support()
     parser = argparse.ArgumentParser(prog="minesim")
     parser.add_argument("--selftest", action="store_true")
     parser.add_argument("--selftest-ui", action="store_true")
+    parser.add_argument("--selftest-audio", action="store_true")
     args = parser.parse_args()
     if args.selftest:
         try:
@@ -162,6 +191,15 @@ def main() -> None:
             code = _run_selftest_ui()
         except Exception as exc:
             print(f"selftest-ui failed: {exc}", file=sys.stderr)
+            raise SystemExit(1) from exc
+        if code != 0:
+            raise SystemExit(code)
+        return
+    if args.selftest_audio:
+        try:
+            code = _run_selftest_audio()
+        except Exception as exc:
+            print(f"selftest-audio failed: {exc}", file=sys.stderr)
             raise SystemExit(1) from exc
         if code != 0:
             raise SystemExit(code)

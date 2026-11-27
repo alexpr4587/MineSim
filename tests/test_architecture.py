@@ -40,6 +40,13 @@ def test_core_does_not_import_scripting_or_runner() -> None:
             assert not module.startswith("minesim.runner"), path
 
 
+def test_core_scripting_runner_do_not_import_audio() -> None:
+    for package in ("core", "scripting", "runner"):
+        for path in _py_files(package):
+            for module in _imports(path):
+                assert not module.startswith("minesim.audio"), f"{path}: imports minesim.audio"
+
+
 FORBIDDEN_MATH_CALLS = {
     "sin",
     "cos",

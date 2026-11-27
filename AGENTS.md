@@ -12,6 +12,7 @@ Build tasks live in kit/prompts/NN-*.md and are run one per session, in order.
 ## Architecture (enforced by tests/test_architecture.py)
 - core/ is pure Python: no PySide6, no threads, no subprocess, no wall-clock time. Deterministic and runnable headless.
 - scripting/ and runner/ never import PySide6 or ui/. ui/ may import core/ and scripting/, never the reverse. runner/ imports only the standard library and itself.
+- audio/ may import PySide6 and numpy. core/, scripting/ and runner/ must never import audio/. ui/ imports audio/.
 - The game process NEVER executes player code. Only the subprocess started by scripting/host.py does.
 - World and miner are separate: core/world knows nothing about the miner. The miner acts only through commands processed by core/engine.py.
 - No global mutable state or singletons. Pass dependencies through constructors. Systems talk through the typed EventBus in core/events.py.
@@ -33,5 +34,5 @@ Build tasks live in kit/prompts/NN-*.md and are run one per session, in order.
 - End every task with a short report: what changed, commands run and their results, known limitations. Use Conventional Commits.
 - Player scripts run in a subprocess with a restricted namespace. This is NOT a security sandbox; never claim it is.
 
-- numpy is allowed only in ui/ (never in core/).
+- numpy is allowed only in ui/ and audio/ (never in core/).
 - floating-point math in core/ uses only + - * / comparisons, min, max, abs, ceil, floor and sqrt (no sin, cos, exp, log or fractional powers) so results are identical on every OS.

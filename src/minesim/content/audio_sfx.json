@@ -1,0 +1,55 @@
+[
+  {
+    "id": "ui_click",
+    "kind": "click",
+    "params": {
+      "freq": 1300,
+      "duration": 0.06
+    },
+    "variants": 2,
+    "pitch_jitter": 0.02,
+    "gain": 0.75
+  },
+  {
+    "id": "mine_thunk",
+    "kind": "thunk",
+    "params": {
+      "freq": 150,
+      "duration": 0.24
+    },
+    "variants": 3,
+    "pitch_jitter": 0.06,
+    "gain": 0.95
+  },
+  {
+    "id": "coin",
+    "kind": "coin",
+    "params": {
+      "freq": 1046
+    },
+    "variants": 2,
+    "pitch_jitter": 0.03,
+    "gain": 0.8
+  },
+  {
+    "id": "chime_achievement",
+    "kind": "chime",
+    "params": {
+      "freq": 660
+    },
+    "variants": 2,
+    "pitch_jitter": 0.01,
+    "gain": 0.9
+  },
+  {
+    "id": "drip",
+    "kind": "drip",
+    "params": {
+      "freq": 900,
+      "duration": 0.4
+    },
+    "variants": 3,
+    "pitch_jitter": 0.05,
+    "gain": 0.7
+  }
+]
