@@ -67,7 +67,12 @@ class AudioCache:
 
     def _fingerprint(self) -> str:
         parts = [f"cache={CACHE_VERSION}", f"version={__version__}"]
-        for filename in ("audio_sfx.json", "audio_music.json", "audio.json"):
+        for filename in (
+            "audio_sfx.json",
+            "audio_music.json",
+            "audio_events.json",
+            "audio.json",
+        ):
             try:
                 parts.append(read_content_text(filename, self.content_dir))
             except ContentError:
@@ -141,6 +146,10 @@ class AudioCache:
             return override
         return self.sfx_dir / f"{sound_id}_{int(variant)}.wav"
 
+    def pitched_sfx_path(self, sound_id: str, variant: int, pitch_steps: int) -> Path:
+        """Return the WAV path for a pitched combo variant."""
+        return self.sfx_dir / f"{sound_id}_p{int(pitch_steps)}_{int(variant)}.wav"
+
     def music_path(self, mood_id: str) -> Path:
         """Return the path for a music mood, honouring user overrides."""
         override_dir = self.override_dir / "music"
@@ -188,6 +197,10 @@ class AudioCache:
             for variant in range(recipe.variants):
                 if not (self.sfx_dir / f"{sound_id}_{variant}.wav").is_file():
                     return False
+            for step in range(recipe.pitch_variants):
+                for variant in range(recipe.variants):
+                    if not self.pitched_sfx_path(sound_id, variant, step).is_file():
+                        return False
         for mood_id in moods:
             if not self.music_path(mood_id).is_file():
                 return False
@@ -205,6 +218,19 @@ class AudioCache:
             paths.append(synth.write_wav(path, buffer))
         return paths
 
+    def render_pitched_sfx(self, sound_id: str, pitch_steps: int, seed: int = 0) -> list[Path]:
+        """Render every variant of one sound at a pentatonic combo pitch."""
+        recipe = self.recipes().get(sound_id)
+        if recipe is None:
+            raise ContentError(f"audio_sfx.json: $.id: unknown sound id '{sound_id}'")
+        steps = max(0, min(7, int(pitch_steps)))
+        paths: list[Path] = []
+        for variant in range(recipe.variants):
+            buffer = render_sfx(recipe, variant, seed, pitch_steps=steps)
+            path = self.pitched_sfx_path(sound_id, variant, steps)
+            paths.append(synth.write_wav(path, buffer))
+        return paths
+
     def render_music(self, mood_id: str, seed: int = 0, bars: int = 8) -> Path:
         """Render one music mood loop."""
         mood = self.moods().get(mood_id)
@@ -215,9 +241,11 @@ class AudioCache:
         return synth.write_wav(path, loop)
 
     def render_all(self, seed: int = 0, bars: int = 8) -> None:
-        """Render every sound variant and every music loop."""
-        for sound_id in self.recipes():
+        """Render every sound variant, combo pitch and music loop."""
+        for sound_id, recipe in self.recipes().items():
             self.render_sfx(sound_id, seed)
+            for step in range(recipe.pitch_variants):
+                self.render_pitched_sfx(sound_id, step, seed)
         for mood_id in self.moods():
             self.render_music(mood_id, seed, bars)
 

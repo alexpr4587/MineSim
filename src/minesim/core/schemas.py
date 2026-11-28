@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -94,6 +94,8 @@ class Config(_ContentModel):
     airflow_start: int = Field(default=4, ge=0)
     overload_penalty: float = Field(default=0.5, ge=0.0)
     hot_layer_min_heat: int = Field(default=1, ge=0)
+    audio_hearing_radius: int = Field(default=14, ge=0)
+    combo_window_ticks: int = Field(default=30, ge=0)
 
     @field_validator("contract_deadline_max")
     @classmethod
@@ -243,6 +245,7 @@ class Layer(_ContentModel):
     heat: int = Field(default=0, ge=0)
     floor_tint: str = Field(default="#4a4a42", min_length=1)
     light_ambient: float = Field(default=1.0, ge=0.0, le=1.0)
+    music: str = ""
 
 
 class Biome(_ContentModel):
@@ -496,11 +499,20 @@ class AudioSfxRecipe(_ContentModel):
         "drip",
         "hum",
         "crackle",
+        "notes",
+        "cascade",
+        "sparkle",
+        "tsk",
+        "pop",
+        "elevator",
+        "rise",
+        "bonk",
     ]
     params: dict[str, float] = Field(default_factory=dict)
     variants: int = Field(default=1, ge=1, le=16)
     pitch_jitter: float = Field(default=0.0, ge=0.0, le=1.0)
     gain: float = Field(default=1.0, ge=0.0, le=4.0)
+    pitch_variants: int = Field(default=0, ge=0, le=16)
 
     @field_validator("params")
     @classmethod
@@ -535,6 +547,27 @@ class AudioMood(_ContentModel):
         return value
 
 
+class AudioDuck(_ContentModel):
+    """A temporary music duck attached to an audio event rule."""
+
+    amount: float = Field(default=0.5, ge=0.0, le=1.0)
+    ms: int = Field(default=1200, ge=0)
+
+
+class AudioEventRule(_ContentModel):
+    """Map one EventBus event to one sound effect (audio_events.json)."""
+
+    event: str = Field(min_length=1)
+    sound: str = Field(min_length=1)
+    volume: float = Field(default=1.0, ge=0.0, le=4.0)
+    cooldown_ms: int = Field(default=0, ge=0)
+    positional: bool = False
+    layer_scoped: bool = False
+    when: dict[str, Any] = Field(default_factory=dict)
+    pitch: str = ""
+    duck: AudioDuck | None = None
+
+
 class AudioProtections(_ContentModel):
     """Voice and interval limits for the audio engine (audio.json)."""
 
@@ -554,6 +587,8 @@ class AudioProtections(_ContentModel):
 
 __all__ = [
     "Achievement",
+    "AudioDuck",
+    "AudioEventRule",
     "AudioMood",
     "AudioProtections",
     "AudioSfxRecipe",

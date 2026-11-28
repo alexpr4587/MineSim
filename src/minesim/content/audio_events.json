@@ -1,0 +1,278 @@
+[
+  {
+    "event": "Moved",
+    "sound": "step",
+    "volume": 0.35,
+    "cooldown_ms": 110,
+    "positional": true,
+    "layer_scoped": true
+  },
+  {
+    "event": "MineAttempted",
+    "sound": "mine_miss",
+    "volume": 0.8,
+    "cooldown_ms": 60,
+    "positional": true,
+    "layer_scoped": true,
+    "when": { "success": false, "reason": "miss" }
+  },
+  {
+    "event": "MineAttempted",
+    "sound": "inventory_full",
+    "volume": 0.8,
+    "cooldown_ms": 600,
+    "positional": true,
+    "layer_scoped": true,
+    "when": { "reason": "inventory_full" }
+  },
+  {
+    "event": "MineAttempted",
+    "sound": "ore_pop",
+    "volume": 0.65,
+    "positional": true,
+    "layer_scoped": true,
+    "pitch": "combo",
+    "when": { "success": true }
+  },
+  {
+    "event": "OreMined",
+    "sound": "mine_stone",
+    "volume": 0.9,
+    "cooldown_ms": 40,
+    "positional": true,
+    "layer_scoped": true,
+    "when": { "ore_id": "stone" }
+  },
+  {
+    "event": "OreMined",
+    "sound": "mine_coal",
+    "volume": 0.9,
+    "cooldown_ms": 40,
+    "positional": true,
+    "layer_scoped": true,
+    "when": { "ore_id": "coal" }
+  },
+  {
+    "event": "OreMined",
+    "sound": "mine_copper",
+    "volume": 0.9,
+    "cooldown_ms": 40,
+    "positional": true,
+    "layer_scoped": true,
+    "when": { "ore_id": "copper" }
+  },
+  {
+    "event": "OreMined",
+    "sound": "mine_iron",
+    "volume": 0.9,
+    "cooldown_ms": 40,
+    "positional": true,
+    "layer_scoped": true,
+    "when": { "ore_id": "iron" }
+  },
+  {
+    "event": "OreMined",
+    "sound": "mine_silver",
+    "volume": 0.9,
+    "cooldown_ms": 40,
+    "positional": true,
+    "layer_scoped": true,
+    "when": { "ore_id": "silver" }
+  },
+  {
+    "event": "OreMined",
+    "sound": "mine_gold",
+    "volume": 0.95,
+    "cooldown_ms": 40,
+    "positional": true,
+    "layer_scoped": true,
+    "when": { "ore_id": "gold" }
+  },
+  {
+    "event": "OreMined",
+    "sound": "mine_ruby",
+    "volume": 1.0,
+    "cooldown_ms": 40,
+    "positional": true,
+    "layer_scoped": true,
+    "when": { "ore_id": "ruby" }
+  },
+  {
+    "event": "Sold",
+    "sound": "sell_small",
+    "volume": 0.8,
+    "cooldown_ms": 120,
+    "when": { "money": { "lt": 200 } }
+  },
+  {
+    "event": "Sold",
+    "sound": "sell_medium",
+    "volume": 0.85,
+    "cooldown_ms": 120,
+    "when": { "money": { "gte": 200, "lt": 1000 } }
+  },
+  {
+    "event": "Sold",
+    "sound": "sell_large",
+    "volume": 0.9,
+    "cooldown_ms": 120,
+    "when": { "money": { "gte": 1000 } }
+  },
+  {
+    "event": "Sold",
+    "sound": "market_up",
+    "volume": 0.5,
+    "cooldown_ms": 800,
+    "when": { "avg_index": { "gt": 1.05 } }
+  },
+  {
+    "event": "Sold",
+    "sound": "market_down",
+    "volume": 0.5,
+    "cooldown_ms": 800,
+    "when": { "avg_index": { "lt": 0.95 } }
+  },
+  {
+    "event": "StockSold",
+    "sound": "sell_medium",
+    "volume": 0.7,
+    "cooldown_ms": 160,
+    "when": { "money": { "gte": 1 } }
+  },
+  {
+    "event": "Unloaded",
+    "sound": "ui_open",
+    "volume": 0.35,
+    "cooldown_ms": 300
+  },
+  {
+    "event": "UpgradeBought",
+    "sound": "upgrade_buy",
+    "volume": 0.85,
+    "cooldown_ms": 300
+  },
+  {
+    "event": "ContractDelivered",
+    "sound": "contract_done",
+    "volume": 0.9,
+    "cooldown_ms": 300
+  },
+  {
+    "event": "RefineStarted",
+    "sound": "refine_start",
+    "volume": 0.8,
+    "cooldown_ms": 300
+  },
+  {
+    "event": "RefineFinished",
+    "sound": "refine_done",
+    "volume": 0.85,
+    "cooldown_ms": 300
+  },
+  {
+    "event": "AchievementUnlocked",
+    "sound": "achievement",
+    "volume": 0.9,
+    "cooldown_ms": 500,
+    "duck": { "amount": 0.5, "ms": 1200 }
+  },
+  {
+    "event": "WorldEventStarted",
+    "sound": "event_start",
+    "volume": 0.7,
+    "cooldown_ms": 600
+  },
+  {
+    "event": "WorldEventEnded",
+    "sound": "event_end",
+    "volume": 0.6,
+    "cooldown_ms": 600
+  },
+  {
+    "event": "LayerChanged",
+    "sound": "layer_down",
+    "volume": 0.8,
+    "cooldown_ms": 400,
+    "when": { "direction": "down" }
+  },
+  {
+    "event": "LayerChanged",
+    "sound": "layer_up",
+    "volume": 0.75,
+    "cooldown_ms": 400,
+    "when": { "direction": "up" }
+  },
+  {
+    "event": "Charged",
+    "sound": "charge",
+    "volume": 0.7,
+    "cooldown_ms": 1200,
+    "positional": true,
+    "layer_scoped": true
+  },
+  {
+    "event": "MoveRefused",
+    "sound": "low_energy",
+    "volume": 0.7,
+    "cooldown_ms": 1500,
+    "positional": true,
+    "layer_scoped": true,
+    "when": { "reason": "low_energy" }
+  },
+  {
+    "event": "MinerOverheated",
+    "sound": "overheat",
+    "volume": 0.85,
+    "cooldown_ms": 500,
+    "positional": true,
+    "layer_scoped": true
+  },
+  {
+    "event": "MinerRecovered",
+    "sound": "recover",
+    "volume": 0.8,
+    "cooldown_ms": 300,
+    "positional": true,
+    "layer_scoped": true
+  },
+  {
+    "event": "MinerStranded",
+    "sound": "stranded",
+    "volume": 0.8,
+    "cooldown_ms": 500,
+    "positional": true,
+    "layer_scoped": true
+  },
+  {
+    "event": "MinerRescued",
+    "sound": "rescue",
+    "volume": 0.85,
+    "cooldown_ms": 500,
+    "positional": true,
+    "layer_scoped": true
+  },
+  {
+    "event": "MinerSpawned",
+    "sound": "miner_spawn",
+    "volume": 0.8,
+    "cooldown_ms": 300
+  },
+  {
+    "event": "ScriptStarted",
+    "sound": "script_start",
+    "volume": 0.7,
+    "cooldown_ms": 200
+  },
+  {
+    "event": "ScriptFinished",
+    "sound": "script_finish",
+    "volume": 0.7,
+    "cooldown_ms": 200
+  },
+  {
+    "event": "ScriptFailed",
+    "sound": "script_error",
+    "volume": 0.8,
+    "cooldown_ms": 200
+  }
+]

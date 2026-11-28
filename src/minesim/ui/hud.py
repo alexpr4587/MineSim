@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QPushButton, QWidget
 
@@ -61,6 +62,9 @@ class HUD(QWidget):
         self.world_view = world_view
         self.speed: int = 1
         self.paused: bool = False
+        self.audio: Any = None
+        self.audio_bridge: Any = None
+        self.options_callback: Any = None
         self.setObjectName("hud")
         self.setStyleSheet(
             "QWidget#hud {"
@@ -135,6 +139,13 @@ class HUD(QWidget):
             layout.addWidget(button)
             self.speed_buttons[speed] = button
             self.buttons.append(button)
+        self.speaker_button = QPushButton("♪", self)
+        self.speaker_button.setObjectName("hud_speaker_button")
+        self.speaker_button.setCheckable(True)
+        self.speaker_button.setToolTip("Mute or unmute audio (click). Right-click for Options (O).")
+        self.speaker_button.clicked.connect(self._on_speaker_clicked)
+        self.speaker_button.installEventFilter(self)
+        layout.addWidget(self.speaker_button)
         self._subscribe_events()
         self._sync_buttons()
         if self.world_view is not None:
@@ -146,6 +157,84 @@ class HUD(QWidget):
     def set_game_loop(self, game_loop: Any) -> None:
         """Attach the game loop that speed buttons control."""
         self.game_loop = game_loop
+
+    def set_audio(
+        self,
+        audio: Any,
+        options_callback: Any = None,
+        bridge: Any = None,
+    ) -> None:
+        """Attach the audio manager, Options callback and audio bridge."""
+        self.audio = audio
+        self.options_callback = options_callback
+        self.audio_bridge = bridge
+        self.sync_speaker()
+
+    def set_audio_bridge(self, bridge: Any) -> None:
+        """Attach the bridge that reacts to pause/resume."""
+        self.audio_bridge = bridge
+
+    def _on_speaker_clicked(self, _checked: bool = False) -> None:
+        self.toggle_mute()
+
+    def toggle_mute(self) -> bool:
+        """Toggle mute and return the new muted state."""
+        audio = self.audio
+        if audio is None:
+            self.speaker_button.setChecked(False)
+            return False
+        settings = getattr(audio, "settings", None)
+        muted = not bool(getattr(settings, "muted", False))
+        if muted:
+            audio.play("toggle_off", volume=0.7)
+        audio.set_muted(muted)
+        if not muted:
+            audio.play("toggle_on", volume=0.7)
+        saver = getattr(settings, "save", None)
+        if callable(saver):
+            try:
+                saver()
+            except Exception:
+                pass
+        self.sync_speaker()
+        return muted
+
+    def sync_speaker(self) -> None:
+        """Reflect the current mute state on the speaker button."""
+        audio = self.audio
+        muted = bool(getattr(getattr(audio, "settings", None), "muted", False))
+        self.speaker_button.blockSignals(True)
+        try:
+            self.speaker_button.setChecked(muted)
+            self.speaker_button.setToolTip(
+                ("Unmute audio" if muted else "Mute audio")
+                + " (click). Right-click for Options (O)."
+            )
+        finally:
+            self.speaker_button.blockSignals(False)
+
+    def open_options(self) -> None:
+        """Open the options panel through the attached callback."""
+        callback = self.options_callback
+        if callable(callback):
+            try:
+                callback()
+            except Exception:
+                pass
+
+    def eventFilter(self, obj: Any, event: Any) -> bool:  # noqa: N802 - Qt override
+        """Open Options on a right-click on the speaker button."""
+        if obj is self.speaker_button:
+            try:
+                if (
+                    event.type() == QEvent.Type.MouseButtonPress
+                    and event.button() == Qt.MouseButton.RightButton
+                ):
+                    self.open_options()
+                    return True
+            except Exception:
+                pass
+        return super().eventFilter(obj, event)
 
     def attach(self, game_loop: Any) -> None:
         """Alias for :meth:`set_game_loop`."""
@@ -183,6 +272,14 @@ class HUD(QWidget):
             setter = _get(self.game_loop, "set_speed")
             if callable(setter):
                 setter(self.speed)
+        bridge = self.audio_bridge
+        if bridge is not None:
+            setter = _get(bridge, "set_paused")
+            if callable(setter):
+                try:
+                    setter(self.paused)
+                except Exception:
+                    pass
         self._sync_buttons()
 
     def set_paused(self, paused: bool) -> None:
@@ -352,6 +449,7 @@ class HUD(QWidget):
                 self.speed = int(speed)
                 self.paused = self.speed == 0
                 self._sync_buttons()
+        self.sync_speaker()
 
     def _dock_text(self, engine: Any, tick: int) -> str:
         getter = _get(engine, "dock_status")

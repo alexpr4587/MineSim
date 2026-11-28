@@ -76,5 +76,7 @@
   "cooldown_temperature": 50,
   "airflow_start": 4,
   "overload_penalty": 0.5,
-  "hot_layer_min_heat": 1
+  "hot_layer_min_heat": 1,
+  "audio_hearing_radius": 14,
+  "combo_window_ticks": 30
 }

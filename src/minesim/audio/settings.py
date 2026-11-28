@@ -41,6 +41,7 @@ class AudioSettings:
     music_enabled: bool = True
     sfx_enabled: bool = True
     muted: bool = False
+    hint_shown: bool = False
 
     def clamped(self) -> AudioSettings:
         """Return a copy with all volumes clamped to ``[0, 1]``."""
@@ -51,6 +52,7 @@ class AudioSettings:
             music_enabled=bool(self.music_enabled),
             sfx_enabled=bool(self.sfx_enabled),
             muted=bool(self.muted),
+            hint_shown=bool(self.hint_shown),
         )
 
     @classmethod
@@ -68,6 +70,7 @@ class AudioSettings:
             music_enabled=_to_bool(settings.value(f"{prefix}/music_enabled", True), True),
             sfx_enabled=_to_bool(settings.value(f"{prefix}/sfx_enabled", True), True),
             muted=_to_bool(settings.value(f"{prefix}/muted", False), False),
+            hint_shown=_to_bool(settings.value(f"{prefix}/hint_shown", False), False),
         ).clamped()
 
     def save(self, settings: Any = None) -> None:
@@ -84,6 +87,7 @@ class AudioSettings:
         settings.setValue(f"{prefix}/music_enabled", values.music_enabled)
         settings.setValue(f"{prefix}/sfx_enabled", values.sfx_enabled)
         settings.setValue(f"{prefix}/muted", values.muted)
+        settings.setValue(f"{prefix}/hint_shown", values.hint_shown)
         sync = getattr(settings, "sync", None)
         if callable(sync):
             sync()

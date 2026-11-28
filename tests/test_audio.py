@@ -79,7 +79,7 @@ def test_write_wav_is_stereo_16_bit(tmp_path: Path) -> None:
 
 def test_audio_content_validates() -> None:
     recipes = load_sfx_recipes()
-    assert {"ui_click", "mine_thunk", "coin", "chime_achievement", "drip"} <= set(recipes)
+    assert {"ui_click", "mine_stone", "sell_small", "achievement", "step"} <= set(recipes)
     moods = load_music_moods()
     assert set(moods) == {"surface", "galleries", "deep", "abyss"}
     assert moods["surface"].bpm == 72
@@ -162,14 +162,14 @@ def test_cache_override_paths(tmp_path: Path) -> None:
     data = tmp_path / "data"
     override = data / "audio" / "override"
     override.mkdir(parents=True)
-    sound = override / "mine_thunk.wav"
+    sound = override / "mine_stone.wav"
     sound.write_bytes(b"RIFF")
     music = override / "music"
     music.mkdir()
     track = music / "surface.ogg"
     track.write_bytes(b"OggS")
     cache = AudioCache(cache_dir=tmp_path / "cache", data_dir=data)
-    assert cache.sfx_path("mine_thunk", 0) == sound
+    assert cache.sfx_path("mine_stone", 0) == sound
     assert cache.music_path("surface") == track
 
 

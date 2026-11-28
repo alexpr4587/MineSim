@@ -189,7 +189,7 @@ def test_hud_shows_state_and_speed_buttons(qapp) -> None:
     assert "42" in hud.money_label.text()
     assert "0/10" in hud.inventory_label.text()
     texts = [button.text() for button in hud.findChildren(QPushButton)]
-    assert texts == ["Pause", "1x", "2x", "5x", "20x"]
+    assert texts == ["Pause", "1x", "2x", "5x", "20x", "♪"]
     hud.set_speed(5)
     assert hud.speed == 5
     hud.toggle_pause()

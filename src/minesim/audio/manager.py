@@ -41,6 +41,8 @@ class AudioManager:
         self._last_played: dict[str, float] = {}
         self._duck_until = 0.0
         self._duck_amount = 0.0
+        self._pause_duck = 0.0
+        self._paused = False
         self._mood: str | None = None
         self._apply_volumes()
 
@@ -61,9 +63,12 @@ class AudioManager:
         return len(self._voices)
 
     def _duck_factor(self) -> float:
-        if self._clock() >= self._duck_until:
-            return 1.0
-        return max(0.0, 1.0 - float(self._duck_amount))
+        if self._clock() < self._duck_until:
+            return max(0.0, 1.0 - float(self._duck_amount))
+        return 1.0
+
+    def _pause_factor(self) -> float:
+        return max(0.0, 1.0 - float(self._pause_duck))
 
     def _master_level(self) -> float:
         return 0.0 if self.settings.muted else float(self.settings.master)
@@ -71,7 +76,7 @@ class AudioManager:
     def _music_level(self) -> float:
         if not self.settings.music_enabled:
             return 0.0
-        return float(self.settings.music) * self._duck_factor()
+        return float(self.settings.music) * self._duck_factor() * self._pause_factor()
 
     def _sfx_level(self) -> float:
         if not self.settings.sfx_enabled:
@@ -97,8 +102,18 @@ class AudioManager:
                 return 0.5
         return 0.5
 
-    def play(self, sound_id: str, volume: float = 1.0, pan: float = 0.0) -> bool:
-        """Play a sound effect if it passes the interval and voice limits."""
+    def play(
+        self,
+        sound_id: str,
+        volume: float = 1.0,
+        pan: float = 0.0,
+        pitch_steps: int = 0,
+    ) -> bool:
+        """Play a sound effect if it passes the interval and voice limits.
+
+        ``pitch_steps`` shifts the sound by pentatonic steps (0 to +7) and
+        is used by the mining combo.
+        """
         if not self.settings.sfx_enabled or self.settings.muted:
             return False
         now = self._clock()
@@ -112,14 +127,27 @@ class AudioManager:
         gain = self._master_level() * self._sfx_level() * float(volume)
         if gain <= 0.0:
             return False
+        steps = max(0, min(7, int(pitch_steps)))
         self.backend.play_sfx(
             sound_id,
             max(0.0, min(1.0, gain)),
             max(-1.0, min(1.0, float(pan))),
+            steps,
         )
         self._last_played[sound_id] = now
         self._voices.append(now + self._voice_duration(sound_id))
         return True
+
+    def set_paused(self, paused: bool) -> None:
+        """Duck the music by 40 percent while the game is paused."""
+        self._paused = bool(paused)
+        self._pause_duck = 0.4 if self._paused else 0.0
+        self._apply_volumes()
+
+    @property
+    def paused(self) -> bool:
+        """Whether the manager is currently in its paused duck state."""
+        return self._paused
 
     def set_mood(self, mood: str, fade_ms: int = 1000) -> bool:
         """Request a music mood with a crossfade."""

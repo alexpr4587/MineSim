@@ -37,6 +37,7 @@ from minesim.ui.links import (
 )
 from minesim.ui.market_panel import MarketPanel
 from minesim.ui.miners_panel import MinersPanel
+from minesim.ui.options_panel import OptionsPanel
 from minesim.ui.toasts import ToastManager
 from minesim.ui.upgrades_panel import UpgradesPanel
 from minesim.ui.wardrobe_panel import WardrobePanel
@@ -56,6 +57,7 @@ _SINGLE_KEYS = {
     Qt.Key.Key_C,
     Qt.Key.Key_G,
     Qt.Key.Key_H,
+    Qt.Key.Key_O,
     Qt.Key.Key_Space,
     Qt.Key.Key_1,
     Qt.Key.Key_2,
@@ -86,6 +88,8 @@ class MainWindow(QMainWindow):
         )
         host = kwargs.pop("host", None) or kwargs.pop("script_host", None)
         manager = kwargs.pop("manager", None) or kwargs.pop("script_manager", None)
+        audio = kwargs.pop("audio", None) or kwargs.pop("audio_manager", None)
+        audio_cache = kwargs.pop("audio_cache", None)
         editor_panel_arg = kwargs.pop("editor_panel", None) or kwargs.pop("editor", None)
         api_panel_arg = kwargs.pop("api_panel", None) or kwargs.pop("functions_panel", None)
         console_panel_arg = kwargs.pop("console_panel", None) or kwargs.pop("console", None)
@@ -260,6 +264,14 @@ class MainWindow(QMainWindow):
         # Toasts for achievement unlocks.
         self.toast_manager = ToastManager(self, game)
 
+        # Options panel (O): audio controls now, more sections later.
+        self.audio = audio
+        self.audio_cache = audio_cache
+        self.audio_bridge = None
+        self.options_panel = OptionsPanel(game=game, audio=audio, parent=self)
+        self.options_panel.hide()
+        self.floating_panels["options"] = self.options_panel
+
         self.game_loop = GameLoop(
             game,
             hud=self.hud,
@@ -270,8 +282,11 @@ class MainWindow(QMainWindow):
             console_panel=self.console_panel,
         )
         self.hud.set_game_loop(self.game_loop)
+        self.hud.set_audio(audio, self.show_options)
         self.loop = self.game_loop
         self.game_loop.start()
+        if audio is not None:
+            self.set_audio(audio, self.audio_cache)
 
         # Autosave every 30 s of wall-clock time.
         self._autosave_timer = QTimer(self)
@@ -310,6 +325,7 @@ class MainWindow(QMainWindow):
             (getattr(self, "_wardrobe_action", None), getattr(self, "wardrobe_panel", None)),
             (getattr(self, "_base_action", None), getattr(self, "base_panel", None)),
             (getattr(self, "_market_action", None), getattr(self, "market_panel", None)),
+            (getattr(self, "_options_action", None), getattr(self, "options_panel", None)),
         ):
             if action is not None and panel is not None:
                 try:
@@ -529,6 +545,67 @@ class MainWindow(QMainWindow):
         """Toggle the lit 2.5D terrain renderer (H in the world view)."""
         self.world_view.toggle_terrain_lighting()
 
+    # -- audio / options ------------------------------------------------------
+
+    def set_audio(self, audio: Any, cache: Any = None) -> None:
+        """Attach the audio manager and build the event/music bridge."""
+        self.audio = audio
+        self.audio_cache = cache
+        self.options_panel.set_audio(audio)
+        self.hud.set_audio(audio, self.show_options)
+        if audio is None:
+            return
+        try:
+            from minesim.ui.audio_bridge import AudioBridge
+
+            bridge = AudioBridge(
+                self.game,
+                audio,
+                world_view=self.world_view,
+                content=getattr(self.game, "content", None),
+            )
+        except Exception:
+            self.audio_bridge = None
+            return
+        self.audio_bridge = bridge
+        self.hud.set_audio_bridge(bridge)
+        self.game_loop.set_audio_bridge(bridge)
+        bridge.set_paused(bool(getattr(self.game_loop, "paused", False)))
+        self._maybe_show_audio_hint()
+
+    def _maybe_show_audio_hint(self) -> None:
+        """Show the one-time first-run audio hint."""
+        settings = getattr(self.audio, "settings", None)
+        if settings is None or bool(getattr(settings, "hint_shown", True)):
+            return
+        settings.hint_shown = True
+        saver = getattr(settings, "save", None)
+        if callable(saver):
+            try:
+                saver()
+            except Exception:
+                pass
+        QTimer.singleShot(
+            1200,
+            lambda: self.toast_manager.show_message(
+                "Sound", "Music is on. Press O to change the sound."
+            ),
+        )
+
+    def show_options(self) -> None:
+        """Show the options panel (O)."""
+        self.options_panel.show_panel()
+        self._sync_view_actions()
+
+    def toggle_options(self) -> None:
+        """Toggle the options panel (O)."""
+        self.options_panel.toggle()
+        self._sync_view_actions()
+
+    def _toggle_mute(self) -> None:
+        """Mute or unmute all audio (Ctrl+Shift+M)."""
+        self.hud.toggle_mute()
+
     # -- menu bar (F10) -------------------------------------------------------
 
     def _build_menu_bar(self) -> None:
@@ -606,6 +683,13 @@ class MainWindow(QMainWindow):
             lambda checked=False: self._on_view_action(self.miners_panel, checked)
         )
         view_menu.addSeparator()
+        self._options_action = view_menu.addAction("&Options…")
+        self._options_action.setShortcut(QKeySequence("Ctrl+,"))
+        self._options_action.setToolTip("Audio and other options (O when world focused)")
+        self._options_action.triggered.connect(
+            lambda checked=False: self._on_view_action(self.options_panel, checked)
+        )
+        view_menu.addSeparator()
         self._terrain_action = view_menu.addAction("Terrain &lighting")
         self._terrain_action.setCheckable(True)
         self._terrain_action.setChecked(bool(self.world_view.terrain_lighting))
@@ -620,6 +704,8 @@ class MainWindow(QMainWindow):
         # F10 opens the File menu.
         self._f10_shortcut = QShortcut(QKeySequence(Qt.Key.Key_F10), self)
         self._f10_shortcut.activated.connect(self._open_file_menu)
+        self._mute_shortcut = QShortcut(QKeySequence("Ctrl+Shift+M"), self)
+        self._mute_shortcut.activated.connect(self._toggle_mute)
         self._sync_view_actions()
 
     def _build_help_menu(self, menu_bar: QMenuBar) -> None:
@@ -721,6 +807,12 @@ class MainWindow(QMainWindow):
         self.market_panel.set_game(game)
         self.toast_manager.set_game(game)
         self.api_panel.set_game(game)
+        if self.audio_bridge is not None:
+            try:
+                self.audio_bridge.set_game(game)
+                self.audio_bridge.reset_combo()
+            except Exception:
+                pass
         if self.manager is not None:
             self.manager.set_game(game)
             try:
@@ -775,6 +867,13 @@ class MainWindow(QMainWindow):
                         return False
                 except Exception:
                     pass
+        options = getattr(self, "options_panel", None)
+        if options is not None:
+            try:
+                if options is focused or options.isAncestorOf(focused):
+                    return True
+            except Exception:
+                pass
         world_view = getattr(self, "world_view", None)
         hud = getattr(self, "hud", None)
         if world_view is not None and (focused is world_view or world_view.isAncestorOf(focused)):
@@ -851,6 +950,12 @@ class MainWindow(QMainWindow):
                     host.stop()
                 except Exception:
                     pass
+        bridge = getattr(self, "audio_bridge", None)
+        if bridge is not None:
+            try:
+                bridge.close()
+            except Exception:
+                pass
         self.game_loop.stop()
         super().closeEvent(event)
 
@@ -876,6 +981,14 @@ class MainWindow(QMainWindow):
                 self.editor_panel.stop()
             except Exception:
                 pass
+            event.accept()
+            return
+        if (
+            modifiers & ctrl
+            and modifiers & Qt.KeyboardModifier.ShiftModifier
+            and key == Qt.Key.Key_M
+        ):
+            self._toggle_mute()
             event.accept()
             return
         if key == Qt.Key.Key_Escape and self._focus_is_text_widget():
@@ -915,6 +1028,10 @@ class MainWindow(QMainWindow):
             return
         if key == Qt.Key.Key_T:
             self.toggle_miners()
+            event.accept()
+            return
+        if key == Qt.Key.Key_O:
+            self.toggle_options()
             event.accept()
             return
         if key == Qt.Key.Key_F10:

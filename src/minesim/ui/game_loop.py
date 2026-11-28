@@ -98,6 +98,7 @@ class GameLoop(QObject):
         self.tick_hz: int = int(tick_hz or 10)
         self.speed: int = 1
         self.paused: bool = False
+        self.audio_bridge: Any = None
         self._accumulator: float = 0.0
         self._last_time: float | None = None
         self.timer = QTimer(self)
@@ -202,10 +203,22 @@ class GameLoop(QObject):
                 handle(events)
         return events
 
+    def set_audio_bridge(self, bridge: Any) -> None:
+        """Attach the audio bridge that follows pause/resume."""
+        self.audio_bridge = bridge
+
     def set_speed(self, speed: int) -> None:
         """Set the speed multiplier (0 pauses)."""
         self.speed = int(speed)
         self.paused = self.speed == 0
+        bridge = self.audio_bridge
+        if bridge is not None:
+            setter = _get(bridge, "set_paused")
+            if callable(setter):
+                try:
+                    setter(self.paused)
+                except Exception:
+                    pass
         if self.hud is not None:
             hud_speed = _get(self.hud, "speed")
             if hud_speed is not None and int(hud_speed) != self.speed:

@@ -22,6 +22,7 @@ layer N, run a short mining session and save ``artifacts/ui_layer_N.png``),
 ``--dock`` (queue miners at the shared dock and save
 ``artifacts/ui_dock.png``), ``--climate`` (a hot layer, a low battery and the
 energy/climate HUD with the miners panel, saved as ``artifacts/ui_climate.png``),
+``--options`` (the audio options panel, saved as ``artifacts/ui_options.png``),
 ``--preset hero|editor|layers|market|miners|base`` (deterministic press scenes
 saved at 1920x1080 and 1080x1920 into ``docs/press/``) and ``--output``.
 """
@@ -834,6 +835,7 @@ def build_window(
     dock: bool = False,
     api: bool = False,
     climate: bool = False,
+    options: bool = False,
 ) -> MainWindow:
     """Build the real main window and run ``ticks`` engine ticks."""
     app = QApplication.instance() or QApplication([])
@@ -885,8 +887,17 @@ def build_window(
     window.world_view.set_terrain_lighting(not flat, persist=False)
     window.resize(size[0], size[1])
     window.show()
-    if dock:
+    if dock or options:
         window.game_loop.stop()
+    if options:
+        panel = getattr(window, "options_panel", None)
+        if panel is not None:
+            try:
+                panel.show_panel()
+                panel.move(292, 110)
+                panel.resize(440, 520)
+            except Exception:
+                pass
     if editor_tabs and scripts_dir is not None:
         window.game_loop.stop()
         _setup_editor_tabs(window, scripts_dir, app)
@@ -1054,6 +1065,11 @@ def main() -> int:
         "saved as artifacts/ui_climate.png",
     )
     parser.add_argument(
+        "--options",
+        action="store_true",
+        help="show the audio options panel and save artifacts/ui_options.png",
+    )
+    parser.add_argument(
         "--preset",
         choices=PRESS_PRESETS,
         default=None,
@@ -1083,6 +1099,7 @@ def main() -> int:
         dock=args.dock,
         api=args.api,
         climate=args.climate,
+        options=args.options,
     )
     for panel_name in (
         "achievements_panel",
@@ -1101,6 +1118,8 @@ def main() -> int:
         if args.miners and panel_name in ("miners_panel", "editor_panel"):
             continue
         if args.climate and panel_name == "miners_panel":
+            continue
+        if args.options and panel_name == "options_panel":
             continue
         if args.editor_tabs and panel_name == "editor_panel":
             continue
@@ -1125,6 +1144,13 @@ def main() -> int:
             window.show_wardrobe()
         except Exception:
             window.wardrobe_panel.show_panel()
+    elif args.options:
+        try:
+            window.show_options()
+        except Exception:
+            window.options_panel.show_panel()
+        window.options_panel.move(292, 110)
+        window.options_panel.resize(440, 520)
     elif args.climate:
         try:
             window.show_miners()
@@ -1183,6 +1209,8 @@ def main() -> int:
         default_name = "ui_api.png"
     if args.climate:
         default_name = "ui_climate.png"
+    if args.options:
+        default_name = "ui_options.png"
     out = args.output or (Path(__file__).resolve().parents[1] / "artifacts" / default_name)
     out.parent.mkdir(parents=True, exist_ok=True)
     window.grab().save(str(out))

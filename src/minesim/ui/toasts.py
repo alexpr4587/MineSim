@@ -212,6 +212,11 @@ class ToastManager(QObject):
         self._queue.append((title, message))
         self._show_next()
 
+    def show_message(self, title: str, message: str = "") -> None:
+        """Queue a plain toast (used for the first-run audio hint)."""
+        self._queue.append((str(title), str(message)))
+        self._show_next()
+
     # -- queue ----------------------------------------------------------------
 
     def _show_next(self) -> None:

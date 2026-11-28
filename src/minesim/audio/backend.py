@@ -29,6 +29,8 @@ class AudioCall:
     volume: float = 1.0
     pan: float = 0.0
     fade_ms: int = 0
+    pitch_steps: int = 0
+    pitch: float = 1.0
 
 
 class AudioBackend(ABC):
@@ -40,8 +42,14 @@ class AudioBackend(ABC):
         return False
 
     @abstractmethod
-    def play_sfx(self, sound_id: str, volume: float = 1.0, pan: float = 0.0) -> None:
-        """Play a one-shot sound effect."""
+    def play_sfx(
+        self,
+        sound_id: str,
+        volume: float = 1.0,
+        pan: float = 0.0,
+        pitch_steps: int = 0,
+    ) -> None:
+        """Play a one-shot sound effect, optionally shifted by pentatonic steps."""
 
     @abstractmethod
     def play_music(self, track_id: str, fade_ms: int = 0) -> None:
@@ -81,8 +89,26 @@ class NullBackend(AudioBackend):
         """Only the music calls."""
         return [call for call in self.calls if call.kind == "music"]
 
-    def play_sfx(self, sound_id: str, volume: float = 1.0, pan: float = 0.0) -> None:
-        self.calls.append(AudioCall("sfx", sound_id, float(volume), float(pan)))
+    def play_sfx(
+        self,
+        sound_id: str,
+        volume: float = 1.0,
+        pan: float = 0.0,
+        pitch_steps: int = 0,
+    ) -> None:
+        steps = max(0, min(7, int(pitch_steps)))
+        semitones = (0, 2, 4, 7, 9, 12, 14, 16)[steps]
+        pitch = 2.0 ** (semitones / 12.0)
+        self.calls.append(
+            AudioCall(
+                "sfx",
+                sound_id,
+                float(volume),
+                float(pan),
+                pitch_steps=steps,
+                pitch=pitch,
+            )
+        )
 
     def play_music(self, track_id: str, fade_ms: int = 0) -> None:
         self.calls.append(AudioCall("music", track_id, fade_ms=int(fade_ms)))
@@ -164,13 +190,30 @@ class QtBackend(AudioBackend):
         self._animations.append(animation)
         return animation
 
-    def play_sfx(self, sound_id: str, volume: float = 1.0, pan: float = 0.0) -> None:
+    def play_sfx(
+        self,
+        sound_id: str,
+        volume: float = 1.0,
+        pan: float = 0.0,
+        pitch_steps: int = 0,
+    ) -> None:
         if self._cache is None:
             return
         variant_count = max(1, int(self._cache.sfx_variant_count(sound_id)))
         variant = self._variant_index.get(sound_id, 0) % variant_count
         self._variant_index[sound_id] = variant + 1
-        path = self._cache.sfx_path(sound_id, variant)
+        steps = max(0, min(7, int(pitch_steps)))
+        path = None
+        pitched = getattr(self._cache, "pitched_sfx_path", None)
+        if steps and callable(pitched):
+            try:
+                candidate = pitched(sound_id, variant, steps)
+                if candidate.is_file():
+                    path = candidate
+            except Exception:
+                path = None
+        if path is None:
+            path = self._cache.sfx_path(sound_id, variant)
         if not path.is_file():
             return
         pool = self._sfx_pool.setdefault(sound_id, [])

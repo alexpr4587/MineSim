@@ -56,9 +56,21 @@ def _setup_audio(window: Any) -> None:
         manager = AudioManager(AudioSettings.load(), backend, cache)
         window.audio = manager
         window.audio_cache = cache
-        window.audio_warm_thread = cache.warm_async(
-            lambda: manager.set_mood("surface", fade_ms=1500)
-        )
+        setter = getattr(window, "set_audio", None)
+        if callable(setter):
+            setter(manager, cache)
+        else:
+            window.audio = manager
+            window.audio_cache = cache
+
+        def _on_warm() -> None:
+            bridge = getattr(window, "audio_bridge", None)
+            if bridge is not None:
+                bridge.sync_music(force=True)
+            else:
+                manager.set_mood("surface", fade_ms=1500)
+
+        window.audio_warm_thread = cache.warm_async(_on_warm)
     except Exception:
         logger.warning("Could not start audio", exc_info=True)
 

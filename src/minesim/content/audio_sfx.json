@@ -2,54 +2,362 @@
   {
     "id": "ui_click",
     "kind": "click",
-    "params": {
-      "freq": 1300,
-      "duration": 0.06
-    },
-    "variants": 2,
+    "params": { "freq": 1250, "duration": 0.055 },
+    "variants": 3,
     "pitch_jitter": 0.02,
-    "gain": 0.75
+    "gain": 0.7
   },
   {
-    "id": "mine_thunk",
+    "id": "ui_open",
+    "kind": "notes",
+    "params": { "freq": 660, "freq2": 880, "duration": 0.18, "spacing": 0.04 },
+    "variants": 3,
+    "pitch_jitter": 0.015,
+    "gain": 0.5
+  },
+  {
+    "id": "ui_close",
+    "kind": "notes",
+    "params": { "freq": 880, "freq2": 660, "duration": 0.18, "spacing": 0.04 },
+    "variants": 3,
+    "pitch_jitter": 0.015,
+    "gain": 0.5
+  },
+  {
+    "id": "toggle_on",
+    "kind": "notes",
+    "params": { "freq": 660, "freq2": 990, "duration": 0.16, "spacing": 0.035 },
+    "variants": 3,
+    "pitch_jitter": 0.01,
+    "gain": 0.55
+  },
+  {
+    "id": "toggle_off",
+    "kind": "notes",
+    "params": { "freq": 990, "freq2": 660, "duration": 0.16, "spacing": 0.035 },
+    "variants": 3,
+    "pitch_jitter": 0.01,
+    "gain": 0.55
+  },
+  {
+    "id": "pause",
+    "kind": "notes",
+    "params": { "freq": 440, "freq2": 330, "duration": 0.25, "spacing": 0.07 },
+    "variants": 2,
+    "pitch_jitter": 0.01,
+    "gain": 0.5
+  },
+  {
+    "id": "resume",
+    "kind": "notes",
+    "params": { "freq": 330, "freq2": 440, "duration": 0.25, "spacing": 0.07 },
+    "variants": 2,
+    "pitch_jitter": 0.01,
+    "gain": 0.5
+  },
+  {
+    "id": "step",
     "kind": "thunk",
-    "params": {
-      "freq": 150,
-      "duration": 0.24
-    },
+    "params": { "freq": 80, "duration": 0.07 },
+    "variants": 3,
+    "pitch_jitter": 0.08,
+    "gain": 0.22
+  },
+  {
+    "id": "mine_stone",
+    "kind": "thunk",
+    "params": { "freq": 140, "duration": 0.22 },
+    "variants": 3,
+    "pitch_jitter": 0.05,
+    "gain": 0.9
+  },
+  {
+    "id": "mine_coal",
+    "kind": "thunk",
+    "params": { "freq": 175, "duration": 0.2 },
+    "variants": 3,
+    "pitch_jitter": 0.05,
+    "gain": 0.85
+  },
+  {
+    "id": "mine_copper",
+    "kind": "pluck",
+    "params": { "freq": 330, "duration": 0.35 },
+    "variants": 3,
+    "pitch_jitter": 0.04,
+    "gain": 0.8
+  },
+  {
+    "id": "mine_iron",
+    "kind": "pluck",
+    "params": { "freq": 440, "duration": 0.4 },
+    "variants": 3,
+    "pitch_jitter": 0.04,
+    "gain": 0.8
+  },
+  {
+    "id": "mine_silver",
+    "kind": "bell",
+    "params": { "freq": 660, "duration": 0.9 },
+    "variants": 3,
+    "pitch_jitter": 0.02,
+    "gain": 0.8
+  },
+  {
+    "id": "mine_gold",
+    "kind": "bell",
+    "params": { "freq": 880, "duration": 1.0 },
+    "variants": 3,
+    "pitch_jitter": 0.02,
+    "gain": 0.85
+  },
+  {
+    "id": "mine_ruby",
+    "kind": "bell",
+    "params": { "freq": 1174, "duration": 1.2 },
+    "variants": 3,
+    "pitch_jitter": 0.015,
+    "gain": 0.9
+  },
+  {
+    "id": "mine_miss",
+    "kind": "tsk",
+    "params": { "freq": 320, "duration": 0.09 },
     "variants": 3,
     "pitch_jitter": 0.06,
-    "gain": 0.95
+    "gain": 0.5
   },
   {
-    "id": "coin",
-    "kind": "coin",
-    "params": {
-      "freq": 1046
-    },
+    "id": "ore_pop",
+    "kind": "pop",
+    "params": { "freq": 700, "duration": 0.12 },
+    "variants": 3,
+    "pitch_jitter": 0.02,
+    "gain": 0.6,
+    "pitch_variants": 8
+  },
+  {
+    "id": "inventory_full",
+    "kind": "notes",
+    "params": { "freq": 440, "freq2": 392, "duration": 0.4, "spacing": 0.12 },
     "variants": 2,
+    "pitch_jitter": 0.01,
+    "gain": 0.5
+  },
+  {
+    "id": "sell_small",
+    "kind": "cascade",
+    "params": { "freq": 1046, "duration": 0.3, "count": 2 },
+    "variants": 3,
+    "pitch_jitter": 0.03,
+    "gain": 0.6
+  },
+  {
+    "id": "sell_medium",
+    "kind": "cascade",
+    "params": { "freq": 1046, "duration": 0.45, "count": 4 },
+    "variants": 3,
+    "pitch_jitter": 0.03,
+    "gain": 0.7
+  },
+  {
+    "id": "sell_large",
+    "kind": "cascade",
+    "params": { "freq": 1046, "duration": 0.7, "count": 7 },
+    "variants": 3,
     "pitch_jitter": 0.03,
     "gain": 0.8
   },
   {
-    "id": "chime_achievement",
-    "kind": "chime",
-    "params": {
-      "freq": 660
-    },
+    "id": "upgrade_buy",
+    "kind": "notes",
+    "params": { "freq": 523, "freq2": 784, "duration": 0.5, "spacing": 0.14 },
     "variants": 2,
     "pitch_jitter": 0.01,
-    "gain": 0.9
+    "gain": 0.7
   },
   {
-    "id": "drip",
-    "kind": "drip",
-    "params": {
-      "freq": 900,
-      "duration": 0.4
-    },
-    "variants": 3,
-    "pitch_jitter": 0.05,
+    "id": "contract_done",
+    "kind": "notes",
+    "params": { "freq": 523, "freq2": 659, "freq3": 784, "duration": 0.7, "spacing": 0.16 },
+    "variants": 2,
+    "pitch_jitter": 0.01,
+    "gain": 0.75
+  },
+  {
+    "id": "refine_start",
+    "kind": "rise",
+    "params": { "freq": 220, "duration": 0.8 },
+    "variants": 2,
+    "pitch_jitter": 0.02,
+    "gain": 0.5
+  },
+  {
+    "id": "refine_done",
+    "kind": "chime",
+    "params": { "freq": 660, "duration": 0.9, "notes": 3 },
+    "variants": 2,
+    "pitch_jitter": 0.01,
     "gain": 0.7
+  },
+  {
+    "id": "market_up",
+    "kind": "notes",
+    "params": { "freq": 880, "freq2": 988, "duration": 0.2, "spacing": 0.06 },
+    "variants": 2,
+    "pitch_jitter": 0.01,
+    "gain": 0.2
+  },
+  {
+    "id": "market_down",
+    "kind": "notes",
+    "params": { "freq": 988, "freq2": 880, "duration": 0.2, "spacing": 0.06 },
+    "variants": 2,
+    "pitch_jitter": 0.01,
+    "gain": 0.2
+  },
+  {
+    "id": "achievement",
+    "kind": "chime",
+    "params": { "freq": 784, "duration": 1.4, "notes": 3 },
+    "variants": 2,
+    "pitch_jitter": 0.005,
+    "gain": 0.8
+  },
+  {
+    "id": "unlock",
+    "kind": "chime",
+    "params": { "freq": 660, "duration": 0.9, "notes": 3 },
+    "variants": 2,
+    "pitch_jitter": 0.01,
+    "gain": 0.7
+  },
+  {
+    "id": "milestone",
+    "kind": "chime",
+    "params": { "freq": 523, "duration": 1.6, "notes": 5 },
+    "variants": 2,
+    "pitch_jitter": 0.01,
+    "gain": 0.75
+  },
+  {
+    "id": "codex_entry",
+    "kind": "sparkle",
+    "params": { "freq": 1200, "duration": 0.5 },
+    "variants": 2,
+    "pitch_jitter": 0.02,
+    "gain": 0.4
+  },
+  {
+    "id": "event_start",
+    "kind": "whoosh",
+    "params": { "duration": 0.9 },
+    "variants": 2,
+    "pitch_jitter": 0.02,
+    "gain": 0.6
+  },
+  {
+    "id": "event_end",
+    "kind": "whoosh",
+    "params": { "duration": 0.7 },
+    "variants": 2,
+    "pitch_jitter": 0.02,
+    "gain": 0.5
+  },
+  {
+    "id": "layer_down",
+    "kind": "elevator",
+    "params": { "duration": 0.9 },
+    "variants": 2,
+    "pitch_jitter": 0.01,
+    "gain": 0.6
+  },
+  {
+    "id": "layer_up",
+    "kind": "elevator",
+    "params": { "duration": 0.7 },
+    "variants": 2,
+    "pitch_jitter": 0.01,
+    "gain": 0.55
+  },
+  {
+    "id": "charge",
+    "kind": "rise",
+    "params": { "freq": 110, "duration": 1.2 },
+    "variants": 2,
+    "pitch_jitter": 0.01,
+    "gain": 0.4
+  },
+  {
+    "id": "low_energy",
+    "kind": "notes",
+    "params": { "freq": 330, "freq2": 262, "duration": 0.5, "spacing": 0.16 },
+    "variants": 2,
+    "pitch_jitter": 0.01,
+    "gain": 0.5
+  },
+  {
+    "id": "overheat",
+    "kind": "crackle",
+    "params": { "duration": 1.2, "freq": 110 },
+    "variants": 2,
+    "pitch_jitter": 0.02,
+    "gain": 0.6
+  },
+  {
+    "id": "recover",
+    "kind": "chime",
+    "params": { "freq": 523, "duration": 0.7, "notes": 2 },
+    "variants": 2,
+    "pitch_jitter": 0.01,
+    "gain": 0.6
+  },
+  {
+    "id": "stranded",
+    "kind": "notes",
+    "params": { "freq": 262, "freq2": 196, "duration": 0.8, "spacing": 0.24 },
+    "variants": 2,
+    "pitch_jitter": 0.01,
+    "gain": 0.6
+  },
+  {
+    "id": "rescue",
+    "kind": "notes",
+    "params": { "freq": 392, "freq2": 523, "freq3": 659, "duration": 0.8, "spacing": 0.16 },
+    "variants": 2,
+    "pitch_jitter": 0.01,
+    "gain": 0.65
+  },
+  {
+    "id": "miner_spawn",
+    "kind": "chime",
+    "params": { "freq": 440, "duration": 0.9, "notes": 4 },
+    "variants": 2,
+    "pitch_jitter": 0.01,
+    "gain": 0.6
+  },
+  {
+    "id": "script_start",
+    "kind": "notes",
+    "params": { "freq": 523, "freq2": 659, "duration": 0.3, "spacing": 0.08 },
+    "variants": 2,
+    "pitch_jitter": 0.01,
+    "gain": 0.5
+  },
+  {
+    "id": "script_finish",
+    "kind": "notes",
+    "params": { "freq": 659, "freq2": 784, "freq3": 1046, "duration": 0.5, "spacing": 0.1 },
+    "variants": 2,
+    "pitch_jitter": 0.01,
+    "gain": 0.55
+  },
+  {
+    "id": "script_error",
+    "kind": "bonk",
+    "params": { "freq": 140, "duration": 0.25 },
+    "variants": 2,
+    "pitch_jitter": 0.02,
+    "gain": 0.6
   }
 ]

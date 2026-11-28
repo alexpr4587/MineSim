@@ -34,6 +34,14 @@ _DEFAULT_FREQUENCY = {
     "drip": 900.0,
     "hum": 60.0,
     "crackle": 1200.0,
+    "notes": 440.0,
+    "cascade": 1046.0,
+    "sparkle": 1200.0,
+    "tsk": 320.0,
+    "pop": 700.0,
+    "elevator": 260.0,
+    "rise": 110.0,
+    "bonk": 140.0,
 }
 
 _DEFAULT_DURATION = {
@@ -48,6 +56,14 @@ _DEFAULT_DURATION = {
     "drip": 0.4,
     "hum": 1.6,
     "crackle": 1.0,
+    "notes": 0.5,
+    "cascade": 0.5,
+    "sparkle": 0.5,
+    "tsk": 0.09,
+    "pop": 0.12,
+    "elevator": 0.8,
+    "rise": 1.0,
+    "bonk": 0.25,
 }
 
 
@@ -119,11 +135,13 @@ def _bell(params: dict[str, float], rng: np.random.Generator) -> np.ndarray:
 def _chime(params: dict[str, float], rng: np.random.Generator) -> np.ndarray:
     duration = float(params.get("duration", _DEFAULT_DURATION["chime"]))
     frequency = float(params.get("freq", _DEFAULT_FREQUENCY["chime"]))
+    count = max(2, min(6, int(params.get("notes", 4))))
     note_duration = max(0.2, duration * 0.65)
-    spacing = max(0.02, duration / 8.0)
+    spacing = max(0.02, duration / (count * 2.0))
     buffers: list[np.ndarray] = []
     offsets: list[int] = []
-    for index, ratio in enumerate((1.0, 1.25, 1.5, 2.0)):
+    for index in range(count):
+        ratio = 1.0 + index * 0.25
         timing = index * spacing + float(rng.uniform(-0.02, 0.02))
         buffers.append(_bell_note(frequency * ratio, note_duration))
         offsets.append(max(0, int(round(timing * _SAMPLE_RATE))))
@@ -233,7 +251,126 @@ def _crackle(params: dict[str, float], rng: np.random.Generator) -> np.ndarray:
         buffers.append(burst * float(rng.uniform(0.15, 0.5)))
         offsets.append(int(round(start * _SAMPLE_RATE)))
     envelope = synth.adsr(duration, attack=0.05, decay=0.1, sustain=0.8, release=0.2)
-    return synth.one_pole_lowpass(synth.mix(buffers, offsets) * envelope, 3500.0)
+    mixed = synth.mix(buffers, offsets) * envelope
+    low_note = float(params.get("freq", 0.0))
+    if low_note > 0.0:
+        mixed = mixed + synth.sine(low_note, duration) * envelope * 0.18
+    return synth.one_pole_lowpass(mixed, 3500.0)
+
+
+def _gentle_note(frequency: float, duration: float) -> np.ndarray:
+    """Return a soft plucked triangle note used by the note sequences."""
+    time = _time(duration)
+    body = synth.triangle(frequency, duration) + 0.18 * synth.sine(frequency * 2.0, duration)
+    envelope = synth.adsr(duration, attack=0.006, decay=0.12, sustain=0.35, release=0.3)
+    decay = np.exp(-time * 4.5).astype(np.float32)
+    return synth.one_pole_lowpass(body * envelope * decay, 3200.0)
+
+
+def _notes(params: dict[str, float], rng: np.random.Generator) -> np.ndarray:
+    duration = float(params.get("duration", 0.5))
+    base = float(params.get("freq", 440.0))
+    count = max(2, min(6, int(params.get("notes", 2))))
+    ratios = (1.0, 1.25, 1.5, 2.0, 2.5, 3.0)
+    frequencies = [
+        float(params.get(f"freq{index + 1}", base * ratios[index])) for index in range(count)
+    ]
+    spacing = float(params.get("spacing", duration / (count + 1.0)))
+    note_duration = max(0.08, duration * 0.7)
+    buffers: list[np.ndarray] = []
+    offsets: list[int] = []
+    for index, frequency in enumerate(frequencies):
+        jitter = float(rng.uniform(-0.01, 0.01))
+        buffers.append(_gentle_note(frequency, note_duration))
+        offsets.append(max(0, int(round((index * spacing + jitter) * _SAMPLE_RATE))))
+    return synth.echo(synth.mix(buffers, offsets), delay=0.14, feedback=0.18, mix=0.16)
+
+
+def _cascade(params: dict[str, float], rng: np.random.Generator) -> np.ndarray:
+    duration = float(params.get("duration", 0.5))
+    frequency = float(params.get("freq", _DEFAULT_FREQUENCY["coin"]))
+    count = max(2, min(12, int(params.get("count", 4))))
+    spacing = max(0.02, duration / (count + 1.0))
+    buffers: list[np.ndarray] = []
+    offsets: list[int] = []
+    for index in range(count):
+        note_duration = max(0.06, spacing * 1.8)
+        time = _time(note_duration)
+        ping = synth.sine(frequency * (1.0 + index * 0.08), note_duration) * np.exp(
+            -time / 0.035
+        ).astype(np.float32)
+        buffers.append(ping * (0.9 - index * 0.04))
+        offsets.append(max(0, int(round(index * spacing * _SAMPLE_RATE))))
+    return synth.echo(synth.mix(buffers, offsets), delay=0.09, feedback=0.22, mix=0.2)
+
+
+def _sparkle(params: dict[str, float], rng: np.random.Generator) -> np.ndarray:
+    duration = float(params.get("duration", 0.5))
+    frequency = float(params.get("freq", 1200.0))
+    buffers: list[np.ndarray] = []
+    offsets: list[int] = []
+    for index in range(5):
+        note_duration = 0.08 + float(rng.uniform(0.0, 0.04))
+        time = _time(note_duration)
+        note_frequency = frequency * (1.0 + index * 0.16) * float(rng.uniform(0.98, 1.02))
+        note = synth.sine(note_frequency, note_duration) * np.exp(-time / 0.025).astype(np.float32)
+        buffers.append(note * float(rng.uniform(0.2, 0.45)))
+        offsets.append(max(0, int(round(float(rng.uniform(0.0, duration * 0.7)) * _SAMPLE_RATE))))
+    return synth.echo(synth.mix(buffers, offsets), delay=0.11, feedback=0.2, mix=0.24)
+
+
+def _tsk(params: dict[str, float], rng: np.random.Generator) -> np.ndarray:
+    duration = float(params.get("duration", 0.09))
+    frequency = float(params.get("freq", 320.0))
+    time = _time(duration)
+    noise = synth.one_pole_lowpass(synth.seeded_noise(duration, _noise_seed(rng)), 1600.0)
+    envelope = np.exp(-time / 0.018).astype(np.float32)
+    body = synth.sine(frequency, duration) * 0.35
+    return synth.one_pole_lowpass((noise * 0.8 + body) * envelope, 2200.0)
+
+
+def _pop(params: dict[str, float], rng: np.random.Generator) -> np.ndarray:
+    duration = float(params.get("duration", 0.12))
+    base = float(params.get("freq", 700.0))
+    time = _time(duration)
+    start = base * 1.45
+    end = base * 0.85
+    frequency = end + (start - end) * np.exp(-time / 0.02).astype(np.float32)
+    phase = 2.0 * np.pi * np.cumsum(frequency) / _SAMPLE_RATE
+    envelope = synth.adsr(duration, attack=0.003, decay=0.03, sustain=0.2, release=0.08)
+    return synth.one_pole_lowpass(np.sin(phase).astype(np.float32) * envelope, 3000.0)
+
+
+def _elevator(params: dict[str, float], rng: np.random.Generator) -> np.ndarray:
+    duration = float(params.get("duration", 0.8))
+    whoosh = _whoosh({"duration": duration * 0.8, "freq": 260.0}, rng)
+    thunk = _thunk({"duration": 0.24, "freq": 110.0}, rng)
+    return synth.mix(
+        [whoosh, thunk],
+        [0, max(0, int(round(duration * 0.55 * _SAMPLE_RATE)))],
+    )
+
+
+def _rise(params: dict[str, float], rng: np.random.Generator) -> np.ndarray:
+    duration = float(params.get("duration", 1.0))
+    base = float(params.get("freq", 110.0))
+    time = _time(duration)
+    frequency = base * (1.0 + time / max(0.01, duration))
+    phase = 2.0 * np.pi * np.cumsum(frequency) / _SAMPLE_RATE
+    tremolo = 1.0 + 0.06 * np.sin(2.0 * np.pi * 6.0 * time)
+    body = np.sin(phase).astype(np.float32) * 0.6 + synth.sine(base * 2.0, duration) * 0.2
+    envelope = synth.adsr(duration, attack=0.2, decay=0.1, sustain=0.9, release=0.3)
+    return synth.one_pole_lowpass(body * tremolo * envelope, 900.0)
+
+
+def _bonk(params: dict[str, float], rng: np.random.Generator) -> np.ndarray:
+    duration = float(params.get("duration", 0.25))
+    base = float(params.get("freq", 140.0))
+    time = _time(duration)
+    frequency = base * (0.7 + 0.5 * np.exp(-time / 0.03).astype(np.float32))
+    phase = 2.0 * np.pi * np.cumsum(frequency) / _SAMPLE_RATE
+    envelope = synth.adsr(duration, attack=0.005, decay=0.05, sustain=0.3, release=0.15)
+    return synth.one_pole_lowpass(np.sin(phase).astype(np.float32) * envelope, 700.0)
 
 
 _RENDERERS = {
@@ -248,6 +385,14 @@ _RENDERERS = {
     "drip": _drip,
     "hum": _hum,
     "crackle": _crackle,
+    "notes": _notes,
+    "cascade": _cascade,
+    "sparkle": _sparkle,
+    "tsk": _tsk,
+    "pop": _pop,
+    "elevator": _elevator,
+    "rise": _rise,
+    "bonk": _bonk,
 }
 
 
@@ -256,14 +401,29 @@ def estimated_duration(recipe: AudioSfxRecipe) -> float:
     return float(recipe.params.get("duration", _DEFAULT_DURATION.get(recipe.kind, 0.5)))
 
 
+PENTATONIC_SEMITONES: tuple[int, ...] = (0, 2, 4, 7, 9, 12, 14, 16)
+
+
+def pitch_ratio(pitch_steps: int) -> float:
+    """Return the frequency ratio for a pentatonic step (0 to +7)."""
+    step = max(0, min(len(PENTATONIC_SEMITONES) - 1, int(pitch_steps)))
+    return float(2.0 ** (PENTATONIC_SEMITONES[step] / 12.0))
+
+
 def render_sfx(
     recipe: AudioSfxRecipe,
     variant: int = 0,
     seed: int = 0,
+    pitch_steps: int = 0,
 ) -> np.ndarray:
-    """Render one deterministic stereo variant of ``recipe``."""
+    """Render one deterministic stereo variant of ``recipe``.
+
+    ``pitch_steps`` shifts the base frequency by a pentatonic step; it is
+    used for the mining combo pop.
+    """
     generator = np.random.default_rng(_stable_seed(recipe.id, int(variant), int(seed)))
-    pitch = 1.0 + (float(generator.random()) * 2.0 - 1.0) * float(recipe.pitch_jitter)
+    jitter = 1.0 + (float(generator.random()) * 2.0 - 1.0) * float(recipe.pitch_jitter)
+    pitch = jitter * pitch_ratio(pitch_steps)
     params = dict(recipe.params)
     params["freq"] = float(params.get("freq", _DEFAULT_FREQUENCY[recipe.kind])) * pitch
     renderer = _RENDERERS[recipe.kind]
